@@ -5,6 +5,7 @@ Thank you for your interest in contributing to Miktos Streamlab! This document p
 ## 🤝 How to Contribute
 
 ### Reporting Issues
+
 - Use GitHub Issues to report bugs or request features
 - Search existing issues before creating new ones
 - Provide detailed information including:
@@ -15,6 +16,7 @@ Thank you for your interest in contributing to Miktos Streamlab! This document p
   - Screenshots or logs when applicable
 
 ### Pull Requests
+
 1. Fork the repository
 2. Create a feature branch from `main`
 3. Make your changes
@@ -25,6 +27,7 @@ Thank you for your interest in contributing to Miktos Streamlab! This document p
 ## 🏗️ Development Setup
 
 ### Prerequisites
+
 - **iOS:** Xcode 14+, iOS 15+
 - **Android:** Android Studio, API Level 24+
 - **Backend:** Python 3.14+, pip
@@ -32,6 +35,7 @@ Thank you for your interest in contributing to Miktos Streamlab! This document p
 - **Broadcasting:** OBS Studio 28+ (optional)
 
 ### Local Development
+
 ```bash
 # Clone repository
 git clone https://github.com/LegnaPetiteTour/Miktos-Streamlab.git
@@ -55,12 +59,14 @@ npm run dev
 ## 📝 Code Standards
 
 ### General
+
 - Write clear, self-documenting code
 - Add comments for complex logic
 - Follow existing code style in each language
 - Include unit tests for new features
 
 ### Python (Backend)
+
 - Follow PEP 8 style guide
 - Use type hints
 - Maximum line length: 88 characters (Black formatter)
@@ -68,18 +74,21 @@ npm run dev
 - Run tests with `pytest`
 
 ### Swift (iOS)
+
 - Follow Swift API Design Guidelines
 - Use SwiftUI for UI components
 - Document public APIs
 - Use meaningful variable and function names
 
 ### Kotlin (Android)
+
 - Follow Kotlin coding conventions
 - Use Jetpack Compose for UI (when applicable)
 - Follow Material Design principles
 - Use dependency injection where appropriate
 
 ### TypeScript/React (Web)
+
 - Follow TypeScript strict mode
 - Use functional components with hooks
 - Follow ESLint configuration
@@ -88,6 +97,7 @@ npm run dev
 ## 🧪 Testing
 
 ### Running Tests
+
 ```bash
 # Python backend tests
 cd Desktop/Backend
@@ -103,6 +113,7 @@ npm test
 ```
 
 ### Test Guidelines
+
 - Write tests for all new features
 - Maintain minimum 80% code coverage
 - Include integration tests for API endpoints
@@ -111,6 +122,7 @@ npm test
 ## 📱 Mobile Development
 
 ### iOS Guidelines
+
 - Support iOS 15+
 - Use AVFoundation for camera access
 - Implement proper error handling
@@ -118,6 +130,7 @@ npm test
 - Follow Apple's Human Interface Guidelines
 
 ### Android Guidelines
+
 - Support API Level 24+
 - Use CameraX for camera functionality
 - Follow Material Design principles
@@ -127,6 +140,7 @@ npm test
 ## 🖥️ Desktop Development
 
 ### Backend Guidelines
+
 - Use FastAPI for web APIs
 - Implement proper error handling and logging
 - Use async/await for I/O operations
@@ -134,6 +148,7 @@ npm test
 - Document API endpoints
 
 ### Web Interface Guidelines
+
 - Build responsive designs
 - Use TailwindCSS for styling
 - Implement proper loading states
@@ -143,12 +158,14 @@ npm test
 ## 🎯 Architecture Principles
 
 ### Mobile → Desktop Flow
+
 1. Mobile apps capture and encode video
 2. Stream to desktop via SRT/TCP protocols
 3. Desktop processes and routes to broadcasting platforms
 4. Web interface provides monitoring and controls
 
 ### Code Organization
+
 - **Separation of Concerns:** Each component has a single responsibility
 - **Modularity:** Code is organized into reusable modules
 - **Documentation:** All public APIs are documented
@@ -157,11 +174,13 @@ npm test
 ## 🔄 Release Process
 
 ### Version Numbering
+
 - Follow Semantic Versioning (SemVer)
 - Format: `MAJOR.MINOR.PATCH`
 - Mobile apps may have independent version numbers
 
 ### Release Checklist
+
 - [ ] All tests passing
 - [ ] Documentation updated
 - [ ] CHANGELOG.md updated
@@ -171,10 +190,12 @@ npm test
 ## 🚀 Deployment
 
 ### Mobile Apps
+
 - **iOS:** App Store submission process
 - **Android:** Google Play Store submission
 
 ### Desktop Platform
+
 - Docker containerization
 - Cloud deployment documentation
 - Self-hosted installation guides
@@ -182,11 +203,13 @@ npm test
 ## 📞 Community
 
 ### Communication
+
 - **GitHub Discussions:** General questions and ideas
 - **GitHub Issues:** Bug reports and feature requests
 - **Pull Requests:** Code contributions
 
 ### Code of Conduct
+
 - Be respectful and inclusive
 - Help others learn and grow
 - Focus on constructive feedback
