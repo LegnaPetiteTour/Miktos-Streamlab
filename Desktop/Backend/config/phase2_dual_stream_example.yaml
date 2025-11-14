@@ -1,0 +1,187 @@
+# Phase 2 Configuration Example: YouTube Dual-Language Streaming
+#
+# Example configuration file showing how to set up dual-language
+# streaming for municipal broadcasting with failover capabilities.
+#
+# Copy this to config/phase2_dual_stream.yaml and customize for your deployment.
+#
+# Author: Miktos StreamLab Team
+# License: MIT
+
+# YouTube Dual-Language Configuration for City of Ottawa
+dual_stream_config:
+  
+  # Primary Language Settings
+  primary_language: "english"  # "english", "french", or "bilingual"
+  
+  # English YouTube Channel
+  english_channel:
+    name: "ottawa_city_en"
+    language: "en"
+    
+    # YouTube Streaming Configuration
+    stream_url: "rtmp://a.rtmp.youtube.com/live2"
+    stream_key: "${YOUTUBE_EN_STREAM_KEY}"  # Set in environment variables
+    channel_id: "${YOUTUBE_EN_CHANNEL_ID}"
+    
+    # Optional: YouTube API Integration (for metrics, chat, etc.)
+    api_key: "${YOUTUBE_API_KEY}"
+    access_token: "${YOUTUBE_EN_ACCESS_TOKEN}"
+    
+    # Stream Quality Settings
+    max_bitrate: 6000  # kbps
+    target_resolution: "1920x1080"
+    target_fps: 30
+    encoder_preset: "veryfast"
+  
+  # French YouTube Channel
+  french_channel:
+    name: "ottawa_city_fr"
+    language: "fr"
+    
+    # YouTube Streaming Configuration
+    stream_url: "rtmp://a.rtmp.youtube.com/live2"
+    stream_key: "${YOUTUBE_FR_STREAM_KEY}"  # Set in environment variables
+    channel_id: "${YOUTUBE_FR_CHANNEL_ID}"
+    
+    # Optional: YouTube API Integration
+    api_key: "${YOUTUBE_API_KEY}"
+    access_token: "${YOUTUBE_FR_ACCESS_TOKEN}"
+    
+    # Stream Quality Settings
+    max_bitrate: 6000  # kbps
+    target_resolution: "1920x1080"
+    target_fps: 30
+    encoder_preset: "veryfast"
+  
+  # Failover Configuration
+  failover:
+    enabled: true
+    cross_language_failover: true  # EN can failover to FR and vice versa
+    
+    # Trigger Thresholds (Municipal Broadcasting - More Sensitive)
+    trigger_packet_loss_pct: 3.0      # Trigger at 3% packet loss (vs. 5% default)
+    trigger_rtt_ms: 300.0              # Trigger at 300ms RTT (vs. 500ms default)
+    trigger_duration_sec: 5.0          # Must persist for 5 seconds
+    trigger_dropped_frames: 25         # Dropped frames per check interval
+    
+    # Recovery Behavior
+    retry_interval_sec: 15.0           # Faster retry attempts
+    max_retry_attempts: 15             # More recovery attempts for reliability
+    
+    # Slate Display During Failover
+    show_slate: true
+    slate_text: "Experiencing Technical Difficulties - Problèmes Techniques"
+    slate_duration_sec: 3.0            # Faster slate transitions
+  
+  # SRT Backup Relay (Optional but Recommended)
+  srt_backup:
+    enabled: true
+    relay_url: "${SRT_RELAY_URL}"      # e.g., "srt://backup.relay.com:9999"
+    latency_ms: 1000                   # Low latency for municipal broadcasts
+    
+    # SRT Security (Optional)
+    passphrase: "${SRT_PASSPHRASE}"    # Set in environment variables
+    pbkeylen: 16                       # AES key length (16, 24, 32)
+  
+  # Municipal Compliance Settings
+  municipal:
+    compliance_mode: true              # Enhanced logging and reliability
+    audit_logging: true                # Comprehensive audit trails
+    bilingual_messaging: true          # All error messages in EN/FR
+    enhanced_monitoring: true          # More frequent health checks
+    
+    # Health Check Intervals
+    health_check_interval_sec: 3.0     # More frequent health checks
+    health_log_interval_sec: 30.0      # More frequent health logging
+    
+    # Quality Assurance
+    quality_monitoring: true           # Real-time quality analysis
+    performance_alerts: true           # Immediate alerts for issues
+
+# OBS Integration Configuration
+obs_config:
+  websocket:
+    host: "localhost"
+    port: 4455
+    password: "${OBS_WEBSOCKET_PASSWORD}"
+  
+  # Scene Management
+  scenes:
+    english_scene: "English Broadcast"
+    french_scene: "French Broadcast" 
+    slate_scene: "Technical Difficulties"
+    
+  # Source Management
+  sources:
+    primary_camera: "Camera 1"
+    backup_camera: "Camera 2"
+    logo_overlay: "City Logo"
+    lower_third: "Lower Third"
+
+# Monitoring and Alerting
+monitoring:
+  # Health Metrics
+  track_metrics: true
+  export_metrics: true
+  metrics_interval_sec: 10.0
+  
+  # Alerting Thresholds
+  alerts:
+    critical_packet_loss_pct: 5.0
+    warning_packet_loss_pct: 2.0
+    critical_rtt_ms: 500.0
+    warning_rtt_ms: 200.0
+    critical_dropped_frames: 50
+    warning_dropped_frames: 20
+  
+  # Logging
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_retention_days: 30
+  audit_log_retention_days: 365  # Keep audit logs longer for compliance
+
+# Security Configuration
+security:
+  # Encryption
+  encrypt_stream_keys: true          # Encrypt stream keys at rest
+  encrypt_credentials: true          # Encrypt API credentials
+  
+  # Access Control
+  require_authentication: true       # Require auth for configuration changes
+  admin_users:
+    - "admin@ottawa.ca"
+    - "broadcast@ottawa.ca"
+  
+  # Network Security
+  allowed_ips:
+    - "192.168.1.0/24"              # Internal network
+    - "10.0.0.0/8"                  # VPN network
+  
+  # Audit
+  log_all_actions: true             # Log all configuration changes
+  require_approval: true            # Require approval for critical changes
+
+# Example Environment Variables (.env file)
+# Copy these to your .env file and fill in the actual values:
+#
+# YouTube Configuration
+# YOUTUBE_EN_STREAM_KEY=xxxx-xxxx-xxxx-xxxx-xxxx
+# YOUTUBE_FR_STREAM_KEY=yyyy-yyyy-yyyy-yyyy-yyyy
+# YOUTUBE_EN_CHANNEL_ID=UCxxxxxxxxxxxxxxxxxx
+# YOUTUBE_FR_CHANNEL_ID=UCyyyyyyyyyyyyyyyyyy
+# YOUTUBE_API_KEY=AIzaxxxxxxxxxxxxxxxxxxxxxxxxx
+#
+# YouTube Access Tokens (Optional)
+# YOUTUBE_EN_ACCESS_TOKEN=ya29.xxxxxxxxxxxxxxxxxxxxxx
+# YOUTUBE_FR_ACCESS_TOKEN=ya29.yyyyyyyyyyyyyyyyyyyyyy
+#
+# SRT Backup Configuration
+# SRT_RELAY_URL=srt://backup.miktos.com:9999
+# SRT_PASSPHRASE=secure_passphrase_here
+#
+# OBS WebSocket
+# OBS_WEBSOCKET_PASSWORD=secure_obs_password
+#
+# Security Keys
+# ENCRYPTION_KEY=your_32_character_encryption_key
+# JWT_SECRET=your_jwt_secret_key_here
