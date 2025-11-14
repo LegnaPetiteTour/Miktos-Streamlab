@@ -15,6 +15,11 @@ import android.util.Log
 import java.io.IOException
 import java.io.OutputStream
 import java.net.Socket
+import java.net.InetSocketAddress
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
+import android.content.Intent
 
 class CameraStreamer(
     private val context: Context,
@@ -28,6 +33,9 @@ class CameraStreamer(
     private var socket: Socket? = null
     private var outputStream: OutputStream? = null
     private var wakeLock: PowerManager.WakeLock? = null
+
+    // Connection health monitoring
+    private var heartbeatExecutor: ScheduledExecutorService? = null
     
     private var cameraThread: HandlerThread? = null
     private var cameraHandler: Handler? = null
@@ -86,6 +94,43 @@ class CameraStreamer(
         socket?.keepAlive = true
         outputStream = socket?.getOutputStream()
         Log.d(TAG, "Connected to server")
+        startConnectionHealthCheck()
+    }
+
+    private fun startConnectionHealthCheck() {
+        heartbeatExecutor = Executors.newSingleThreadScheduledExecutor()
+        
+        heartbeatExecutor?.scheduleAtFixedRate({
+            try {
+                if (socket?.isConnected == false || socket?.isClosed == true) {
+                    Log.e(TAG, "❌ Socket disconnected - notifying UI")
+                    cameraHandler?.post {
+                        onDisconnect()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Heartbeat check failed: ${e.message}")
+            }
+        }, 1, 2, TimeUnit.SECONDS) // Check every 2 seconds
+    }
+
+    private fun onDisconnect() {
+        Log.w(TAG, "Connection lost - updating UI state")
+        // Update internal state
+        isStreaming = false
+        
+        // Notify MainActivity via broadcast
+        val intent = Intent("com.miktos.STREAM_DISCONNECTED")
+        context.sendBroadcast(intent)
+        
+        // Clean up resources
+        cleanup()
+        statusCallback(false)
+    }
+
+    private fun stopHeartbeat() {
+        heartbeatExecutor?.shutdown()
+        heartbeatExecutor = null
     }
     
     private fun initializeEncoder() {
@@ -276,6 +321,9 @@ class CameraStreamer(
     
     private fun cleanup() {
         Log.d(TAG, "Cleaning up resources")
+        
+        // Stop heartbeat monitoring
+        stopHeartbeat()
         
         // Release wake lock first
         try {

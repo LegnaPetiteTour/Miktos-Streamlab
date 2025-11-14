@@ -12,6 +12,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 
 class MainActivity : AppCompatActivity() {
     
@@ -22,6 +26,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
     
     private var isStreaming = false
+
+    // Disconnect handling
+    private val disconnectReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.miktos.STREAM_DISCONNECTED") {
+                runOnUiThread {
+                    statusText.text = "❌ Disconnected"
+                    startButton.text = "RECONNECT"
+                    startButton.isEnabled = true
+                    isStreaming = false
+                }
+            }
+        }
+    }
     
     companion object {
         private const val REQUEST_CAMERA_PERMISSION = 200
@@ -33,6 +51,10 @@ class MainActivity : AppCompatActivity() {
         
         // Keep screen on during streaming to prevent camera disconnect
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        
+        // Register disconnect receiver
+        val filter = IntentFilter("com.miktos.STREAM_DISCONNECTED")
+        registerReceiver(disconnectReceiver, filter, RECEIVER_NOT_EXPORTED)
         
         // Initialize views
         previewView = findViewById(R.id.previewView)
@@ -140,6 +162,9 @@ class MainActivity : AppCompatActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
+        
+        // Unregister disconnect receiver
+        unregisterReceiver(disconnectReceiver)
         if (isStreaming) {
             stopStreaming()
         }
