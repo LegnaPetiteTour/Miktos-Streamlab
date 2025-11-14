@@ -1,5 +1,6 @@
 # 🎯 Miktos Streamlab
-**Professional Streaming Platform - Mobile + Desktop Unified Ecosystem**
+
+> Professional Streaming Platform - Mobile + Desktop Unified Ecosystem
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Swift](https://img.shields.io/badge/Swift-5.8+-orange.svg)](https://swift.org)
@@ -15,7 +16,8 @@
 
 Miktos Streamlab is a comprehensive streaming platform that bridges mobile convenience with professional broadcasting capabilities. It consists of native mobile apps (iOS & Android) that stream high-quality video to a powerful desktop platform for professional content creation and multi-destination broadcasting.
 
-### **🎯 Key Value Proposition**
+### 🎯 Key Value Proposition
+
 - **📱 Mobile Camera Apps** - Turn phones into professional streaming cameras
 - **🖥️ Desktop Broadcasting Platform** - Enterprise-grade streaming infrastructure  
 - **🔄 Seamless Integration** - Mobile streams directly integrate with desktop workflows
@@ -24,9 +26,10 @@ Miktos Streamlab is a comprehensive streaming platform that bridges mobile conve
 
 ---
 
-## ✨ **Features**
+## ✨ Features
 
-### � **Mobile Applications**
+### 📱 Mobile Applications
+
 - **iOS Native App** (Swift/SwiftUI)
   - Hardware-accelerated H.264 encoding via VideoToolbox
   - SRT protocol for low-latency streaming
@@ -39,7 +42,8 @@ Miktos Streamlab is a comprehensive streaming platform that bridges mobile conve
   - Background service for reliable streaming
   - Adaptive bitrate and resolution controls
 
-### 🖥️ **Desktop Platform** 
+### 🖥️ Desktop Platform
+
 - **Python Backend** (25,881+ lines)
   - FastAPI web server with real-time APIs
   - OBS Studio WebSocket integration
@@ -61,33 +65,37 @@ Miktos Streamlab is a comprehensive streaming platform that bridges mobile conve
 
 ---
 
-## 🚀 **Quick Start**
+## 🚀 Quick Start
 
-### **Prerequisites**
+### Prerequisites
+
 - **iOS Development:** Xcode 14+, iOS 15+
 - **Android Development:** Android Studio, API Level 24+
 - **Desktop Platform:** Python 3.14+, Node.js 24+
 - **Broadcasting:** OBS Studio 28+ (optional)
 
-### **1. Mobile App Development**
+### 1. Mobile App Development
 
 #### iOS Setup
+
 ```bash
 cd Mobile/iOS/Source/
 # Open in Xcode and follow Documentation/Mobile/ guides
 open StreamLabCamera.xcodeproj
 ```
 
-#### Android Setup  
+#### Android Setup
+
 ```bash
 cd Mobile/Android/
 # Open in Android Studio
 ./gradlew build
 ```
 
-### **2. Desktop Platform Setup**
+### 2. Desktop Platform Setup
 
 #### Backend
+
 ```bash
 cd Desktop/Backend/
 pip install -r requirements.txt
@@ -95,13 +103,15 @@ python3 main_hybrid.py  # Starts both desktop + web interfaces
 ```
 
 #### Web Interface
+
 ```bash
 cd Desktop/WebUI/
 npm install
 npm run dev  # Development server at http://localhost:5173
 ```
 
-### **3. Start Streaming**
+### 3. Start Streaming
+
 ```bash
 # Start desktop receiver
 cd Mobile/Receivers/
@@ -113,9 +123,9 @@ python3 android_receiver.py
 
 ---
 
-## 🏗️ **Architecture**
+## 🏗️ Architecture
 
-```
+```text
 ┌─────────────────┐    ┌──────────────────────┐    ┌─────────────────────┐
 │   📱 Mobile     │    │   🖥️ Desktop        │    │  📺 Broadcasting   │
 │   Applications  │───▶│   Platform           │───▶│  Destinations       │
@@ -127,7 +137,8 @@ python3 android_receiver.py
                        └─ NGINX RTMP               └─ Custom RTMP
 ```
 
-### **Data Flow**
+### Data Flow
+
 1. **Mobile Capture** → Camera → H.264 Encoder → SRT/TCP Stream
 2. **Desktop Reception** → Stream Decoder → Processing Pipeline → OBS
 3. **Broadcasting** → OBS → NGINX RTMP → Multiple Destinations
@@ -147,9 +158,9 @@ python3 android_receiver.py
 
 ---
 
-## 📂 **Project Structure**
+## 📂 Project Structure
 
-```
+```text
 Miktos-Streamlab/
 ├── 📱 Mobile/
 │   ├── iOS/                    # Swift streaming application
@@ -179,7 +190,8 @@ Miktos-Streamlab/
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-### **Development Workflow**
+### Development Workflow
+
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit changes (`git commit -m 'Add amazing feature'`)
