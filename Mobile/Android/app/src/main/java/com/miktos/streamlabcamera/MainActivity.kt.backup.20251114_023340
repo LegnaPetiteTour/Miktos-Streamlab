@@ -12,10 +12,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 
 class MainActivity : AppCompatActivity() {
     
@@ -26,32 +22,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
     
     private var isStreaming = false
-
-    // Disconnect handling
-    private val disconnectReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
-                "com.miktos.STREAM_DISCONNECTED" -> {
-                    val attempts = intent.getIntExtra("reconnect_attempts", 0)
-                    val maxAttempts = intent.getIntExtra("max_attempts", 3)
-                    runOnUiThread {
-                        statusText.text = "🔄 Disconnected - Reconnecting ($attempts/$maxAttempts)"
-                        startButton.text = "RECONNECTING..."
-                        startButton.isEnabled = false
-                        isStreaming = false
-                    }
-                }
-                "com.miktos.STREAM_FAILED" -> {
-                    runOnUiThread {
-                        statusText.text = "❌ Connection Failed - Max attempts reached"
-                        startButton.text = "RETRY"
-                        startButton.isEnabled = true
-                        isStreaming = false
-                    }
-                }
-            }
-        }
-    }
     
     companion object {
         private const val REQUEST_CAMERA_PERMISSION = 200
@@ -63,13 +33,6 @@ class MainActivity : AppCompatActivity() {
         
         // Keep screen on during streaming to prevent camera disconnect
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        
-        // Register disconnect receiver
-        val filter = IntentFilter().apply {
-            addAction("com.miktos.STREAM_DISCONNECTED")
-            addAction("com.miktos.STREAM_FAILED")
-        }
-        registerReceiver(disconnectReceiver, filter, RECEIVER_NOT_EXPORTED)
         
         // Initialize views
         previewView = findViewById(R.id.previewView)
@@ -177,9 +140,6 @@ class MainActivity : AppCompatActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
-        
-        // Unregister disconnect receiver
-        unregisterReceiver(disconnectReceiver)
         if (isStreaming) {
             stopStreaming()
         }

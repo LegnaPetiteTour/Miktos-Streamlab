@@ -36,16 +36,6 @@ class CameraStreamer(
 
     // Connection health monitoring
     private var heartbeatExecutor: ScheduledExecutorService? = null
-
-    // Advanced disconnect detection
-    private var lastWriteTime = System.currentTimeMillis()
-    private val DISCONNECT_TIMEOUT = 10_000 // 10 seconds
-    private var reconnectAttempts = 0
-    private val MAX_RECONNECT_ATTEMPTS = 3    
-
-    // Connection parameters for auto-reconnection
-    private var storedServerIp: String? = null
-    private var storedServerPort: Int? = null
     
     private var cameraThread: HandlerThread? = null
     private var cameraHandler: Handler? = null
@@ -63,10 +53,6 @@ class CameraStreamer(
     private val VIDEO_I_FRAME_INTERVAL = 2
     
     fun startStreaming(serverIp: String, serverPort: Int) {
-        // Store connection parameters for auto-reconnection
-        storedServerIp = serverIp
-        storedServerPort = serverPort
-        Log.d(TAG, "Connection parameters stored: $serverIp:$serverPort")
         // Acquire wake lock to keep camera alive
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
@@ -89,8 +75,7 @@ class CameraStreamer(
                 initializeEncoder()
                 startCamera2()
                 isStreaming = true
-                lastWriteTime = System.currentTimeMillis() // Initialize encoder stall tracking
-                reconnectAttempts = 0 // Reset reconnection counter                statusCallback(true)
+                statusCallback(true)
                 Log.d(TAG, "Streaming pipeline initialized")
                 
             } catch (e: Exception) {
@@ -117,83 +102,32 @@ class CameraStreamer(
         
         heartbeatExecutor?.scheduleAtFixedRate({
             try {
-                val currentTime = System.currentTimeMillis()
-                
-                // Check basic socket health
                 if (socket?.isConnected == false || socket?.isClosed == true) {
-                    Log.e(TAG, "❌ Socket disconnected - basic check failed")
+                    Log.e(TAG, "❌ Socket disconnected - notifying UI")
                     cameraHandler?.post {
                         onDisconnect()
                     }
-                    return@scheduleAtFixedRate
                 }
-                
-                // Check for encoder stall (no data sent for DISCONNECT_TIMEOUT)
-                if (currentTime - lastWriteTime > DISCONNECT_TIMEOUT) {
-                    Log.e(TAG, "❌ Encoder stall detected - no data for ${(currentTime - lastWriteTime)/1000}s")
-                    cameraHandler?.post {
-                        onDisconnect()
-                    }
-                }            } catch (e: Exception) {
+            } catch (e: Exception) {
                 Log.e(TAG, "Heartbeat check failed: ${e.message}")
             }
         }, 1, 2, TimeUnit.SECONDS) // Check every 2 seconds
     }
 
     private fun onDisconnect() {
-        Log.w(TAG, "Connection lost - attempting recovery (attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})")
-        
+        Log.w(TAG, "Connection lost - updating UI state")
         // Update internal state
         isStreaming = false
         
-        // Notify MainActivity via broadcast with reconnection status
+        // Notify MainActivity via broadcast
         val intent = Intent("com.miktos.STREAM_DISCONNECTED")
-        intent.putExtra("reconnect_attempts", reconnectAttempts)
-        intent.putExtra("max_attempts", MAX_RECONNECT_ATTEMPTS)
         context.sendBroadcast(intent)
         
-        // Clean up current resources
+        // Clean up resources
         cleanup()
         statusCallback(false)
-        
-        // Attempt auto-reconnection if within limits
-        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-            reconnectAttempts++
-            Log.i(TAG, "🔄 Auto-reconnecting in 3 seconds... (attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)")
-            
-            // Schedule reconnection after 3 second delay
-            cameraHandler?.postDelayed({
-                try {
-                    Log.i(TAG, "🚀 Attempting auto-reconnection...")
-                    lastWriteTime = System.currentTimeMillis() // Reset timer
-                    
-                    // Implement actual reconnection logic using stored parameters
-                    if (storedServerIp != null && storedServerPort != null) {
-                        Log.i(TAG, "Reconnecting to ${storedServerIp}:${storedServerPort}")
-                        startStreaming(storedServerIp!!, storedServerPort!!)
-                    } else {
-                        Log.e(TAG, "Cannot auto-reconnect: connection parameters not stored")
-                        onReconnectionFailed()
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Auto-reconnection failed: ${e.message}")
-                    onReconnectionFailed()
-                }
-            }, 3000)
-        } else {
-            Log.e(TAG, "❌ Max reconnection attempts ($MAX_RECONNECT_ATTEMPTS) reached - giving up")
-            val failIntent = Intent("com.miktos.STREAM_FAILED")
-            context.sendBroadcast(failIntent)
-        }
     }
 
-    private fun onReconnectionFailed() {
-        Log.w(TAG, "Reconnection attempt failed - treating as disconnect failure")
-        // Trigger the same failure logic as max attempts reached
-        val failIntent = Intent("com.miktos.STREAM_FAILED")
-        context.sendBroadcast(failIntent)
-    }
-    
     private fun stopHeartbeat() {
         heartbeatExecutor?.shutdown()
         heartbeatExecutor = null
@@ -350,7 +284,7 @@ class CameraStreamer(
                 // ALWAYS send codec config, and send keyframes + regular frames
                 if (isConfig || (info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0 || info.flags == 0) {
                     outputStream?.write(data)
-                    lastWriteTime = System.currentTimeMillis() // Track data transmission time                    outputStream?.flush()
+                    outputStream?.flush()
                     
                     when {
                         isConfig -> Log.d(TAG, "✅ Sent codec config (SPS/PPS): ${info.size} bytes")
