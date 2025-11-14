@@ -423,3 +423,6 @@ test_output/
 
 # Documentation build output
 docs/build/
+# Large video files (>100MB)
+*.h264
+**/video_samples/*.h264
