@@ -1,0 +1,68 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                                ║
+║           ANDROID STUDIO SETUP - QUICK REFERENCE               ║
+║                                                                ║
+╚═══════════════════════════════════════════════════════════════╝
+
+📋 CHECKLIST (check off as you complete):
+
+[ ] 1. Download Android Studio (1.2GB)
+      https://developer.android.com/studio
+      
+[ ] 2. Install to Applications folder
+
+[ ] 3. Run Setup Wizard (30-45 min)
+      - Standard install
+      - Accept licenses
+      - Download SDK (~4GB)
+      
+[ ] 4. Configure SDK Manager
+      - API 34, 33, 31
+      - Build tools
+      - Emulator
+      
+[ ] 5. Set Environment Variables
+      nano ~/.zshrc
+      Add:
+        export ANDROID_HOME=$HOME/Library/Android/sdk
+        export PATH=$PATH:$ANDROID_HOME/platform-tools
+      source ~/.zshrc
+      
+[ ] 6. Create Emulator (Pixel 6 API 34)
+
+[ ] 7. Enable USB Debugging on Phone
+      Settings → About → Tap Build Number 7x
+      Developer Options → USB Debugging ON
+      
+[ ] 8. Install Java JDK
+      brew install openjdk@17
+      
+[ ] 9. Verify Setup
+      adb devices
+      emulator -list-avds
+      java -version
+
+
+⚡ QUICK VERIFICATION COMMANDS:
+
+# Check everything is installed:
+adb --version              # Should work
+emulator -list-avds        # Should show Pixel_6_API_34
+java -version              # Should show openjdk 17
+adb devices                # Should show your phone if connected
+
+
+🎯 WHEN COMPLETE:
+
+Message me: "Android setup complete! Ready to build the app."
+
+I'll then create:
+✅ Native Kotlin camera app
+✅ Camera2 + MediaCodec H.264
+✅ TCP streaming to Mac
+✅ Build & deploy instructions
+
+
+📖 FULL GUIDE:
+
+See: 📱_ANDROID_SETUP_GUIDE.md

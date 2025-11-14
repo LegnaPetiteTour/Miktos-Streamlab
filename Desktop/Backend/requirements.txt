@@ -1,0 +1,67 @@
+# Miktos StreamLab - Python Dependencies
+
+# ============================================================================
+# Core Dependencies (Required)
+# ============================================================================
+
+# OBS Control
+obs-websocket-py==1.0
+
+# Configuration
+python-dotenv==1.0.0
+cryptography>=41.0.0  # For secure config encryption
+
+# Network & System Monitoring (Required by network.py)
+speedtest-cli==2.1.3
+psutil>=5.9.0  # For system/process monitoring
+
+# Web API & Real-time Communication
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+websockets>=12.0
+python-multipart>=0.0.6  # For file uploads if needed
+pydantic>=2.0.0  # Data validation
+
+# Desktop UI
+PySide6>=6.5.0  # Qt for Python - Desktop GUI framework
+qasync>=0.24.0  # Qt + asyncio integration
+
+# ============================================================================
+# Testing Dependencies (Required for Development)
+# ============================================================================
+
+# Testing framework
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.1
+
+# ============================================================================
+# Code Quality (Recommended)
+# ============================================================================
+
+# Linting and formatting
+black>=23.7.0
+flake8>=6.1.0
+mypy>=1.5.0
+
+# Type stubs (optional - commented out due to version availability)
+# types-python-dotenv  # Uncomment if needed for IDE type checking
+
+# ============================================================================
+# Optional: AI Transcription (install when ready for Week 7+)
+# ============================================================================
+# openai-whisper==20231117
+# torch==2.1.0
+
+# ============================================================================
+# Optional: Video Processing (install when ready for Week 4+)
+# ============================================================================
+# ffmpeg-python==0.2.0
+
+# ============================================================================
+# Optional: SRT Protocol (install when ready for Week 3)
+# ============================================================================
+# Note: Requires libsrt installed on system first
+# pip install srt
+# or for macOS: brew install srt

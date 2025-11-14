@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Camera Permission -->
+    <key>NSCameraUsageDescription</key>
+    <string>StreamLab Camera needs access to your camera to stream live video to your computer.</string>
+    
+    <!-- Microphone Permission (for future audio support) -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>StreamLab Camera needs access to your microphone to stream live audio to your computer.</string>
+    
+    <!-- Local Network Permission (iOS 14+) -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>StreamLab Camera needs access to your local network to connect to your streaming server.</string>
+    
+    <!-- Bonjour services (for network discovery) -->
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_srt._udp</string>
+    </array>
+    
+    <!-- Allow arbitrary loads for local network streaming -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
+    
+    <!-- Background modes (keep streaming when app goes to background) -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>audio</string>
+        <string>processing</string>
+    </array>
+    
+    <!-- Supported orientations -->
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    
+    <!-- Status bar style -->
+    <key>UIStatusBarStyle</key>
+    <string>UIStatusBarStyleLightContent</string>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <false/>
+    
+    <!-- Prevent device from sleeping during streaming -->
+    <key>UIApplicationExitsOnSuspend</key>
+    <false/>
+    
+    <!-- Launch screen -->
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+</dict>
+</plist>
