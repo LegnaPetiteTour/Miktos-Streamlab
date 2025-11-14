@@ -7,13 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Planned
+
 - Initial release preparation
 - GitHub repository setup
 
 ## [1.0.0] - 2025-11-13
 
 ### Added
+
 - **iOS Mobile App** - Native Swift streaming application
   - Hardware-accelerated H.264 encoding via VideoToolbox
   - SRT protocol support for low-latency streaming
@@ -52,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Desktop deployment instructions
 
 ### Technical Details
+
 - **Total Codebase:** 28,618+ lines of production code
 - **Languages:** Swift, Kotlin, Python, TypeScript/React
 - **Platforms:** iOS 15+, Android API 24+, Python 3.14+, Node.js 24+
@@ -59,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Protocols:** SRT, TCP/UDP, H.264, WebSocket
 
 ### Infrastructure
+
 - **Mobile → Desktop → Broadcasting** architecture
 - **Real-time streaming** with sub-second latency
 - **Multi-platform output** (YouTube, Twitch, Facebook Live, Custom RTMP)
@@ -74,18 +78,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 This is the initial production release of Miktos Streamlab, representing months of development and thousands of lines of code across multiple platforms.
 
 **What's Included:**
+
 - Complete mobile streaming applications for iOS and Android
 - Professional desktop streaming platform with web interface
 - Full documentation and deployment guides
 - Production-ready broadcasting infrastructure
 
 **Perfect for:**
+
 - Content creators seeking professional mobile streaming
 - Broadcasters needing multi-platform streaming
 - Developers building streaming applications
 - Organizations requiring custom streaming solutions
 
 **Next Steps:**
+
 - Mobile app marketplace distribution
 - Cloud-based processing pipeline
 - Multi-camera synchronization features
@@ -93,4 +100,4 @@ This is the initial production release of Miktos Streamlab, representing months 
 
 ---
 
-**GitHub Repository:** https://github.com/LegnaPetiteTour/Miktos-Streamlab
+**GitHub Repository:** <https://github.com/LegnaPetiteTour/Miktos-Streamlab>
