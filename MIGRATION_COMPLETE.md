@@ -1,6 +1,9 @@
-#!/bin/bash
 # Miktos Migration Completion Script
-# This script helps you finalize the migration from old structure to new unified Miktos structure
+
+This script helps you finalize the migration from old structure to new unified Miktos structure
+
+```bash
+#!/bin/bash
 
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║                                                                ║"
@@ -19,7 +22,7 @@ echo "   │   └── Receivers/      ← Desktop receivers"
 echo "   ├── Desktop/            ← Professional platform"  
 echo "   │   ├── Backend/        ← Python streaming core"
 echo "   │   ├── WebUI/          ← Browser interface"
-echo "   │   ├── OBS-Integration/ ← Broadcasting tools" 
+echo "   │   ├── OBS-Integration/ ← Broadcasting tools"
 echo "   │   └── Infrastructure/ ← Server setup"
 echo "   ├── Documentation/      ← All guides organized"
 echo "   ├── Scripts/            ← Build & utility scripts"
@@ -75,3 +78,4 @@ echo ""
 echo "🎉 MIGRATION COMPLETE!"
 echo "   Your Miktos unified project is ready for development!"
 echo ""
+```
