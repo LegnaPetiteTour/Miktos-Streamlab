@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miktos StreamLab - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🎥 Miktos StreamLab</h1>
+            <div class="header-controls">
+                <button id="theme-toggle" class="theme-toggle" title="Toggle theme">🌙</button>
+                <div class="header-status">
+                    <span id="connection-status" class="status-badge disconnected">Disconnected</span>
+                    <span id="stream-status" class="status-badge unknown">Unknown</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main>
+            <!-- Top Level Status -->
+            <section class="status-section">
+                <div class="status-card">
+                    <h2>Stream Status</h2>
+                    <div class="status-indicator">
+                        <div id="streaming-indicator" class="indicator unknown"></div>
+                        <span id="streaming-text">Checking...</span>
+                    </div>
+                    <div class="status-detail">
+                        <span id="uptime-text">Uptime: --</span>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <h2>Failover State</h2>
+                    <div class="status-indicator">
+                        <div id="failover-indicator" class="indicator unknown"></div>
+                        <span id="failover-text">Checking...</span>
+                    </div>
+                    <div class="status-detail">
+                        <span id="failover-detail">--</span>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <h2>Overall Health</h2>
+                    <div class="status-indicator">
+                        <div id="health-indicator" class="indicator unknown"></div>
+                        <span id="health-text">Checking...</span>
+                    </div>
+                    <div id="health-issues" class="status-detail">
+                        No issues
+                    </div>
+                </div>
+            </section>
+
+            <!-- Metrics Grid -->
+            <section class="metrics-section">
+                <h2>Live Metrics</h2>
+                <div class="metrics-grid">
+                    <!-- Bitrate Card -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">📊</span>
+                            <span class="metric-title">Bitrate</span>
+                        </div>
+                        <div class="metric-value">
+                            <span id="bitrate-value">--</span>
+                            <span class="metric-unit">kbps</span>
+                        </div>
+                        <div class="metric-stats">
+                            <span class="stat-label">Avg:</span>
+                            <span id="bitrate-avg">--</span>
+                        </div>
+                    </div>
+
+                    <!-- FPS Card -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">🎬</span>
+                            <span class="metric-title">Framerate</span>
+                        </div>
+                        <div class="metric-value">
+                            <span id="fps-value">--</span>
+                            <span class="metric-unit">fps</span>
+                        </div>
+                        <div class="metric-stats">
+                            <span class="stat-label">Avg:</span>
+                            <span id="fps-avg">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Drop Rate Card -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">⚠️</span>
+                            <span class="metric-title">Drop Rate</span>
+                        </div>
+                        <div class="metric-value">
+                            <span id="drop-value">--</span>
+                            <span class="metric-unit">%</span>
+                        </div>
+                        <div class="metric-stats">
+                            <span class="stat-label">Avg:</span>
+                            <span id="drop-avg">--</span>
+                        </div>
+                    </div>
+
+                    <!-- CPU Card -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-icon">💻</span>
+                            <span class="metric-title">CPU Usage</span>
+                        </div>
+                        <div class="metric-value">
+                            <span id="cpu-value">--</span>
+                            <span class="metric-unit">%</span>
+                        </div>
+                        <div class="metric-stats">
+                            <span class="stat-label">Avg:</span>
+                            <span id="cpu-avg">--</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Section (placeholder for Week 9-10) -->
+            <section class="charts-section">
+                <h2>Historical Charts</h2>
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Bitrate & FPS</h3>
+                        <canvas id="bitrate-chart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>CPU & Drop Rate</h3>
+                        <canvas id="system-chart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Actions -->
+            <section class="actions-section">
+                <button id="export-csv" class="action-btn">Export CSV</button>
+                <button id="export-json" class="action-btn">Export JSON</button>
+                <button id="export-html" class="action-btn">Export Report</button>
+                <button id="config-alerts" class="action-btn primary">Configure Alerts</button>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer>
+            <p>Miktos StreamLab Dashboard - Week 9-10 Implementation</p>
+            <p id="last-update">Last update: --</p>
+        </footer>
+    </div>
+
+    <!-- Alert Configuration Modal -->
+    <div id="alert-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Configure Alerts</h2>
+                <button id="close-modal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert-setting">
+                    <label for="cpu-threshold">CPU Usage Threshold (%)</label>
+                    <input type="number" id="cpu-threshold" min="0" max="100" value="75">
+                    <span class="help-text">Alert when CPU exceeds this value</span>
+                </div>
+                
+                <div class="alert-setting">
+                    <label for="bitrate-threshold">Minimum Bitrate (kbps)</label>
+                    <input type="number" id="bitrate-threshold" min="0" value="2000">
+                    <span class="help-text">Alert when bitrate drops below this value</span>
+                </div>
+                
+                <div class="alert-setting">
+                    <label for="drop-threshold">Drop Rate Threshold (%)</label>
+                    <input type="number" id="drop-threshold" min="0" max="100" step="0.1" value="1.0">
+                    <span class="help-text">Alert when drop rate exceeds this value</span>
+                </div>
+                
+                <div class="alert-setting">
+                    <label for="fps-threshold">Minimum FPS</label>
+                    <input type="number" id="fps-threshold" min="0" max="120" value="25">
+                    <span class="help-text">Alert when FPS drops below this value</span>
+                </div>
+                
+                <div class="alert-setting">
+                    <label>
+                        <input type="checkbox" id="alert-enabled" checked>
+                        Enable Alerts
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-alerts" class="action-btn primary">Save Settings</button>
+                <button id="cancel-alerts" class="action-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>

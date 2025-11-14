@@ -1,0 +1,100 @@
+# Miktos Streamlab - Git Attributes Configuration
+# ==============================================
+
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Source code
+*.py text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.swift text eol=lf
+*.kt text eol=lf
+*.java text eol=lf
+
+# Configuration files
+*.yml text eol=lf
+*.yaml text eol=lf
+*.xml text eol=lf
+*.plist text eol=lf
+*.conf text eol=lf
+*.config text eol=lf
+*.ini text eol=lf
+
+# Web files
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.sass text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+*.rst text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mp4 binary
+*.mov binary
+*.avi binary
+*.mp3 binary
+*.wav binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.dmg binary
+*.app binary
+*.ipa binary
+*.apk binary
+
+# Archives
+*.7z binary
+*.gz binary
+*.jar binary
+*.rar binary
+*.tar binary
+*.zip binary
+
+# Fonts
+*.ttf binary
+*.eot binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+
+# Xcode
+*.pbxproj merge=union
+*.xcworkspacedata merge=union
+*.xcscheme merge=union
+
+# Android
+*.gradle text eol=lf
+gradle.properties text eol=lf
+gradlew text eol=lf
+*.pro text eol=lf
+
+# Linguist overrides for GitHub language detection
+*.swift linguist-language=Swift
+*.kt linguist-language=Kotlin
+*.py linguist-language=Python
+*.ts linguist-language=TypeScript
+*.js linguist-language=JavaScript
+
+# Mark generated files
+**/build/** linguist-generated=true
+**/dist/** linguist-generated=true
+**/node_modules/** linguist-generated=true
+**/*.min.js linguist-generated=true
+**/*.min.css linguist-generated=true
