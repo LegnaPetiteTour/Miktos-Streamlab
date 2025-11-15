@@ -6,7 +6,7 @@ Provides Facebook Live streaming with Graph API integration.
 
 import logging
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, UTC
 import httpx
 
 from core.streaming_platform import (
@@ -162,7 +162,7 @@ class FacebookLive(StreamingPlatform):
                 platform="Facebook",
                 status=StreamStatus.LIVE,
                 health=StreamHealth.UNKNOWN,
-                started_at=datetime.utcnow()
+                started_at=datetime.now(UTC)
             )
 
             logger.info(
@@ -204,7 +204,7 @@ class FacebookLive(StreamingPlatform):
             if response.status_code == 200:
                 if self.stream_info:
                     self.stream_info.status = StreamStatus.OFFLINE
-                    self.stream_info.ended_at = datetime.utcnow()
+                    self.stream_info.ended_at = datetime.now(UTC)
 
                 logger.info(
                     f"Facebook Live stream stopped: {self.video_id}"
@@ -297,7 +297,7 @@ class FacebookLive(StreamingPlatform):
                 if self.stream_info and self.stream_info.started_at:
                     uptime = int(
                         (
-                            datetime.utcnow() -
+                            datetime.now(UTC) -
                             self.stream_info.started_at
                         ).total_seconds()
                     )

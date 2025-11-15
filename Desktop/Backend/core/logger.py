@@ -6,7 +6,7 @@ import logging
 import sys
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, UTC
 from logging.handlers import RotatingFileHandler
 from typing import Any, Dict
 
@@ -16,7 +16,7 @@ class JSONFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         log_data = {
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(UTC).isoformat() + 'Z',
             'level': record.levelname,
             'logger': record.name,
             'message': record.getMessage(),
@@ -170,7 +170,7 @@ class StreamLogger:
         with open(stream_log, 'w') as f:
             json.dump({
                 'event': 'start',
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': datetime.now(UTC).isoformat(),
                 'channels': channels,
                 'metadata': metadata
             }, f, indent=2)

@@ -4,10 +4,10 @@ Tests for YouTube Live Integration
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
+from datetime import datetime, UTC
 
-from src.core.youtube_live import YouTubeLive
-from src.core.streaming_platform import (
+from core.youtube_live import YouTubeLive
+from core.streaming_platform import (
     PlatformConfig,
     StreamStatus,
     StreamHealth
@@ -219,7 +219,7 @@ class TestYouTubeStreamStop:
     @pytest.mark.asyncio
     async def test_successful_stream_stop(self, youtube_platform):
         """Test successful stream stop"""
-        from src.core.streaming_platform import StreamInfo
+        from core.streaming_platform import StreamInfo
 
         youtube_platform.broadcast_id = 'broadcast-123'
         youtube_platform.stream_info = StreamInfo(
@@ -227,7 +227,7 @@ class TestYouTubeStreamStop:
             platform='YouTube',
             status=StreamStatus.LIVE,
             health=StreamHealth.GOOD,
-            started_at=datetime.utcnow()
+            started_at=datetime.now(UTC)
         )
 
         mock_response = MagicMock()
@@ -290,7 +290,7 @@ class TestYouTubeMetrics:
         """Test metrics with data"""
         youtube_platform.broadcast_id = 'broadcast-123'
         youtube_platform.stream_info = MagicMock()
-        youtube_platform.stream_info.started_at = datetime.utcnow()
+        youtube_platform.stream_info.started_at = datetime.now(UTC)
 
         mock_response = MagicMock()
         mock_response.status_code = 200

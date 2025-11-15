@@ -4,13 +4,13 @@ Tests for the preflight validation system.
 
 import pytest
 
-from src.core.preflight import (
+from core.preflight import (
     PreflightResult,
     PreflightStatus,
     PreflightValidator,
     ValidationCheck,
 )
-from src.core.preflight.models import CheckResult
+from core.preflight.models import CheckResult
 
 
 class TestPreflightModels:

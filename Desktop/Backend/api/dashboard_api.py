@@ -13,8 +13,8 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.core.health_metrics import HealthAggregator
-from src.core.logger import get_logger
+from core.health_metrics import HealthAggregator
+from core.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -367,9 +367,13 @@ class DashboardAPI:
         # Add metric cards
         for name, series in metrics.items():
             current = series.samples[-1].value if series.samples else 0
-            avg = series.get_average()
+            avg = series.get_average() or 0
             min_val, max_val = series.get_min_max()
             trend = series.get_trend()
+
+            # Handle None values for min/max
+            min_val = min_val if min_val is not None else 0
+            max_val = max_val if max_val is not None else 0
 
             # Trend emoji
             if trend == "rising":

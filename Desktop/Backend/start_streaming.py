@@ -15,8 +15,8 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 # Load environment variables
 load_dotenv()
 
-from src.obs_controller import OBSController  # noqa: E402
-from src.core.egress_v2 import (  # noqa: E402
+from obs_controller import OBSController  # noqa: E402
+from core.egress_v2 import (  # noqa: E402
     EgressManagerV2,
     EgressConfig,
 )

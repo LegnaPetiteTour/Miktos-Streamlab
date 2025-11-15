@@ -126,10 +126,15 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=src --cov-report=html --cov-report=term"
+addopts = "-v --cov=core --cov=api --cov-report=html --cov-report=term"
+pythonpath = ["."]
+filterwarnings = [
+    "ignore::DeprecationWarning:speedtest.*:",
+    "ignore:datetime.datetime.utcnow.*:DeprecationWarning:speedtest.*",
+]
 
 [tool.coverage.run]
-source = ["src"]
+source = ["core", "api", "."]
 omit = ["*/tests/*", "*/test_*.py"]
 
 [tool.coverage.report]

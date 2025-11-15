@@ -4,7 +4,7 @@ Tests for configuration management
 import pytest
 from pathlib import Path
 import os
-from src.core.config import ConfigManager, OBSConfig, StreamConfig, AIConfig
+from core.config import ConfigManager, OBSConfig, StreamConfig, AIConfig
 
 
 class TestConfigManager:

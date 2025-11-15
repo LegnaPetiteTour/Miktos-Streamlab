@@ -4,10 +4,10 @@ Tests for Twitter/X Live Integration
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
+from datetime import datetime, UTC
 
-from src.core.twitter_live import TwitterLive
-from src.core.streaming_platform import (
+from core.twitter_live import TwitterLive
+from core.streaming_platform import (
     PlatformConfig,
     StreamStatus,
     StreamHealth
@@ -173,7 +173,7 @@ class TestTwitterStreamStop:
     @pytest.mark.asyncio
     async def test_successful_stream_stop(self, twitter_platform):
         """Test successful stream stop"""
-        from src.core.streaming_platform import StreamInfo
+        from core.streaming_platform import StreamInfo
 
         twitter_platform.broadcast_id = 'broadcast-123'
         twitter_platform.stream_info = StreamInfo(
@@ -181,7 +181,7 @@ class TestTwitterStreamStop:
             platform='Twitter',
             status=StreamStatus.LIVE,
             health=StreamHealth.GOOD,
-            started_at=datetime.utcnow()
+            started_at=datetime.now(UTC)
         )
 
         mock_response = MagicMock()
@@ -242,7 +242,7 @@ class TestTwitterMetrics:
         """Test metrics with data"""
         twitter_platform.broadcast_id = 'broadcast-123'
         twitter_platform.stream_info = MagicMock()
-        twitter_platform.stream_info.started_at = datetime.utcnow()
+        twitter_platform.stream_info.started_at = datetime.now(UTC)
 
         mock_response = MagicMock()
         mock_response.status_code = 200

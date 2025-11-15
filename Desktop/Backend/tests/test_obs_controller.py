@@ -83,7 +83,7 @@ sys.modules['obswebsocket'] = MagicMock()
 sys.modules['obswebsocket.requests'] = MagicMock()
 sys.modules['obswebsocket.exceptions'] = MagicMock()
 
-from src.obs_controller import (
+from obs_controller import (
     OBSController,
     OBSStatus,
     StreamingStatus,
@@ -102,21 +102,32 @@ def mock_obs_response():
 
 @pytest.fixture
 def controller():
-    """Create OBS controller instance"""
-    with patch('src.obs_controller.obsws'):
+    """Create OBS controller instance with cleanup"""
+    with patch('obs_controller.obsws'):
         ctrl = OBSController(
             host='localhost',
             port=4455,
             password='test_password',
             auto_reconnect=False
         )
-        return ctrl
+        yield ctrl
+        
+        # Cleanup after test - cancel any background tasks
+        if hasattr(ctrl, '_health_check_task') and ctrl._health_check_task:
+            ctrl._health_check_task.cancel()
+            ctrl._health_check_task = None
+        if hasattr(ctrl, '_reconnect_task') and ctrl._reconnect_task:
+            ctrl._reconnect_task.cancel()
+            ctrl._reconnect_task = None
+        # Reset status
+        ctrl.status = OBSStatus.DISCONNECTED
+        ctrl.ws = None
 
 
 @pytest.fixture
 def connected_controller():
-    """Create a connected OBS controller"""
-    with patch('src.obs_controller.obsws') as mock_ws:
+    """Create a connected OBS controller with cleanup"""
+    with patch('obs_controller.obsws') as mock_ws:
         # Mock successful connection
         mock_instance = MagicMock()
         mock_ws.return_value = mock_instance
@@ -132,7 +143,18 @@ def connected_controller():
         ctrl.ws = mock_instance
         ctrl.status = OBSStatus.CONNECTED
         
-        return ctrl
+        yield ctrl
+        
+        # Cleanup after test - cancel any background tasks
+        if hasattr(ctrl, '_health_check_task') and ctrl._health_check_task:
+            ctrl._health_check_task.cancel()
+            ctrl._health_check_task = None
+        if hasattr(ctrl, '_reconnect_task') and ctrl._reconnect_task:
+            ctrl._reconnect_task.cancel()
+            ctrl._reconnect_task = None
+        # Reset status
+        ctrl.status = OBSStatus.DISCONNECTED
+        ctrl.ws = None
 
 
 # ============================================================================
@@ -145,7 +167,11 @@ class TestConnection:
     @pytest.mark.asyncio
     async def test_successful_connection(self, controller):
         """Test successful connection to OBS"""
-        with patch.object(controller, 'ws', MagicMock()):
+        with patch('obs_controller.obsws') as mock_ws:
+            # Mock successful WebSocket connection
+            mock_instance = MagicMock()
+            mock_ws.return_value = mock_instance
+            
             result = await controller.connect()
             
             assert result is True
@@ -154,7 +180,7 @@ class TestConnection:
     @pytest.mark.asyncio
     async def test_connection_failure(self, controller):
         """Test connection failure handling"""
-        with patch('src.obs_controller.obsws') as mock_ws:
+        with patch('obs_controller.obsws') as mock_ws:
             mock_ws.side_effect = ConnectionFailure("Connection refused")
             
             controller.auto_reconnect = False
@@ -184,7 +210,7 @@ class TestConnection:
         """Test that auto reconnect doesn't start when disabled"""
         controller.auto_reconnect = False
         
-        with patch('src.obs_controller.obsws') as mock_ws:
+        with patch('obs_controller.obsws') as mock_ws:
             mock_ws.side_effect = ConnectionFailure("Connection refused")
             
             await controller.connect()
@@ -196,10 +222,18 @@ class TestConnection:
         """Test that health monitoring starts on successful connection"""
         controller.auto_reconnect = True
         
-        with patch.object(controller, 'ws', MagicMock()):
-            with patch.object(controller, '_health_monitor', new_callable=AsyncMock):
-                await controller.connect()
+        with patch('obs_controller.obsws') as mock_ws:
+            # Mock successful WebSocket connection
+            mock_instance = MagicMock()
+            mock_ws.return_value = mock_instance
+            
+            with patch.object(controller, '_health_monitor',
+                              new_callable=AsyncMock):
+                result = await controller.connect()
                 
+                # Should connect successfully
+                assert result is True
+                assert controller.status == OBSStatus.CONNECTED
                 # Health check task should be created
                 assert controller._health_check_task is not None
 
@@ -590,7 +624,7 @@ class TestIntegration:
     async def test_error_recovery(self, controller):
         """Test error recovery and resilience"""
         # Fail to connect
-        with patch('src.obs_controller.obsws') as mock_ws:
+        with patch('obs_controller.obsws') as mock_ws:
             mock_ws.side_effect = ConnectionFailure("Connection refused")
             
             result = await controller.connect()

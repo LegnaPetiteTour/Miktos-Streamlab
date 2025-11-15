@@ -3,7 +3,7 @@ Tests for AI transcription
 """
 import pytest
 from pathlib import Path
-from src.core.transcription import TranscriptSegment, Transcript
+from core.transcription import TranscriptSegment, Transcript
 
 
 class TestTranscriptSegment:

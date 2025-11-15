@@ -4,7 +4,7 @@ Tests for audio monitoring.
 
 import pytest
 
-from src.core.preflight.audio import AudioCheckResult, AudioLevelSample, AudioMonitor
+from core.preflight.audio import AudioCheckResult, AudioLevelSample, AudioMonitor
 
 
 class TestAudioDataClasses:

@@ -8,7 +8,7 @@ if the system is ready for streaming.
 
 import asyncio
 
-from src.core.preflight import PreflightValidator
+from core.preflight import PreflightValidator
 
 
 async def main() -> None:

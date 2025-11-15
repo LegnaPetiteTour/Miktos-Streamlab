@@ -8,20 +8,20 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.core.backup_recorder import BackupConfig, BackupRecorder
-from src.core.ffmpeg_recorder import FFmpegRecorder
-from src.core.iso_recording import (
+from core.backup_recorder import BackupConfig, BackupRecorder
+from core.ffmpeg_recorder import FFmpegRecorder
+from core.iso_recording import (
     ISORecordingManager,
     RecordingState,
     SessionConfig,
 )
-from src.core.performance_optimizer import (
+from core.performance_optimizer import (
     PerformanceOptimizer,
     PerformanceProfile,
 )
-from src.core.recovery_manager import RecoveryManager
-from src.core.storage_manager import StorageManager
-from src.core.timecode_sync import TimecodeSync
+from core.recovery_manager import RecoveryManager
+from core.storage_manager import StorageManager
+from core.timecode_sync import TimecodeSync
 
 
 class TestISORecordingManager:

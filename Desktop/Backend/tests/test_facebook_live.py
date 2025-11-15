@@ -4,10 +4,10 @@ Tests for Facebook Live Integration
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
+from datetime import datetime, UTC
 
-from src.core.facebook_live import FacebookLive
-from src.core.streaming_platform import (
+from core.facebook_live import FacebookLive
+from core.streaming_platform import (
     PlatformConfig,
     StreamStatus,
     StreamHealth
@@ -199,7 +199,7 @@ class TestFacebookStreamStop:
     @pytest.mark.asyncio
     async def test_successful_stream_stop(self, facebook_platform):
         """Test successful stream stop"""
-        from src.core.streaming_platform import StreamInfo
+        from core.streaming_platform import StreamInfo
 
         facebook_platform.video_id = 'video-123'
         facebook_platform.stream_info = StreamInfo(
@@ -207,7 +207,7 @@ class TestFacebookStreamStop:
             platform='Facebook',
             status=StreamStatus.LIVE,
             health=StreamHealth.GOOD,
-            started_at=datetime.utcnow()
+            started_at=datetime.now(UTC)
         )
 
         mock_response = MagicMock()
@@ -268,7 +268,7 @@ class TestFacebookMetrics:
         """Test metrics with data"""
         facebook_platform.video_id = 'video-123'
         facebook_platform.stream_info = MagicMock()
-        facebook_platform.stream_info.started_at = datetime.utcnow()
+        facebook_platform.stream_info.started_at = datetime.now(UTC)
 
         mock_response = MagicMock()
         mock_response.status_code = 200

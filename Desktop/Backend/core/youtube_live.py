@@ -7,7 +7,7 @@ Provides YouTube Live streaming with API integration.
 import logging
 import asyncio
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, UTC
 import httpx
 
 from core.streaming_platform import (
@@ -181,7 +181,7 @@ class YouTubeLive(StreamingPlatform):
                 platform="YouTube",
                 status=StreamStatus.STARTING,
                 health=StreamHealth.UNKNOWN,
-                started_at=datetime.utcnow(),
+                started_at=datetime.now(UTC),
                 metrics=StreamMetrics()
             )
 
@@ -230,7 +230,7 @@ class YouTubeLive(StreamingPlatform):
             if response.status_code == 200:
                 if self.stream_info:
                     self.stream_info.status = StreamStatus.OFFLINE
-                    self.stream_info.ended_at = datetime.utcnow()
+                    self.stream_info.ended_at = datetime.now(UTC)
 
                 logger.info(
                     f"YouTube stream stopped: {self.broadcast_id}"
@@ -330,7 +330,7 @@ class YouTubeLive(StreamingPlatform):
                     if self.stream_info and self.stream_info.started_at:
                         uptime = int(
                             (
-                                datetime.utcnow() -
+                                datetime.now(UTC) -
                                 self.stream_info.started_at
                             ).total_seconds()
                         )
@@ -422,7 +422,7 @@ class YouTubeLive(StreamingPlatform):
         try:
             # Default to immediate start
             if not scheduled_start_time:
-                scheduled_start_time = datetime.utcnow()
+                scheduled_start_time = datetime.now(UTC)
 
             broadcast_data = {
                 "snippet": {

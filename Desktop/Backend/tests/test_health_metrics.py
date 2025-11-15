@@ -8,7 +8,7 @@ Part of Week 9-10 dashboard implementation.
 from datetime import datetime
 from unittest.mock import Mock
 
-from src.core.health_metrics import (
+from core.health_metrics import (
     HealthAggregator,
     MetricSample,
     MetricSeries,
@@ -73,8 +73,8 @@ def test_metric_series_trend_rising():
     """Test trend detection - rising"""
     series = MetricSeries(name="test", unit="unit")
 
-    # Add rising trend
-    for i in range(10):
+    # Add rising trend - need at least 30 samples for trend detection
+    for i in range(40):
         series.add(float(i * 10))
 
     trend = series.get_trend()
@@ -85,9 +85,10 @@ def test_metric_series_trend_falling():
     """Test trend detection - falling"""
     series = MetricSeries(name="test", unit="unit")
 
-    # Add falling trend
-    for i in range(10):
-        series.add(100.0 - float(i * 10))
+    # Add falling trend - need at least 30 samples for trend detection
+    # Generate values from 1000 down to 600 (avoiding negatives)
+    for i in range(40):
+        series.add(1000.0 - float(i * 10))
 
     trend = series.get_trend()
     assert trend == "falling"
@@ -155,7 +156,7 @@ def test_health_aggregator_metrics():
 
     # Check that all expected metrics are created
     expected_metrics = [
-        "bitrate",
+        "bitrate_kbps",
         "fps",
         "cpu_usage",
         "gpu_usage",
@@ -279,11 +280,11 @@ def test_get_metric_series():
     )
 
     # Add some data
-    aggregator.metrics["bitrate"].add(3000.0)
+    aggregator.metrics["bitrate_kbps"].add(3000.0)
 
-    series = aggregator.get_metric_series("bitrate")
+    series = aggregator.get_metric_series("bitrate_kbps")
     assert series is not None
-    assert series.name == "bitrate"
+    assert series.name == "Bitrate"
     assert len(series.samples) == 1
 
 
@@ -301,5 +302,5 @@ def test_get_all_metrics():
 
     assert isinstance(all_metrics, dict)
     assert len(all_metrics) > 0
-    assert "bitrate" in all_metrics
+    assert "bitrate_kbps" in all_metrics
     assert "fps" in all_metrics

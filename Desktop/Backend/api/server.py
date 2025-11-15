@@ -7,6 +7,7 @@ endpoints.
 
 import asyncio
 import sys
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List
@@ -19,10 +20,62 @@ from pydantic import BaseModel
 sys.path.append(str(Path(__file__).parent.parent))
 from obs_controller import OBSController, OBSStatus  # noqa: E402
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events"""
+    global obs_controller
+
+    # Startup
+    # If obs_controller is already set by main_hybrid.py, use it
+    if obs_controller is not None:
+        print("🔗 Using shared OBS controller from main application")
+        print("🚀 Miktos StreamLab API started")
+        print("📡 Server running on http://localhost:8000")
+        print("📚 API docs available at http://localhost:8000/docs")
+    else:
+        # Otherwise, create our own connection (standalone mode)
+        try:
+            obs_controller = OBSController(
+                host="localhost",
+                port=4455,
+                password="",  # Set your OBS WebSocket password here if needed
+                auto_reconnect=True,
+            )
+
+            # Attempt to connect to OBS
+            connected = await obs_controller.connect()
+            if connected:
+                print("✅ Connected to OBS Studio")
+            else:
+                print("⚠️  Could not connect to OBS Studio - API will return mock data")
+                print("   Make sure OBS Studio is running with WebSocket server enabled")
+                obs_controller = None
+        except Exception as e:
+            print(f"⚠️  Error initializing OBS connection: {e}")
+            print("   API will return mock data until OBS is connected")
+            obs_controller = None
+
+        print("🚀 Miktos StreamLab API started")
+        print("📡 Server running on http://localhost:8000")
+        print("📚 API docs available at http://localhost:8000/docs")
+    
+    yield  # This is where the application runs
+
+    # Shutdown
+    if obs_controller:
+        try:
+            await obs_controller.disconnect()
+            print("✅ Disconnected from OBS Studio")
+        except Exception as e:
+            print(f"⚠️  Error during shutdown: {e}")
+
+
 app = FastAPI(
     title="Miktos StreamLab API",
     description="REST API for OBS streaming control and monitoring",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Enable CORS for web UI
@@ -359,59 +412,6 @@ def set_obs_controller(controller: Optional[OBSController]) -> None:
     """Set the OBS controller instance for the API to use"""
     global obs_controller
     obs_controller = controller
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Initialize OBS controller on startup"""
-    global obs_controller
-
-    # If obs_controller is already set by main_hybrid.py, use it
-    if obs_controller is not None:
-        print("🔗 Using shared OBS controller from main application")
-        print("🚀 Miktos StreamLab API started")
-        print("📡 Server running on http://localhost:8000")
-        print("📚 API docs available at http://localhost:8000/docs")
-        return
-
-    # Otherwise, create our own connection (standalone mode)
-    try:
-        obs_controller = OBSController(
-            host="localhost",
-            port=4455,
-            password="",  # Set your OBS WebSocket password here if needed
-            auto_reconnect=True,
-        )
-
-        # Attempt to connect to OBS
-        connected = await obs_controller.connect()
-        if connected:
-            print("✅ Connected to OBS Studio")
-        else:
-            print("⚠️  Could not connect to OBS Studio - API will return mock data")
-            print("   Make sure OBS Studio is running with WebSocket server enabled")
-            obs_controller = None
-    except Exception as e:
-        print(f"⚠️  Error initializing OBS connection: {e}")
-        print("   API will return mock data until OBS is connected")
-        obs_controller = None
-
-    print("🚀 Miktos StreamLab API started")
-    print("📡 Server running on http://localhost:8000")
-    print("📚 API docs available at http://localhost:8000/docs")
-
-
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    """Cleanup on shutdown"""
-    if obs_controller:
-        try:
-            await obs_controller.disconnect()
-            print("✅ Disconnected from OBS Studio")
-        except Exception as e:
-            print(f"⚠️  Error disconnecting from OBS: {e}")
-
-    print("👋 Miktos StreamLab API shutting down")
 
 
 if __name__ == "__main__":

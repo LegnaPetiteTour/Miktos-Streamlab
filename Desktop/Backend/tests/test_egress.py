@@ -17,7 +17,7 @@ import pytest
 from datetime import datetime
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
-from src.core.egress import (
+from core.egress import (
     EgressManager,
     RTMPDestination,
     SRTDestination,
@@ -90,12 +90,21 @@ def rtmp_destination():
 
 @pytest.fixture
 def srt_destination():
-    """SRT destination instance"""
-    return SRTDestination(
+    """SRT destination instance with mocked SRT connection"""
+    dest = SRTDestination(
         name="srt-backup",
         url="srt://relay.example.com:9998",
         latency_ms=2000
     )
+    
+    # Mock the SRT connection to avoid real network calls
+    mock_srt_connection = Mock()
+    mock_srt_connection.connect = AsyncMock(return_value=True)
+    mock_srt_connection.disconnect = AsyncMock(return_value=True)
+    mock_srt_connection.is_connected = Mock(return_value=True)
+    
+    dest.srt_connection = mock_srt_connection
+    return dest
 
 
 # ============================================================================
@@ -367,11 +376,28 @@ class TestDestinationHealth:
 # Egress Manager Tests
 # ============================================================================
 
+@patch('core.egress.SRTDestination')
 class TestEgressManager:
     """Test egress manager orchestration"""
     
-    def test_manager_initialization(self, egress_config):
+    def _setup_srt_mock(self, mock_srt, status=DestinationStatus.DISCONNECTED):
+        """Helper to configure SRT destination mock"""
+        mock_srt_instance = Mock()
+        mock_srt_instance.connect = AsyncMock(return_value=True)
+        mock_srt_instance.disconnect = AsyncMock()
+        mock_srt_instance.start_streaming = AsyncMock()
+        mock_srt_instance.stop_streaming = AsyncMock()
+        mock_srt_instance.get_health = AsyncMock(return_value=Mock())
+        mock_srt_instance.status = status
+        mock_srt_instance.health = Mock()
+        mock_srt_instance.name = "SRT Mock"
+        mock_srt.return_value = mock_srt_instance
+        return mock_srt_instance
+    
+    def test_manager_initialization(self, mock_srt, egress_config):
         """Test egress manager initialization"""
+        self._setup_srt_mock(mock_srt)
+        
         manager = EgressManager(egress_config)
         
         assert manager.primary is not None
@@ -379,8 +405,11 @@ class TestEgressManager:
         assert manager.streaming is False
         assert manager.failover_active is False
     
-    def test_manager_initialization_primary_only(self, rtmp_config, failover_config):
+    def test_manager_initialization_primary_only(
+        self, mock_srt, rtmp_config, failover_config
+    ):
         """Test initialization with only primary destination"""
+        self._setup_srt_mock(mock_srt)
         config = EgressConfig(
             primary_destination=rtmp_config,
             failover=failover_config
@@ -392,8 +421,11 @@ class TestEgressManager:
         assert manager.backup is None
     
     @pytest.mark.asyncio
-    async def test_manager_start_streaming_success(self, egress_config):
+    async def test_manager_start_streaming_success(
+        self, mock_srt, egress_config
+    ):
         """Test starting streaming successfully"""
+        self._setup_srt_mock(mock_srt, DestinationStatus.STREAMING)
         manager = EgressManager(egress_config)
         result = await manager.start_streaming()
         
@@ -406,8 +438,9 @@ class TestEgressManager:
         await manager.stop_streaming()
     
     @pytest.mark.asyncio
-    async def test_manager_stop_streaming(self, egress_config):
+    async def test_manager_stop_streaming(self, mock_srt, egress_config):
         """Test stopping streaming"""
+        self._setup_srt_mock(mock_srt, DestinationStatus.STREAMING)
         manager = EgressManager(egress_config)
         await manager.start_streaming()
         result = await manager.stop_streaming()
@@ -417,8 +450,9 @@ class TestEgressManager:
         assert manager.active_destination is None
     
     @pytest.mark.asyncio
-    async def test_manager_get_status(self, egress_config):
+    async def test_manager_get_status(self, mock_srt, egress_config):
         """Test getting egress status"""
+        self._setup_srt_mock(mock_srt, DestinationStatus.STREAMING)
         manager = EgressManager(egress_config)
         await manager.start_streaming()
         
@@ -433,8 +467,10 @@ class TestEgressManager:
         await manager.stop_streaming()
     
     @pytest.mark.asyncio
-    async def test_manager_backup_on_standby(self, egress_config):
+    async def test_manager_backup_on_standby(self, mock_srt, egress_config):
         """Test that backup is connected but not streaming"""
+        self._setup_srt_mock(mock_srt, DestinationStatus.CONNECTED)
+        
         manager = EgressManager(egress_config)
         await manager.start_streaming()
         
@@ -451,12 +487,28 @@ class TestEgressManager:
 # Failover Tests
 # ============================================================================
 
+@patch('core.egress.SRTDestination')
 class TestFailover:
     """Test automatic failover functionality"""
     
+    def _setup_srt_mock(self, mock_srt, status=DestinationStatus.DISCONNECTED):
+        """Helper to configure SRT destination mock"""
+        mock_srt_instance = Mock()
+        mock_srt_instance.connect = AsyncMock(return_value=True)
+        mock_srt_instance.disconnect = AsyncMock()
+        mock_srt_instance.start_streaming = AsyncMock()
+        mock_srt_instance.stop_streaming = AsyncMock()
+        mock_srt_instance.get_health = AsyncMock(return_value=Mock())
+        mock_srt_instance.status = status
+        mock_srt_instance.health = Mock()
+        mock_srt_instance.name = "SRT Mock"
+        mock_srt.return_value = mock_srt_instance
+        return mock_srt_instance
+    
     @pytest.mark.asyncio
-    async def test_failover_disabled(self, egress_config):
+    async def test_failover_disabled(self, mock_srt, egress_config):
         """Test that failover doesn't activate when disabled"""
+        self._setup_srt_mock(mock_srt)
         egress_config.failover.enabled = False
         manager = EgressManager(egress_config)
         
@@ -469,8 +521,11 @@ class TestFailover:
         assert manager.failover_active is False
     
     @pytest.mark.asyncio
-    async def test_failover_no_backup(self, rtmp_config, failover_config):
+    async def test_failover_no_backup(
+        self, mock_srt, rtmp_config, failover_config
+    ):
         """Test failover when no backup is configured"""
+        self._setup_srt_mock(mock_srt)
         config = EgressConfig(
             primary_destination=rtmp_config,
             failover=failover_config
@@ -483,8 +538,20 @@ class TestFailover:
         assert manager.failover_active is False
     
     @pytest.mark.asyncio
-    async def test_failover_initiation(self, egress_config):
+    async def test_failover_initiation(self, mock_srt, egress_config):
         """Test failover initiation"""
+        # Set up SRT mock with CONNECTED status (standby mode)
+        mock_srt_instance = self._setup_srt_mock(
+            mock_srt, DestinationStatus.CONNECTED
+        )
+        
+        # Configure the start_streaming method to change status when called
+        async def mock_start_streaming():
+            mock_srt_instance.status = DestinationStatus.STREAMING
+            return True
+        mock_srt_instance.start_streaming = AsyncMock(
+            side_effect=mock_start_streaming
+        )
         manager = EgressManager(egress_config)
         await manager.start_streaming()
         
@@ -503,8 +570,9 @@ class TestFailover:
         await manager.stop_streaming()
     
     @pytest.mark.asyncio
-    async def test_failover_already_active(self, egress_config):
+    async def test_failover_already_active(self, mock_srt, egress_config):
         """Test that failover doesn't re-trigger if already active"""
+        self._setup_srt_mock(mock_srt, DestinationStatus.STREAMING)
         manager = EgressManager(egress_config)
         await manager.start_streaming()
         
@@ -525,12 +593,28 @@ class TestFailover:
 # Health Monitoring Tests
 # ============================================================================
 
+@patch('core.egress.SRTDestination')
 class TestHealthMonitoring:
     """Test continuous health monitoring"""
     
+    def _setup_srt_mock(self, mock_srt, status=DestinationStatus.DISCONNECTED):
+        """Helper to configure SRT destination mock"""
+        mock_srt_instance = Mock()
+        mock_srt_instance.connect = AsyncMock(return_value=True)
+        mock_srt_instance.disconnect = AsyncMock()
+        mock_srt_instance.start_streaming = AsyncMock()
+        mock_srt_instance.stop_streaming = AsyncMock()
+        mock_srt_instance.get_health = AsyncMock(return_value=Mock())
+        mock_srt_instance.status = status
+        mock_srt_instance.health = Mock()
+        mock_srt_instance.name = "SRT Mock"
+        mock_srt.return_value = mock_srt_instance
+        return mock_srt_instance
+    
     @pytest.mark.asyncio
-    async def test_health_monitoring_starts(self, egress_config):
+    async def test_health_monitoring_starts(self, mock_srt, egress_config):
         """Test that health monitoring starts with streaming"""
+        self._setup_srt_mock(mock_srt, DestinationStatus.STREAMING)
         manager = EgressManager(egress_config)
         await manager.start_streaming()
         
@@ -541,8 +625,9 @@ class TestHealthMonitoring:
         await manager.stop_streaming()
     
     @pytest.mark.asyncio
-    async def test_health_monitoring_stops(self, egress_config):
+    async def test_health_monitoring_stops(self, mock_srt, egress_config):
         """Test that health monitoring stops with streaming"""
+        self._setup_srt_mock(mock_srt, DestinationStatus.STREAMING)
         manager = EgressManager(egress_config)
         await manager.start_streaming()
         await manager.stop_streaming()
@@ -634,12 +719,28 @@ class TestErrorHandling:
 # Integration Tests
 # ============================================================================
 
+@patch('core.egress.SRTDestination')
 class TestIntegration:
     """Integration tests for complete workflows"""
     
+    def _setup_srt_mock(self, mock_srt, status=DestinationStatus.DISCONNECTED):
+        """Helper to configure SRT destination mock"""
+        mock_srt_instance = Mock()
+        mock_srt_instance.connect = AsyncMock(return_value=True)
+        mock_srt_instance.disconnect = AsyncMock()
+        mock_srt_instance.start_streaming = AsyncMock()
+        mock_srt_instance.stop_streaming = AsyncMock()
+        mock_srt_instance.get_health = AsyncMock(return_value=Mock())
+        mock_srt_instance.status = status
+        mock_srt_instance.health = Mock()
+        mock_srt_instance.name = "SRT Mock"
+        mock_srt.return_value = mock_srt_instance
+        return mock_srt_instance
+    
     @pytest.mark.asyncio
-    async def test_full_streaming_lifecycle(self, egress_config):
+    async def test_full_streaming_lifecycle(self, mock_srt, egress_config):
         """Test complete start -> stream -> stop lifecycle"""
+        self._setup_srt_mock(mock_srt, DestinationStatus.STREAMING)
         manager = EgressManager(egress_config)
         
         # Start
@@ -658,8 +759,20 @@ class TestIntegration:
         assert manager.streaming is False
     
     @pytest.mark.asyncio
-    async def test_failover_and_recovery(self, egress_config):
+    async def test_failover_and_recovery(self, mock_srt, egress_config):
         """Test failover followed by recovery"""
+        # Set up SRT mock with proper failover behavior
+        mock_srt_instance = self._setup_srt_mock(
+            mock_srt, DestinationStatus.CONNECTED
+        )
+        
+        # Configure start_streaming to change status when called
+        async def mock_start_streaming():
+            mock_srt_instance.status = DestinationStatus.STREAMING
+            return True
+        mock_srt_instance.start_streaming = AsyncMock(
+            side_effect=mock_start_streaming
+        )
         manager = EgressManager(egress_config)
         await manager.start_streaming()
         
@@ -680,11 +793,26 @@ class TestIntegration:
 # Performance Tests
 # ============================================================================
 
+@patch('core.egress.SRTDestination')
 class TestPerformance:
     """Test performance characteristics"""
     
+    def _setup_srt_mock(self, mock_srt, status=DestinationStatus.DISCONNECTED):
+        """Helper to configure SRT destination mock"""
+        mock_srt_instance = Mock()
+        mock_srt_instance.connect = AsyncMock(return_value=True)
+        mock_srt_instance.disconnect = AsyncMock()
+        mock_srt_instance.start_streaming = AsyncMock()
+        mock_srt_instance.stop_streaming = AsyncMock()
+        mock_srt_instance.get_health = AsyncMock(return_value=Mock())
+        mock_srt_instance.status = status
+        mock_srt_instance.health = Mock()
+        mock_srt_instance.name = "SRT Mock"
+        mock_srt.return_value = mock_srt_instance
+        return mock_srt_instance
+    
     @pytest.mark.asyncio
-    async def test_health_check_performance(self, rtmp_destination):
+    async def test_health_check_performance(self, mock_srt, rtmp_destination):
         """Test that health checks are fast enough"""
         await rtmp_destination.connect()
         
@@ -696,8 +824,9 @@ class TestPerformance:
         assert duration < 0.1
     
     @pytest.mark.asyncio
-    async def test_manager_startup_performance(self, egress_config):
+    async def test_manager_startup_performance(self, mock_srt, egress_config):
         """Test that manager starts up quickly"""
+        self._setup_srt_mock(mock_srt)
         start_time = datetime.now()
         manager = EgressManager(egress_config)
         duration = (datetime.now() - start_time).total_seconds()

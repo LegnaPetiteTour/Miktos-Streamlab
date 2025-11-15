@@ -4,7 +4,7 @@ Tests for system resource monitoring.
 
 import pytest
 
-from src.core.preflight.system_resources import (
+from core.preflight.system_resources import (
     SystemResourceChecker,
     SystemResources,
 )

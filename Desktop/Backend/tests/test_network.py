@@ -2,7 +2,7 @@
 Tests for network monitoring
 """
 import pytest
-from src.core.network import NetworkMonitor, NetworkStatus, NetworkMetrics
+from core.network import NetworkMonitor, NetworkStatus, NetworkMetrics
 
 
 class TestNetworkMetrics:

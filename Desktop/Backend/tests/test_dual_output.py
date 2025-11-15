@@ -14,14 +14,14 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.core.egress_v2 import (
+from core.egress_v2 import (
     DestinationStatus,
     EgressConfig,
     EgressManagerV2,
     RTMPDestination,
     SRTDestination,
 )
-from src.obs_controller import OBSStreamStats
+from obs_controller import OBSStreamStats
 
 
 # ============================================================================
@@ -216,7 +216,7 @@ def test_egress_config_from_env():
 
 
 @patch.dict(os.environ, {}, clear=True)
-@patch("src.core.egress_v2.load_dotenv")
+@patch("core.egress_v2.load_dotenv")
 def test_egress_config_from_env_no_keys(mock_load_dotenv):
     """Test loading config with no environment variables"""
     config = EgressConfig.from_env()

@@ -56,9 +56,14 @@ class BandwidthTester:
             Exception: If speedtest fails or times out
         """
         try:
-            # Try to import speedtest
+            # Try to import speedtest with warning suppression
             try:
-                import speedtest  # type: ignore # noqa: F401
+                import warnings
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore",
+                                            category=DeprecationWarning,
+                                            module="speedtest")
+                    import speedtest  # type: ignore # noqa: F401
             except ImportError:
                 raise ImportError(
                     "speedtest-cli not installed. "

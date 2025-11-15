@@ -4,8 +4,14 @@ Monitors network conditions for reliable streaming.
 """
 import time
 import logging
-import speedtest
+import warnings
 import psutil
+
+# Suppress deprecation warnings from speedtest-cli library
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning,
+                            module="speedtest")
+    import speedtest
 from typing import Dict, Tuple, Optional
 from dataclasses import dataclass
 from enum import Enum

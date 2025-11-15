@@ -8,16 +8,16 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.core.backup_recorder import BackupConfig, BackupRecorder
-from src.core.iso_recording import (
+from core.backup_recorder import BackupConfig, BackupRecorder
+from core.iso_recording import (
     ISORecordingManager,
     SessionConfig,
     TrackConfig,
 )
-from src.core.performance_optimizer import PerformanceOptimizer
-from src.core.recovery_manager import RecoveryManager
-from src.core.storage_manager import StorageManager
-from src.core.timecode_sync import TimecodeSync
+from core.performance_optimizer import PerformanceOptimizer
+from core.recovery_manager import RecoveryManager
+from core.storage_manager import StorageManager
+from core.timecode_sync import TimecodeSync
 
 
 class TestCompleteISOSystem:

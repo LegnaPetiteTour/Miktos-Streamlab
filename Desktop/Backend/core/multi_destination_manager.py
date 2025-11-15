@@ -8,10 +8,10 @@ Provides unified control, health monitoring, and failover handling.
 import asyncio
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, UTC
 from dataclasses import dataclass, field
 
-from src.core.streaming_platform import (
+from core.streaming_platform import (
     StreamingPlatform,
     StreamStatus,
     StreamHealth,
@@ -30,7 +30,7 @@ class PlatformStreamStatus:
     health: StreamHealth
     metrics: StreamMetrics
     error_message: Optional[str] = None
-    last_updated: datetime = field(default_factory=datetime.utcnow)
+    last_updated: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -402,7 +402,7 @@ class MultiDestinationManager:
 
             self.platform_status[name].health = health
             self.platform_status[name].metrics = metrics
-            self.platform_status[name].last_updated = datetime.utcnow()
+            self.platform_status[name].last_updated = datetime.now(UTC)
 
             # Check for critical health
             if health == StreamHealth.CRITICAL:

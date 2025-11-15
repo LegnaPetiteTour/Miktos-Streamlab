@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.core.preflight.bandwidth import BandwidthTester, BandwidthTestResult
+from core.preflight.bandwidth import BandwidthTester, BandwidthTestResult
 
 
 class TestBandwidthTestResult:

@@ -6,7 +6,7 @@ Provides Twitter/X Live streaming with API integration.
 
 import logging
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, UTC
 import httpx
 
 from core.streaming_platform import (
@@ -158,7 +158,7 @@ class TwitterLive(StreamingPlatform):
                 platform="Twitter",
                 status=StreamStatus.LIVE,
                 health=StreamHealth.UNKNOWN,
-                started_at=datetime.utcnow()
+                started_at=datetime.now(UTC)
             )
 
             logger.info(
@@ -200,7 +200,7 @@ class TwitterLive(StreamingPlatform):
             if response.status_code == 200:
                 if self.stream_info:
                     self.stream_info.status = StreamStatus.OFFLINE
-                    self.stream_info.ended_at = datetime.utcnow()
+                    self.stream_info.ended_at = datetime.now(UTC)
 
                 logger.info(
                     f"Twitter/X Live stream stopped: {self.broadcast_id}"
@@ -286,7 +286,7 @@ class TwitterLive(StreamingPlatform):
                 if self.stream_info and self.stream_info.started_at:
                     uptime = int(
                         (
-                            datetime.utcnow() -
+                            datetime.now(UTC) -
                             self.stream_info.started_at
                         ).total_seconds()
                     )

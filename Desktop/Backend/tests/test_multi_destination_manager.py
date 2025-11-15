@@ -5,8 +5,8 @@ Tests for Multi-Destination Broadcast Manager
 import pytest
 from typing import Optional
 
-from src.core.multi_destination_manager import MultiDestinationManager
-from src.core.streaming_platform import (
+from core.multi_destination_manager import MultiDestinationManager
+from core.streaming_platform import (
     StreamingPlatform,
     PlatformConfig,
     StreamHealth,

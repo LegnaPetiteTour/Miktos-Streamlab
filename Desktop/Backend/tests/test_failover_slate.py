@@ -7,7 +7,7 @@ to ensure slates are displayed during failover scenarios.
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
-from src.core.egress import (
+from core.egress import (
     EgressManager,
     EgressConfig,
     FailoverConfig
@@ -78,7 +78,7 @@ class TestFailoverSlateIntegration:
             failover=failover_config
         )
 
-        with patch('src.core.egress.SlateManager') as MockSlateManager:
+        with patch('core.egress.SlateManager') as MockSlateManager:
             manager = EgressManager(
                 config,
                 obs_controller=mock_obs_controller
@@ -120,7 +120,7 @@ class TestFailoverSlateIntegration:
             failover=failover_config
         )
 
-        with patch('src.core.egress.SlateManager') as MockSlateManager:
+        with patch('core.egress.SlateManager') as MockSlateManager:
             mock_slate = MagicMock()
             mock_slate.show_slate = AsyncMock()
             mock_slate.show_preset_message = AsyncMock()
@@ -161,7 +161,7 @@ class TestFailoverSlateIntegration:
             failover=failover_config
         )
 
-        with patch('src.core.egress.SlateManager') as MockSlateManager:
+        with patch('core.egress.SlateManager') as MockSlateManager:
             mock_slate = MagicMock()
             mock_slate.hide_slate = AsyncMock()
             MockSlateManager.return_value = mock_slate
@@ -211,7 +211,7 @@ class TestFailoverSlateIntegration:
             failover=failover_config
         )
 
-        with patch('src.core.egress.SlateManager') as MockSlateManager:
+        with patch('core.egress.SlateManager') as MockSlateManager:
             mock_slate = MagicMock()
             mock_slate.show_slate = AsyncMock()
             MockSlateManager.return_value = mock_slate
@@ -248,7 +248,7 @@ class TestFailoverSlateIntegration:
             failover=failover_config
         )
 
-        with patch('src.core.egress.SlateManager') as MockSlateManager:
+        with patch('core.egress.SlateManager') as MockSlateManager:
             mock_slate = MagicMock()
             # Slate fails to show
             mock_slate.show_slate = AsyncMock(

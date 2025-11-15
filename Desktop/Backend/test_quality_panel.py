@@ -71,13 +71,13 @@ class QualityPanelDemo(QMainWindow):
     def _simulate_quality_update(self) -> None:
         """Simulate quality update from WebSocket"""
         import random
-        from datetime import datetime
+        from datetime import datetime, UTC
 
         # Generate random quality data
         quality_data: Dict[str, Any] = {
             'overall_score': random.uniform(70, 95),
             'status': random.choice(['good', 'warning']),
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(UTC).isoformat() + 'Z',
             'scores': {
                 'exposure': {
                     'score': random.uniform(75, 95),

@@ -10,8 +10,8 @@ from unittest.mock import Mock
 import pytest
 from fastapi.testclient import TestClient
 
-from src.api.dashboard_api import DashboardAPI
-from src.core.health_metrics import HealthAggregator, StreamHealth
+from api.dashboard_api import DashboardAPI
+from core.health_metrics import HealthAggregator, StreamHealth
 
 
 @pytest.fixture
@@ -60,7 +60,7 @@ def health_aggregator(mock_obs_controller, mock_egress_manager, mock_failover):
     )
 
     # Add some test data to metrics
-    aggregator.metrics["bitrate"].add(3000.0)
+    aggregator.metrics["bitrate_kbps"].add(3000.0)
     aggregator.metrics["fps"].add(30.0)
     aggregator.metrics["cpu_usage"].add(45.5)
     aggregator.metrics["drop_percentage"].add(0.5)
@@ -116,13 +116,13 @@ def test_get_metrics_endpoint(client):
     assert response.status_code == 200
 
     data = response.json()
-    assert "bitrate" in data
+    assert "bitrate_kbps" in data
     assert "fps" in data
     assert "cpu_usage" in data
     assert "drop_percentage" in data
 
     # Check metric structure
-    bitrate = data["bitrate"]
+    bitrate = data["bitrate_kbps"]
     assert "unit" in bitrate
     assert "current" in bitrate
     assert "average" in bitrate
@@ -133,11 +133,11 @@ def test_get_metrics_endpoint(client):
 
 def test_get_metric_by_name(client):
     """Test GET /metrics/{metric_name} endpoint"""
-    response = client.get("/metrics/bitrate")
+    response = client.get("/metrics/bitrate_kbps")
     assert response.status_code == 200
 
     data = response.json()
-    assert data["name"] == "bitrate"
+    assert data["name"] == "bitrate_kbps"
     assert data["unit"] == "kbps"
     assert data["current"] == 3000.0
 

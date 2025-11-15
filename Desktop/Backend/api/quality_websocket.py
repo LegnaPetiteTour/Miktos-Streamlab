@@ -7,7 +7,7 @@ Provides WebSocket for live quality updates.
 import asyncio
 import logging
 from typing import Optional, Any, Set
-from datetime import datetime
+from datetime import datetime, UTC
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -117,7 +117,7 @@ class QualityWebSocket:
                 # Prepare update
                 update = {
                     'type': 'quality_update',
-                    'timestamp': datetime.utcnow().isoformat(),
+                    'timestamp': datetime.now(UTC).isoformat(),
                     'quality': quality.to_dict()
                 }
 
@@ -171,7 +171,7 @@ class QualityWebSocket:
                 await websocket.send_json({
                     'type': 'pong',
                     'received': message,
-                    'timestamp': datetime.utcnow().isoformat()
+                    'timestamp': datetime.now(UTC).isoformat()
                 })
 
         except WebSocketDisconnect:

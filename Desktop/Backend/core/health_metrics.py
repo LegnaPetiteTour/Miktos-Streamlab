@@ -90,17 +90,17 @@ class MetricSeries:
 
     def get_samples_for_chart(
         self, max_points: int = 60
-    ) -> List[tuple[datetime, float]]:
+    ) -> List[tuple[str, float]]:
         """Get samples formatted for charting"""
         samples = list(self.samples)
 
         if len(samples) <= max_points:
-            return [(s.timestamp, s.value) for s in samples]
+            return [(s.timestamp.isoformat(), s.value) for s in samples]
 
         # Downsample
         step = len(samples) // max_points
         return [
-            (samples[i].timestamp, samples[i].value)
+            (samples[i].timestamp.isoformat(), samples[i].value)
             for i in range(0, len(samples), step)
         ]
 

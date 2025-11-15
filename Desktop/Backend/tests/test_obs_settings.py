@@ -4,7 +4,7 @@ Tests for OBS settings validation.
 
 import pytest
 
-from src.core.preflight.obs_settings import OBSSettingsValidator
+from core.preflight.obs_settings import OBSSettingsValidator
 
 
 class TestOBSSettingsValidator:

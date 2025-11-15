@@ -43,7 +43,7 @@ def sample_config():
 @pytest.fixture
 def mock_network_metrics():
     """Mock network metrics"""
-    from src.core.network import NetworkMetrics, NetworkStatus
+    from core.network import NetworkMetrics, NetworkStatus
     return NetworkMetrics(
         upload_speed=8.5,
         download_speed=50.0,
@@ -58,7 +58,7 @@ def mock_network_metrics():
 @pytest.fixture
 def sample_transcript_segments():
     """Sample transcript segments for testing"""
-    from src.core.transcription import TranscriptSegment
+    from core.transcription import TranscriptSegment
     return [
         TranscriptSegment(
             start=0.0,
