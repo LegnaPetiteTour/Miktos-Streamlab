@@ -1,7 +1,6 @@
 """
 Tests for network monitoring
 """
-import pytest
 from core.network import NetworkMonitor, NetworkStatus, NetworkMetrics
 
 

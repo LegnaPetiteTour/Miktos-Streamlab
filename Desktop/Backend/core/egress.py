@@ -593,7 +593,9 @@ class SRTDestination(EgressDestination):
             # Extract encryption from URL parameters if present
             query_params = urllib.parse.parse_qs(parsed.query or "")
             encryption = query_params.get("pbkeylen", ["none"])[0]
-            passphrase = query_params.get("passphrase", [None])[0] or self.passphrase
+            passphrase = (
+                query_params.get("passphrase", [None])[0] or self.passphrase
+            )
 
             # Create SRT configuration
             self.srt_config = create_srt_config(
@@ -647,7 +649,10 @@ class SRTDestination(EgressDestination):
                 if success:
                     self.status = DestinationStatus.CONNECTED
                     self._connected_at = datetime.now()
-                    self.logger.info(f"SRT destination connected (latency: {self.latency_ms}ms)")
+                    self.logger.info(
+                        f"SRT destination connected "
+                        f"(latency: {self.latency_ms}ms)"
+                    )
                     return True
                 else:
                     self.status = DestinationStatus.FAILED
@@ -655,7 +660,9 @@ class SRTDestination(EgressDestination):
                     return False
             else:
                 # Fallback simulation mode
-                self.logger.warning("SRT integration not available - using simulation mode")
+                self.logger.warning(
+                    "SRT integration not available - using simulation mode"
+                )
                 self.status = DestinationStatus.CONNECTED
                 self._connected_at = datetime.now()
                 return True
@@ -679,7 +686,9 @@ class SRTDestination(EgressDestination):
             self._connected_at = None
             return True
         except Exception as e:
-            self.logger.error(f"Error disconnecting from SRT: {e}", exc_info=True)
+            self.logger.error(
+                f"Error disconnecting from SRT: {e}", exc_info=True
+            )
             return False
 
     async def start_streaming(self) -> bool:
@@ -702,7 +711,9 @@ class SRTDestination(EgressDestination):
                 return True
                 
         except Exception as e:
-            self.logger.error(f"Failed to start SRT streaming: {e}", exc_info=True)
+            self.logger.error(
+                f"Failed to start SRT streaming: {e}", exc_info=True
+            )
             return False
 
     async def stop_streaming(self) -> bool:
@@ -718,7 +729,9 @@ class SRTDestination(EgressDestination):
             self.status = DestinationStatus.CONNECTED
             return True
         except Exception as e:
-            self.logger.error(f"Error stopping SRT streaming: {e}", exc_info=True)
+            self.logger.error(
+                f"Error stopping SRT streaming: {e}", exc_info=True
+            )
             return False
 
     async def test_connection(self) -> bool:
@@ -734,7 +747,9 @@ class SRTDestination(EgressDestination):
                 
                 if parsed.hostname and parsed.port:
                     from .srt_integration import test_srt_connection
-                    return await test_srt_connection(parsed.hostname, parsed.port)
+                    return await test_srt_connection(
+                        parsed.hostname, parsed.port
+                    )
                 else:
                     return False
             else:
@@ -768,7 +783,10 @@ class SRTDestination(EgressDestination):
                 name=self.name,
                 destination_type=self.destination_type,
                 status=self.status,
-                connected=self.status in [DestinationStatus.CONNECTED, DestinationStatus.STREAMING],
+                connected=self.status in [
+                    DestinationStatus.CONNECTED,
+                    DestinationStatus.STREAMING
+                ],
                 bitrate_actual=avg_bitrate,
                 rtt_ms=avg_rtt,
                 packet_loss_pct=avg_packet_loss,
@@ -810,7 +828,7 @@ class EgressManager:
 
         # Initialize SlateManager if OBS controller is available
         self.slate_manager: Optional["SlateManager"] = None  # type: ignore
-        if SLATE_AVAILABLE and obs_controller and SlateManager:
+        if SLATE_AVAILABLE and obs_controller and SlateManager is not None:
             try:
                 self.slate_manager = SlateManager(obs_controller)
                 self.logger.info(

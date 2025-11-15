@@ -7,6 +7,7 @@ You were stuck in React Native/Expo dependency hell with 300+ build warnings and
 **WE PIVOTED TO NATIVE SWIFT** ← The right choice!
 
 Now you have:
+
 - ✅ Clean, production-ready Swift code (~580 lines)
 - ✅ Zero dependencies (pure iOS SDK)
 - ✅ Guaranteed to build (no external packages)
@@ -17,7 +18,7 @@ Now you have:
 
 ## 📁 FILES CREATED
 
-```
+```text
 /Users/atorrella/Desktop/Miktos Streamlab/
 │
 ├── 📋_SUMMARY.txt                  ← Overview (you are here)
@@ -35,7 +36,7 @@ Now you have:
 │
 ├── _archive_react_native/          ← Old React Native (archived)
 └── StreamLabCamera/                ← Will be moved here ↑
-```
+```text
 
 ---
 
@@ -47,9 +48,10 @@ Now you have:
 cd "/Users/atorrella/Desktop/Miktos Streamlab"
 chmod +x migrate_to_native.sh
 ./migrate_to_native.sh
-```
+```text
 
-**What this does:**
+### What this does:
+
 - Moves `StreamLabCamera/` → `_archive_react_native/StreamLabCamera_TIMESTAMP`
 - Keeps it as reference, removes it from active development
 
@@ -59,11 +61,13 @@ chmod +x migrate_to_native.sh
 
 ```bash
 open /Applications/Xcode.app
-```
+```text
 
 ---
 
 ### Step 3: Create New iOS Project (5 min)
+
+**Follow these steps:**
 
 1. **File → New → Project**
 
@@ -73,7 +77,8 @@ open /Applications/Xcode.app
    - Click **Next**
 
 3. **Configure project:**
-   ```
+
+   ```text
    Product Name:           StreamLabCamera
    Team:                   (Select your Apple Developer team)
    Organization Identifier: com.miktos
@@ -83,7 +88,7 @@ open /Applications/Xcode.app
    ☐ Include Tests         (Unchecked)
    ```
 
-4. **Save location:**
+1. **Save location:**
    - Navigate to: `/Users/atorrella/Desktop/Miktos Streamlab/`
    - Create new folder: `StreamLabCameraNative`
    - Click **Create**
@@ -115,20 +120,20 @@ open /Applications/Xcode.app
 
 ### Step 5: Configure Permissions (2 min)
 
-**Option A: Replace Info.plist (Easy)**
+### Option A: Replace Info.plist (Easy)
 
 1. In Xcode, right-click `Info.plist` → Delete → Move to Trash
 2. In Finder, drag `NativeSwiftSource/Info.plist` into Xcode
 3. ✅ Copy items if needed
 
-**Option B: Add Manually (If you prefer)**
+### Option B: Add Manually (If you prefer)
 
 1. Click project name at top of navigator
 2. Select **StreamLabCamera** target
 3. Go to **Info** tab
 4. Click **+** to add these keys:
 
-```
+```text
 NSCameraUsageDescription
   → "StreamLab Camera needs camera access to stream live video."
 
@@ -137,7 +142,7 @@ NSMicrophoneUsageDescription
 
 NSLocalNetworkUsageDescription
   → "StreamLab Camera needs network access to connect to your Mac."
-```
+```text
 
 ---
 
@@ -180,16 +185,16 @@ NSLocalNetworkUsageDescription
 
 ### Step 8: Test the Stream (3 min)
 
-**On Your Mac (Terminal):**
+### On Your Mac (Terminal):
 
 ```bash
 cd "/Users/atorrella/Desktop/Miktos Streamlab"
 chmod +x test_mobile_camera.sh
 ./test_mobile_camera.sh
-```
+```text
 
-**Expected output:**
-```
+### Expected output:
+```text
 ╔═══════════════════════════════════════════════════════════════╗
 ║          Miktos Streamlab - Mobile Camera Receiver            ║
 ╚═══════════════════════════════════════════════════════════════╝
@@ -206,16 +211,17 @@ Press Ctrl+C to stop
 
 📍 This Mac's IP addresses:
    192.168.1.100
-```
+```text
 
-**On Your iPhone:**
+### On Your iPhone:
 
 1. **Grant camera permission** when app prompts
 2. **Enter Mac IP:** Use the IP shown in terminal (e.g., `192.168.1.100`)
 3. **Port:** `9001` (default)
 4. **Tap: START STREAMING**
 
-**Success! 🎉**
+### Success! 🎉
+
 - FFmpeg window opens: "MobileCamera_Port9001"
 - Live video from iPhone appears
 - Terminal shows: "Receiving frames..."
@@ -226,15 +232,18 @@ Press Ctrl+C to stop
 
 ### Build Fails in Xcode
 
-**Error: "No such module 'AVFoundation'"**
+### Error: "No such module 'AVFoundation'"
+
 - Solution: Check deployment target is iOS 15.0+
 - Project → Target → General → Minimum Deployments
 
-**Error: "Command CodeSign failed"**
+### Error: "Command CodeSign failed"
+
 - Solution: Select your Team in Signing & Capabilities
 - May need to create Apple Developer account
 
-**Error: "Could not launch 'StreamLabCamera'"**
+### Error: "Could not launch 'StreamLabCamera'"
+
 - Solution: Trust developer certificate on iPhone
 - Settings → General → Device Management → Trust
 
@@ -242,14 +251,15 @@ Press Ctrl+C to stop
 
 ### App Runs But No Connection
 
-**"Connection failed" error:**
+### "Connection failed" error:
+
 1. Check both devices on same WiFi network
 2. Check desktop receiver is running (`./test_mobile_camera.sh`)
 3. Check Mac firewall allows port 9001:
    - System Preferences → Security & Privacy → Firewall → Firewall Options
    - Allow incoming connections for FFmpeg
 
-**Wrong IP address:**
+### Wrong IP address:
 ```bash
 # Get Mac's IP:
 ifconfig | grep "inet " | grep -v 127.0.0.1
@@ -257,21 +267,22 @@ ifconfig | grep "inet " | grep -v 127.0.0.1
 # Or use:
 ipconfig getifaddr en0    # WiFi
 ipconfig getifaddr en1    # Ethernet
-```
+```text
 
-**Port already in use:**
+### Port already in use:
 ```bash
 # Try different port:
 ./test_mobile_camera.sh 9002
 
 # On iPhone, use port: 9002
-```
+```text
 
 ---
 
 ### Camera Permission Issues
 
-**Camera permission denied:**
+### Camera permission denied:
+
 - Delete app from iPhone
 - Reinstall and grant permission when prompted
 - Or: Settings → Privacy → Camera → StreamLabCamera → Enable
@@ -280,14 +291,16 @@ ipconfig getifaddr en1    # Ethernet
 
 ### Video Quality Issues
 
-**Video is laggy/choppy:**
+### Video is laggy/choppy:
+
 1. Check WiFi signal strength (move closer to router)
 2. Reduce bitrate:
    - Edit `SRTStreamer.swift`
    - Line 95: Change `5_500_000` to `3_500_000`
    - Rebuild app
 
-**No video appears (but connection successful):**
+### No video appears (but connection successful):
+
 1. Check terminal shows "Receiving frames"
 2. Restart desktop receiver
 3. Try different port
@@ -297,7 +310,7 @@ ipconfig getifaddr en1    # Ethernet
 
 ## 📊 Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────┐
 │      iPhone (iOS Native App)        │
 │                                      │
@@ -335,13 +348,13 @@ ipconfig getifaddr en1    # Ethernet
 │                                      │
 │  Next: Feed to OBS as source        │
 └─────────────────────────────────────┘
-```
+```text
 
 ---
 
 ## 📈 Week 1 Progress Tracker
 
-```
+```text
 PHASE 0: Foundation ✅ COMPLETE
 ├── Desktop receiver with SRT ✅
 ├── OBS integration basic (113 tests) ✅
@@ -357,7 +370,7 @@ PHASE 1: Mobile Camera MVP ← YOU ARE HERE
 └── Testing ⏳ ← NEXT: Get it working!
 
 Week 1: 95% COMPLETE
-```
+```text
 
 ---
 
@@ -382,7 +395,8 @@ Week 1 is complete when ALL of these are true:
 
 Once you have stable iPhone → Mac streaming:
 
-**Week 2 Goals (11 hours):**
+### Week 2 Goals (11 hours):
+
 1. **OBS Integration (2h):**
    - Feed SRT stream into OBS as camera source
    - Add mobile camera to scenes
@@ -408,17 +422,20 @@ Once you have stable iPhone → Mac streaming:
 
 ## 📚 Additional Resources
 
-**Full Documentation:**
+### Full Documentation:
+
 - `NativeSwiftSource/README.md` - Complete guide
 - `⚡_START_HERE.txt` - Quick reference
 
-**Swift Files:**
+### Swift Files:
+
 - `StreamLabCameraApp.swift` - App entry point
 - `ContentView.swift` - UI and streaming controls
 - `CameraManager.swift` - AVFoundation camera handling
 - `SRTStreamer.swift` - H.264 encoding + network streaming
 
-**Testing:**
+### Testing:
+
 - `test_mobile_camera.sh` - Desktop receiver script
 
 ---
@@ -443,7 +460,7 @@ Message me when:
 
 ## 🎯 The Big Picture
 
-```
+```text
 Week 1: ✅ iPhone → Mac (camera stream)        ← YOU ARE HERE
 Week 2: ⏳ OBS integration + multi-camera
 Week 3: ⏳ Quality assurance + production polish
@@ -451,7 +468,7 @@ Week 3: ⏳ Quality assurance + production polish
 Week 4-5: Vertical simulcast (16:9 + 9:16)
 Week 6-9: Post-production suite
 Week 10+: AI features, creative tools, polish
-```
+```text
 
 You're building the foundation RIGHT NOW.
 
@@ -462,7 +479,7 @@ You're building the foundation RIGHT NOW.
 ```bash
 cd "/Users/atorrella/Desktop/Miktos Streamlab"
 cat ⚡_START_HERE.txt
-```
+```text
 
 Then follow the 15-minute setup above!
 
@@ -470,4 +487,3 @@ Then follow the 15-minute setup above!
 
 **You're 15 minutes away from seeing your iPhone's camera streaming live to your Mac!** 🎥
 
-Go build it! 💪

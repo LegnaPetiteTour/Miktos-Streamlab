@@ -13,7 +13,7 @@
 3. [Core Modules](#core-modules)
 4. [Data Flow](#data-flow)
 5. [Technology Stack](#technology-stack)
-6. [Module Specifications](#module-specifications)
+6. [Core Modules](#core-modules)
 7. [Integration Points](#integration-points)
 8. [Security Architecture](#security-architecture)
 9. [Performance Considerations](#performance-considerations)
@@ -25,7 +25,7 @@
 
 ### High-Level Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                        User Interface (Future)                   │
 │                    (PyQt6/Electron Dashboard)                    │
@@ -89,30 +89,35 @@
 ## Architecture Principles
 
 ### 1. Reliability First
+
 - **Dual-path egress**: Never rely on single connection
 - **Graceful degradation**: System continues with reduced features
 - **Automatic recovery**: Self-healing on failures
 - **Comprehensive logging**: Every failure is captured
 
 ### 2. Modularity & Extensibility
+
 - **Loose coupling**: Modules communicate via well-defined interfaces
 - **Plugin architecture**: Easy to add new platforms, features
 - **Configuration-driven**: Behavior changed without code changes
 - **Type-safe**: Strong typing throughout for maintainability
 
 ### 3. Performance & Efficiency
+
 - **Async-first**: Non-blocking I/O for all operations
 - **Resource monitoring**: Track CPU, GPU, memory, disk
 - **Adaptive behavior**: Auto-adjust based on available resources
 - **Efficient processing**: Minimal overhead on stream quality
 
 ### 4. Security & Privacy
+
 - **Encrypted credentials**: Never store keys in plaintext
 - **Secure communications**: TLS/SSL for all external connections
 - **Data isolation**: User data stays local
 - **Audit logging**: Track all security-relevant operations
 
 ### 5. Production-Grade Quality
+
 - **Comprehensive testing**: Unit, integration, system tests
 - **Error handling**: Every function handles failures
 - **Documentation**: Code is self-documenting
@@ -129,6 +134,7 @@
 **Purpose**: Centralized, type-safe configuration with encryption
 
 **Responsibilities**:
+
 - Load/save configuration from files
 - Encrypt sensitive credentials (Fernet)
 - Validate configuration integrity
@@ -136,15 +142,19 @@
 - Support multiple profiles
 
 **Key Classes**:
+
+
 ```python
 @dataclass
 class AppConfig:
+
     obs: OBSConfig
     streaming: StreamConfig
     transcription: TranscriptionConfig
     network: NetworkConfig
     
 class ConfigManager:
+
     def load_config(path: str) -> AppConfig
     def save_config(config: AppConfig, path: str)
     def encrypt_credential(value: str) -> str
@@ -160,6 +170,7 @@ class ConfigManager:
 **Purpose**: Structured, multi-target logging with rotation
 
 **Responsibilities**:
+
 - JSON-structured logging for machine parsing
 - Colored console output for humans
 - Automatic log rotation (10MB files, 5 backups)
@@ -167,6 +178,8 @@ class ConfigManager:
 - Stream event tracking
 
 **Key Functions**:
+
+
 ```python
 def setup_logging(log_dir: str, level: str)
 def get_logger(name: str) -> logging.Logger
@@ -174,6 +187,7 @@ def log_stream_event(event_type: str, data: dict)
 ```
 
 **Log Levels**:
+
 - `DEBUG`: Detailed diagnostic info
 - `INFO`: General operational events
 - `WARNING`: Potential issues
@@ -187,6 +201,7 @@ def log_stream_event(event_type: str, data: dict)
 **Purpose**: Real-time network quality assessment
 
 **Responsibilities**:
+
 - Speed testing (upload/download)
 - Latency and jitter measurement
 - 5-level status assessment (Excellent → Critical)
@@ -194,9 +209,12 @@ def log_stream_event(event_type: str, data: dict)
 - Pre-stream readiness checks
 
 **Key Classes**:
+
+
 ```python
 @dataclass
 class NetworkStatus:
+
     download_mbps: float
     upload_mbps: float
     latency_ms: float
@@ -206,6 +224,7 @@ class NetworkStatus:
     recommended_bitrate: int
     
 class NetworkMonitor:
+
     async def run_speed_test() -> SpeedTestResult
     async def check_latency() -> LatencyResult
     def assess_quality(results) -> NetworkStatus
@@ -213,6 +232,7 @@ class NetworkMonitor:
 ```
 
 **Status Levels**:
+
 1. **Excellent**: >50 Mbps up, <30ms latency, 0% loss
 2. **Good**: 25-50 Mbps up, 30-50ms latency, <0.5% loss
 3. **Fair**: 10-25 Mbps up, 50-100ms latency, 0.5-1% loss
@@ -226,6 +246,7 @@ class NetworkMonitor:
 **Purpose**: Real-time and post-stream transcription with translation
 
 **Responsibilities**:
+
 - OpenAI Whisper integration
 - Bilingual support (EN/FR automatic detection)
 - Multiple export formats (SRT, VTT, TXT)
@@ -233,8 +254,11 @@ class NetworkMonitor:
 - Language filtering
 
 **Key Classes**:
+
+
 ```python
 class TranscriptionEngine:
+
     async def transcribe_audio(audio_path: str) -> Transcription
     def detect_language(audio_chunk) -> str
     def export_srt(transcription) -> str
@@ -243,6 +267,7 @@ class TranscriptionEngine:
 ```
 
 **Supported Formats**:
+
 - **SRT**: Standard subtitle format
 - **VTT**: Web-based captions
 - **TXT**: Plain text with timestamps
@@ -255,6 +280,7 @@ class TranscriptionEngine:
 **Purpose**: Complete OBS WebSocket API wrapper
 
 **Responsibilities**:
+
 - Scene and source management
 - Streaming control (start/stop/status)
 - Recording management
@@ -262,8 +288,11 @@ class TranscriptionEngine:
 - Connection health monitoring
 
 **Key Classes**:
+
+
 ```python
 class OBSController:
+
     async def connect(host: str, port: int, password: str)
     async def disconnect()
     
@@ -297,8 +326,11 @@ class OBSController:
 **Purpose**: Multi-destination streaming with automatic failover
 
 **Architecture**:
+
+
 ```python
 class EgressDestination(ABC):
+
     """Abstract base for streaming destinations"""
     @abstractmethod
     async def connect() -> bool
@@ -310,16 +342,19 @@ class EgressDestination(ABC):
     def get_health() -> DestinationHealth
 
 class RTMPDestination(EgressDestination):
+
     """YouTube, Twitch, Facebook via RTMP"""
     def __init__(self, url: str, key: str)
     # Implementation via FFmpeg
 
 class SRTDestination(EgressDestination):
+
     """SRT relay for failover"""
     def __init__(self, url: str, latency_ms: int)
     # Implementation via libsrt
 
 class EgressManager:
+
     """Orchestrates multiple destinations with failover"""
     def __init__(self):
         self.primary: EgressDestination
@@ -345,11 +380,13 @@ class EgressManager:
 ```
 
 **Failover Logic**:
+
 1. Monitor primary connection health (packet loss, RTT)
 2. On failure detection (>5% loss or >500ms RTT for 10s):
    - Switch OBS output to backup destination
    - Display "Technical Difficulties" slate on primary
    - Log failure event
+
 3. Attempt primary reconnection every 30 seconds
 4. On primary recovery:
    - Fade out slate
@@ -357,8 +394,10 @@ class EgressManager:
    - Mark failover complete
 
 **Configuration**:
+
 ```yaml
 egress:
+
   primary:
     type: rtmp
     url: rtmp://a.rtmp.youtube.com/live2
@@ -383,9 +422,11 @@ egress:
 **Purpose**: Real-time stream quality metrics and alerts
 
 **Architecture**:
+
 ```python
 @dataclass
 class StreamHealth:
+
     timestamp: datetime
     
     # Network metrics
@@ -408,6 +449,7 @@ class StreamHealth:
     
 @dataclass
 class DestinationHealth:
+
     name: str
     connected: bool
     bitrate_actual: float
@@ -417,6 +459,7 @@ class DestinationHealth:
     packet_loss_pct: float
 
 class StreamHealthMonitor:
+
     def __init__(self, obs: OBSController, egress: EgressManager):
         self.obs = obs
         self.egress = egress
@@ -443,8 +486,10 @@ class StreamHealthMonitor:
 ```
 
 **Alert Thresholds**:
+
 ```python
 class HealthThresholds:
+
     # Warning thresholds
     WARN_DROPPED_FRAMES = 10  # per second
     WARN_CPU_USAGE = 80  # percent
@@ -468,9 +513,11 @@ class HealthThresholds:
 **Purpose**: Multi-track recording for backup and editing
 
 **Architecture**:
+
 ```python
 @dataclass
 class RecordingTrack:
+
     name: str
     source_type: str  # 'program', 'camera', 'microphone', 'screen'
     output_path: Path
@@ -479,6 +526,7 @@ class RecordingTrack:
     audio_buses: List[int]  # Which audio tracks to include
 
 class ISORecorder:
+
     def __init__(self, obs: OBSController, storage_path: Path):
         self.obs = obs
         self.storage_path = storage_path
@@ -511,8 +559,10 @@ class ISORecorder:
 ```
 
 **Storage Management**:
+
 ```python
 class StorageManager:
+
     def __init__(self, base_path: Path, retention_hours: int = 168):
         self.base_path = base_path
         self.retention_hours = retention_hours
@@ -533,7 +583,7 @@ class StorageManager:
 
 ### Streaming Data Flow
 
-```
+```text
 ┌──────────┐
 │   OBS    │ ← User configures scenes, sources
 │ Sources  │
@@ -580,7 +630,7 @@ class StorageManager:
 
 ### Transcription Data Flow
 
-```
+```text
 ┌────────────┐
 │    OBS     │
 │   Audio    │
@@ -624,44 +674,53 @@ class StorageManager:
 ### Core Technologies
 
 **Language**: Python 3.11+
+
 - Type hints throughout
 - Async/await for concurrency
 - Dataclasses for structured data
 
 **OBS Integration**:
+
 - `obs-websocket-py` - WebSocket API client
 - OBS Studio 28+ required
 
 **Video/Audio Processing**:
+
 - `ffmpeg-python` - FFmpeg wrapper for encoding
 - `opencv-python` - Image processing, face detection
 - `libsrt` - SRT protocol support
 
 **AI/ML**:
+
 - `openai` - Whisper transcription API
 - `whisper` (optional) - Local Whisper model
 - `numpy` - Numerical processing
 
 **Networking**:
+
 - `aiohttp` - Async HTTP client
 - `speedtest-cli` - Network speed testing
 - `websockets` - WebSocket communication
 
 **Security**:
+
 - `cryptography` - Fernet encryption for credentials
 - `python-dotenv` - Environment variable management
 
 **UI (Future)**:
+
 - `PyQt6` or `Electron` - Desktop interface
 - `matplotlib` / `plotly` - Metrics visualization
 
 **Testing**:
+
 - `pytest` - Test framework
 - `pytest-asyncio` - Async test support
 - `pytest-cov` - Code coverage
 - `pytest-mock` - Mocking utilities
 
 **Development**:
+
 - `black` - Code formatting
 - `mypy` - Static type checking
 - `pylint` - Linting
@@ -674,21 +733,24 @@ class StorageManager:
 ### External Services
 
 #### 1. OBS Studio
+
 - **Protocol**: WebSocket (ws://localhost:4455)
 - **Authentication**: Password-based
 - **API Version**: 5.0+
 - **Rate Limiting**: None (local)
 
 #### 2. YouTube Streaming
+
 - **Protocol**: RTMP
 - **URL**: `rtmp://a.rtmp.youtube.com/live2`
 - **Authentication**: Stream key
-- **Requirements**: 
+- **Requirements**:
   - Keyframe interval: 2 seconds
   - Max bitrate: 51 Mbps (8K), typically 4.5-9 Mbps (1080p)
   - Audio: AAC, 128 kbps
 
 #### 3. OpenAI Whisper
+
 - **Protocol**: HTTPS REST API
 - **Endpoint**: `https://api.openai.com/v1/audio/transcriptions`
 - **Authentication**: API key (Bearer token)
@@ -696,6 +758,7 @@ class StorageManager:
 - **Max File Size**: 25 MB
 
 #### 4. SRT Relay (Future)
+
 - **Protocol**: SRT
 - **Port**: Configurable (typically 9998)
 - **Latency**: Configurable (1000-3000ms recommended)
@@ -707,7 +770,8 @@ class StorageManager:
 ### Credential Management
 
 **Storage**:
-```
+
+```text
 $HOME/.streamlab/
 ├── config.yaml          # Non-sensitive config
 ├── credentials.enc      # Encrypted credentials
@@ -715,6 +779,7 @@ $HOME/.streamlab/
 ```
 
 **Encryption**:
+
 ```python
 from cryptography.fernet import Fernet
 
@@ -730,6 +795,7 @@ decrypted = f.decrypt(encrypted)
 ```
 
 **Environment Variables** (Alternative):
+
 ```bash
 # .env file (never commit)
 YOUTUBE_STREAM_KEY=your-key-here
@@ -740,10 +806,12 @@ OBS_WEBSOCKET_PASSWORD=your-password
 ### Network Security
 
 **TLS/SSL**:
+
 - All external APIs use HTTPS
 - OBS WebSocket can use WSS (future)
 
 **Firewall Rules**:
+
 - Outbound: Allow RTMP (1935), SRT (9998), HTTPS (443)
 - Inbound: Block all (no server component)
 
@@ -754,41 +822,50 @@ OBS_WEBSOCKET_PASSWORD=your-password
 ### Resource Targets
 
 **CPU Usage**:
+
 - Baseline: <10% (idle)
 - During stream: <30% (monitoring/transcription)
 - OBS encoding: 40-60% (separate process)
 
 **Memory Usage**:
+
 - Baseline: ~200 MB
 - During stream: ~500 MB
 - Transcription buffer: ~100 MB
 
 **Disk I/O**:
+
 - ISO recording: ~50 MB/min per track
 - Log files: ~1 MB/hour
 - Transcription cache: ~10 MB/hour
 
 **Network**:
+
 - Upload: 5-10 Mbps (stream) + 0.1 Mbps (monitoring)
 - Download: <1 Mbps (API responses)
 
 ### Optimization Strategies
 
 1. **Async Processing**:
+
    - All I/O operations are async (network, disk, API calls)
    - Prevents blocking the main thread
    
+
 2. **Batching**:
+
    - Transcription: Process in 30s chunks
    - Metrics collection: 1s intervals
    - Health checks: 5s intervals
    
 3. **Caching**:
+
    - Configuration cached in memory
    - Network status cached for 10s
    - OBS status cached for 1s
    
 4. **Resource Monitoring**:
+
    - Track CPU/GPU usage continuously
    - Auto-disable heavy features if resources constrained
    - Alert user when resources critical
@@ -802,11 +879,13 @@ OBS_WEBSOCKET_PASSWORD=your-password
 **Scenario**: Internet connection drops
 
 **Detection**:
+
 - Speedtest fails
 - RTMP connection drops
 - API calls timeout
 
 **Recovery**:
+
 1. Display "Connection Lost" overlay
 2. Continue ISO recording
 3. Attempt reconnection every 30s
@@ -817,10 +896,12 @@ OBS_WEBSOCKET_PASSWORD=your-password
 **Scenario**: High packet loss (>5%)
 
 **Detection**:
+
 - Monitor RTT and dropped frames
 - 3 consecutive checks above threshold
 
 **Recovery**:
+
 1. Alert user (warning notification)
 2. If primary RTMP, failover to SRT
 3. Reduce bitrate recommendation
@@ -833,10 +914,12 @@ OBS_WEBSOCKET_PASSWORD=your-password
 **Scenario**: OBS crashes
 
 **Detection**:
+
 - WebSocket connection lost
 - Heartbeat timeout (10s)
 
 **Recovery**:
+
 1. Log crash event
 2. Alert user immediately
 3. Stop monitoring gracefully
@@ -848,10 +931,12 @@ OBS_WEBSOCKET_PASSWORD=your-password
 **Scenario**: Encoding overload (dropped frames)
 
 **Detection**:
+
 - Dropped frame count increasing
 - Encoding lag >100ms
 
 **Recovery**:
+
 1. Alert user (warning)
 2. Suggest bitrate reduction
 3. Identify resource-heavy sources
@@ -864,10 +949,12 @@ OBS_WEBSOCKET_PASSWORD=your-password
 **Scenario**: Disk full during recording
 
 **Detection**:
+
 - Pre-flight check: <2 GB available
 - During recording: <1 GB remaining
 
 **Recovery**:
+
 1. Alert user immediately
 2. Stop ISO recording gracefully
 3. Continue streaming (critical function)
@@ -880,11 +967,13 @@ OBS_WEBSOCKET_PASSWORD=your-password
 **Scenario**: OpenAI API fails (transcription)
 
 **Detection**:
+
 - HTTP 5xx errors
 - Connection timeout
 - Rate limit exceeded
 
 **Recovery**:
+
 1. Log failure details
 2. Queue audio chunk for retry
 3. Continue with blank captions
@@ -898,11 +987,13 @@ OBS_WEBSOCKET_PASSWORD=your-password
 **Scenario**: Python exception causes crash
 
 **Prevention**:
+
 - Try/except blocks around all critical functions
 - Comprehensive error logging
 - Graceful shutdown handlers
 
 **Recovery**:
+
 1. Log full stack trace
 2. Save current state (config, metrics)
 3. Attempt to stop streams gracefully
@@ -914,22 +1005,26 @@ OBS_WEBSOCKET_PASSWORD=your-password
 ## Testing Strategy
 
 ### Unit Tests
+
 - Each module has comprehensive unit tests
 - Mock external dependencies (OBS, APIs)
 - Target: 80%+ coverage
 
 ### Integration Tests
+
 - Test module interactions
 - Use test OBS instance
 - Validate end-to-end flows
 
 ### System Tests
+
 - Full application testing
 - Real streaming (to test server)
 - Performance benchmarks
 
 ### Test Structure
-```
+
+```text
 tests/
 ├── unit/
 │   ├── test_config.py
@@ -953,7 +1048,8 @@ tests/
 ## Deployment Architecture
 
 ### Development Environment
-```
+
+```text
 Local Machine
 ├── OBS Studio (production)
 ├── Python virtual environment
@@ -962,7 +1058,8 @@ Local Machine
 ```
 
 ### Production Environment (City of Ottawa)
-```
+
+```text
 Production Machine
 ├── OBS Studio (configured)
 ├── Miktos StreamLab (installed)
@@ -976,11 +1073,13 @@ Production Machine
 ## Future Architecture Considerations
 
 ### Scalability
+
 - **Multiple concurrent streams**: Architecture supports this
 - **Cloud deployment**: Could run on server for remote control
 - **Distributed processing**: Transcription could be offloaded
 
 ### Extensibility
+
 - **Plugin system**: For custom integrations
 - **REST API**: For external control
 - **WebSocket API**: For real-time updates to UI
@@ -1001,4 +1100,3 @@ Production Machine
 - **Monthly**: During maintenance
 - **Quarterly**: Major architectural reviews
 
-**Next Review**: End of Week 2
