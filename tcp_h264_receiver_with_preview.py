@@ -33,7 +33,7 @@ class TCPReceiverWithPreview:
             self.socket.bind((self.host, self.port))
             self.socket.listen(1)
 
-            print(f"🎥 TCP H.264 Receiver with Live Preview")
+            print("🎥 TCP H.264 Receiver with Live Preview")
             print(f"📡 Listening on {self.host}:{self.port}")
             print("=" * 60)
             print("Waiting for Android StreamLab Camera connection...")
@@ -48,7 +48,7 @@ class TCPReceiverWithPreview:
                             addr[0]}:{
                             addr[1]} at {
                             datetime.now()}")
-                    print(f"🚀 Starting live preview window...")
+                    print("🚀 Starting live preview window...")
                     self.start_time = time.time()
                     self.bytes_received = 0
 
@@ -67,7 +67,7 @@ class TCPReceiverWithPreview:
 
                     # After disconnection, clean up and wait for next
                     # connection
-                    print(f"\n🔄 Connection closed. Cleaning up...")
+                    print("\n🔄 Connection closed. Cleaning up...")
                     if self.ffplay_process:
                         try:
                             self.ffplay_process.stdin.close()
@@ -79,7 +79,7 @@ class TCPReceiverWithPreview:
                             print(f"⚠️  Error closing preview: {e}")
 
                     print(
-                        f"🔄 Ready for reconnection. Waiting for next stream...")
+                        "🔄 Ready for reconnection. Waiting for next stream...")
                     print("=" * 60)
 
                 except socket.error as e:
@@ -100,10 +100,10 @@ class TCPReceiverWithPreview:
             # ffplay command to read H.264 from stdin and display
             cmd = [
                 'ffplay',
-                '-f', 'h264',           # Input format is raw H.264
-                '-fflags', 'nobuffer',  # Minimize buffering for low latency
+                '-f', 'h264',  # Input format is raw H.264
+                '-fflags', 'nobuffer',  # Minimize buffering
                 '-flags', 'low_delay',  # Low delay mode
-                '-framedrop',           # Drop frames if needed to maintain sync
+                '-framedrop',  # Drop frames if needed
                 '-probesize', '32',     # Minimal probe size
                 '-analyzeduration', '0',  # Don't analyze, start immediately
                 '-sync', 'ext',         # External sync
@@ -134,7 +134,8 @@ class TCPReceiverWithPreview:
         buffer_size = 8192
         last_receive_time = time.time()
         frame_count = 0
-        self.client_socket.settimeout(1.0)  # 1 second timeout for detection
+        # 1 second timeout for detection
+        self.client_socket.settimeout(1.0)
 
         try:
             while self.running and self.client_socket:
@@ -148,7 +149,8 @@ class TCPReceiverWithPreview:
                     last_receive_time = time.time()
 
                     # Send data to ffplay for display
-                    if self.show_preview and self.ffplay_process and self.ffplay_process.stdin:
+                    if (self.show_preview and self.ffplay_process and
+                            self.ffplay_process.stdin):
                         try:
                             self.ffplay_process.stdin.write(data)
                             self.ffplay_process.stdin.flush()
@@ -174,23 +176,26 @@ class TCPReceiverWithPreview:
                                     frame_type = "PPS"
 
                             elapsed = time.time() - self.start_time
-                            fps = frame_count / elapsed if elapsed > 0 else 0
-                            mbps = (self.bytes_received * 8) / \
-                                (elapsed * 1_000_000) if elapsed > 0 else 0
+                            fps = (frame_count / elapsed
+                                   if elapsed > 0 else 0)
+                            mbps = ((self.bytes_received * 8) /
+                                    (elapsed * 1_000_000)
+                                    if elapsed > 0 else 0)
 
                             print(
-                                f"📊 {frame_type} | Frames: {frame_count} | " f"FPS: {
-                                    fps:.1f} | Bitrate: {
-                                    mbps:.2f} Mbps | " f"Total: {
-                                    self.bytes_received /
-                                    1024 /
-                                    1024:.1f} MB")
+                                f"📊 {frame_type} | "
+                                f"Frames: {frame_count} | "
+                                f"FPS: {fps:.1f} | "
+                                f"Bitrate: {mbps:.2f} Mbps | "
+                                f"Total: "
+                                f"{self.bytes_received / 1024 / 1024:.1f} MB")
 
                 except socket.timeout:
                     # Check for timeout (no data received for a while)
                     if time.time() - last_receive_time > 10:
                         print(
-                            "\n⏰ Timeout: No data for 10 seconds - client likely disconnected")
+                            "\n⏰ Timeout: No data for 10 seconds - "
+                            "client likely disconnected")
                         break
                     # Otherwise just continue (normal timeout for checking)
                     continue
@@ -214,7 +219,8 @@ class TCPReceiverWithPreview:
             time.sleep(5)  # Check every 5 seconds
             check_count += 1
 
-            if self.start_time and check_count % 6 == 0:  # Full report every 30 seconds
+            # Full report every 30 seconds
+            if self.start_time and check_count % 6 == 0:
                 elapsed = time.time() - self.start_time
                 avg_kbps = (self.bytes_received * 8) / \
                     (elapsed * 1000) if elapsed > 0 else 0
@@ -222,22 +228,16 @@ class TCPReceiverWithPreview:
                     (self.bytes_received - last_bytes) * 8) / (5 * 1000)
 
                 print(f"\n{'=' * 60}")
-                print(f"📈 30-Second Report:")
+                print("📈 30-Second Report:")
                 print(
-                    f"   Total Data: {
-                        self.bytes_received /
-                        1024 /
-                        1024:.2f} MB")
+                    f"   Total Data: "
+                    f"{self.bytes_received / 1024 / 1024:.2f} MB")
                 print(
-                    f"   Average Bitrate: {
-                        avg_kbps:.1f} Kbps ({
-                        avg_kbps /
-                        1000:.2f} Mbps)")
+                    f"   Average Bitrate: {avg_kbps:.1f} Kbps "
+                    f"({avg_kbps / 1000:.2f} Mbps)")
                 print(
-                    f"   Current Bitrate: {
-                        current_kbps:.1f} Kbps ({
-                        current_kbps /
-                        1000:.2f} Mbps)")
+                    f"   Current Bitrate: {current_kbps:.1f} Kbps "
+                    f"({current_kbps / 1000:.2f} Mbps)")
                 print(f"   Duration: {elapsed:.1f} seconds")
                 print(f"{'=' * 60}\n")
 
@@ -265,11 +265,15 @@ class TCPReceiverWithPreview:
 
         if self.start_time:
             elapsed = time.time() - self.start_time
-            print(f"\n📊 Final Statistics:")
+            print("\n📊 Final Statistics:")
             print(f"   Duration: {elapsed:.1f} seconds")
-            print(f"   Total Data: {self.bytes_received / 1024 / 1024:.2f} MB")
             print(
-                f"   Average Bitrate: {(self.bytes_received * 8) / (elapsed * 1_000_000):.2f} Mbps")
+                "   Total Data: "
+                f"{self.bytes_received / 1024 / 1024:.2f} MB")
+            print(
+                "   Average Bitrate: "
+                f"{(self.bytes_received * 8) /
+                   (elapsed * 1_000_000):.2f} Mbps")
 
         print("👋 Receiver stopped")
 
@@ -284,7 +288,8 @@ def main():
 
     if '--help' in sys.argv or '-h' in sys.argv:
         print(
-            "Usage: python3 tcp_h264_receiver_with_preview.py [--no-preview] [PORT]")
+            "Usage: python3 tcp_h264_receiver_with_preview.py "
+            "[--no-preview] [PORT]")
         print("\nOptions:")
         print("  --no-preview    Don't open preview window (just log stats)")
         print("  PORT            Port number (default: 8554)")
