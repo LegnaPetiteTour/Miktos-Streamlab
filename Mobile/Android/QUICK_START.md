@@ -3,24 +3,28 @@
 ## ⚡ 5-Minute Setup
 
 ### 1️⃣ Enable Developer Mode (One-time setup)
-```
+
+```text
 Phone Settings → About Phone → Tap "Build number" 7 times
 Settings → Developer Options → Enable "USB debugging"
 ```
 
 ### 2️⃣ Connect Phone to Mac
+
 ```bash
 # Connect USB cable, approve popup on phone
 adb devices    # Verify connection
 ```
 
 ### 3️⃣ Install App
+
 ```bash
 cd "/Users/atorrella/Desktop/Miktos Streamlab/Mobile/Android"
 ./gradlew installDebug
 ```
 
 ### 4️⃣ Start Mac Receiver
+
 ```bash
 # Terminal Window 1:
 cd "/Users/atorrella/Desktop/Miktos Streamlab"
@@ -29,6 +33,7 @@ python3 tcp_h264_receiver.py
 ```
 
 ### 5️⃣ Get Mac IP
+
 ```bash
 # Terminal Window 2:
 ifconfig | grep "inet " | grep -v 127.0.0.1
@@ -36,7 +41,8 @@ ifconfig | grep "inet " | grep -v 127.0.0.1
 ```
 
 ### 6️⃣ Stream from Phone
-```
+
+```text
 1. Open "Miktos Camera" app
 2. Grant all permissions (camera/audio/notification)
 3. Enter Mac IP: 192.168.2.36 (use YOUR IP)
@@ -47,11 +53,13 @@ ifconfig | grep "inet " | grep -v 127.0.0.1
 ## ✅ Success Indicators
 
 **On Phone:**
+
 - Red "STOP STREAMING" button
 - "✅ LIVE: Streaming to..." status
 - Notification: "📹 Streaming to Mac..."
 
 **On Mac Terminal:**
+
 - "✅ Connected to..."
 - "📊 Receiving stream... X.X MB/s"
 
