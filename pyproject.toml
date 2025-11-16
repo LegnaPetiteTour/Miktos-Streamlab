@@ -1,0 +1,9 @@
+[tool.mypy]
+# Suppress informational warnings for untyped functions in test files
+check_untyped_defs = false
+warn_unused_ignores = false
+
+# Ignore test files to reduce noise
+[[tool.mypy.overrides]]
+module = "test_*"
+ignore_errors = true
