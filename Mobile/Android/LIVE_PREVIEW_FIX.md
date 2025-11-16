@@ -1,6 +1,7 @@
 # 🎬 Live Preview Fix - Quick Guide
 
 ## Problem
+
 - ✅ Streaming works (data is being received)
 - ❌ No live preview on Mac
 - ❌ No camera preview on phone
@@ -12,10 +13,13 @@
 This will show the live video on your Mac!
 
 #### Step 1: Stop Current Receiver
+
 In the Terminal where the receiver is running:
+
 - Press `Ctrl+C` to stop it
 
 #### Step 2: Check if ffplay is installed
+
 ```bash
 which ffplay
 ```
@@ -23,12 +27,15 @@ which ffplay
 **If you see a path** (like `/opt/homebrew/bin/ffplay`): ✅ You have it!
 
 **If you see nothing:** Install ffmpeg:
+
 ```bash
 brew install ffmpeg
 ```
+
 (This takes 2-3 minutes)
 
 #### Step 3: Start New Receiver with Live Preview
+
 ```bash
 cd "/Users/atorrella/Desktop/Miktos Streamlab"
 source .venv/bin/activate
@@ -36,11 +43,13 @@ python3 tcp_h264_receiver_with_preview.py
 ```
 
 #### Step 4: Restart Streaming on Phone
+
 1. On phone, tap "STOP STREAMING"
 2. Wait 2 seconds
 3. Tap "START STREAMING" again
 
 **You should now see:**
+
 - 📺 A new window opens on Mac showing live video!
 - 📊 Terminal shows stats (FPS, bitrate, etc.)
 
@@ -49,7 +58,8 @@ python3 tcp_h264_receiver_with_preview.py
 ### What You'll See
 
 **On Mac:**
-```
+
+```text
 🎥 Miktos StreamLab Camera - TCP H.264 Receiver
 ============================================================
 📺 Live preview enabled (press Q in preview window to close)
@@ -72,21 +82,25 @@ Waiting for Android StreamLab Camera connection...
 ### Commands
 
 **Start with preview (default):**
+
 ```bash
 python3 tcp_h264_receiver_with_preview.py
 ```
 
 **Stats only (no preview window):**
+
 ```bash
 python3 tcp_h264_receiver_with_preview.py --no-preview
 ```
 
 **Use different port:**
+
 ```bash
 python3 tcp_h264_receiver_with_preview.py 9000
 ```
 
 **Stop receiver:**
+
 - Press `Ctrl+C` in Terminal, or
 - Press `Q` in the video preview window
 
@@ -94,22 +108,26 @@ python3 tcp_h264_receiver_with_preview.py 9000
 
 ### Troubleshooting
 
-**"ffplay: command not found"**
+#### "ffplay: command not found"
+
 ```bash
 brew install ffmpeg
 ```
 
-**Preview window appears but is black:**
+#### Preview window appears but is black
+
 - Give it 2-3 seconds to start
 - Check phone is actually streaming (look for "STOP STREAMING" button)
 - Try stopping and restarting the stream on phone
 
-**Preview is laggy:**
+#### Preview is laggy
+
 - This is normal for first few seconds
 - Should stabilize at 30 FPS after ~5 seconds
 - Check Wi-Fi signal strength
 
-**No preview window at all:**
+#### No preview window at all
+
 - Check Terminal for errors
 - Make sure ffplay installed: `which ffplay`
 - Try `--no-preview` mode to verify data is received
@@ -128,9 +146,11 @@ The Android app has a PreviewView but it's not currently connected to show what 
 
 1. **Stop old receiver** (Ctrl+C)
 2. **Start new receiver:**
+
    ```bash
    python3 tcp_h264_receiver_with_preview.py
    ```
+
 3. **On phone:** Stop then Start streaming
 4. **Watch for preview window to pop up!**
 
