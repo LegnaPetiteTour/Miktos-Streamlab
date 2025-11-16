@@ -46,7 +46,8 @@ class CameraStreamer(
     private var reconnectAttempts = 0
     private val MAX_RECONNECT_ATTEMPTS = 5  // Increased from 3 to 5
     private var consecutiveWriteFailures = 0
-    private val MAX_WRITE_FAILURES = 3  // Trigger reconnect after 3 failed writes    
+    private val MAX_WRITE_FAILURES = 3  // Trigger reconnect after 3 failed writes
+    private var isReconnecting = false  // Guard to prevent overlapping reconnections    
 
     // Connection parameters for auto-reconnection
     private var storedServerIp: String? = null
@@ -98,15 +99,19 @@ class CameraStreamer(
                 lastSuccessfulFrameTime = System.currentTimeMillis()
                 consecutiveWriteFailures = 0  // Reset failure counter
                 
-                // If this was a successful reconnection, notify UI
-                if (reconnectAttempts > 0) {
-                    Log.i(TAG, "✅ Reconnection successful after $reconnectAttempts attempts!")
+                // If this was a successful reconnection, notify UI (check BEFORE resetting)
+                val wasReconnecting = isReconnecting
+                val attemptCount = reconnectAttempts
+                
+                reconnectAttempts = 0 // Reset reconnection counter
+                isReconnecting = false // Clear reconnection flag
+                
+                if (wasReconnecting && attemptCount > 0) {
+                    Log.i(TAG, "✅ Reconnection successful after $attemptCount attempts!")
                     val intent = Intent("com.miktos.STREAM_RECONNECTED")
                     intent.setPackage(context.packageName)
                     context.sendBroadcast(intent)
                 }
-                
-                reconnectAttempts = 0 // Reset reconnection counter
                 statusCallback(true)
                 Log.d(TAG, "Streaming pipeline initialized")
                 
@@ -238,14 +243,23 @@ class CameraStreamer(
     }
 
     private fun onDisconnect() {
+        // Guard against overlapping reconnection attempts
+        if (isReconnecting) {
+            Log.w(TAG, "Already reconnecting - ignoring duplicate disconnect event")
+            return
+        }
+        
         Log.w(TAG, "Connection lost - attempting recovery (attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})")
+        
+        // Mark as reconnecting
+        isReconnecting = true
         
         // Update internal state FIRST
         isStreaming = false
         
         // Clean up current resources
         cleanup()
-        statusCallback(false)
+        // DON'T call statusCallback(false) during reconnection - it triggers service destruction!
         
         // Attempt auto-reconnection if within limits
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
@@ -296,6 +310,7 @@ class CameraStreamer(
 
     private fun onReconnectionFailed() {
         Log.w(TAG, "Reconnection attempt failed - treating as disconnect failure")
+        isReconnecting = false // Clear reconnection flag on failure
         // Trigger the same failure logic as max attempts reached
         val failIntent = Intent("com.miktos.STREAM_FAILED")
         failIntent.setPackage(context.packageName)
@@ -420,15 +435,14 @@ class CameraStreamer(
                 }
                 
                 override fun onDisconnected(camera: CameraDevice) {
-                    Log.d(TAG, "Camera disconnected")
-                    cleanup()
-                    statusCallback(false)
+                    Log.w(TAG, "Camera disconnected by system (likely screen lock/unlock)")
+                    // This is expected during lock/unlock - auto-reconnect will handle it
+                    onDisconnect()
                 }
                 
                 override fun onError(camera: CameraDevice, error: Int) {
-                    Log.e(TAG, "Camera error: $error")
-                    cleanup()
-                    statusCallback(false)
+                    Log.e(TAG, "Camera error: $error - triggering auto-reconnect")
+                    onDisconnect()
                 }
             }, cameraHandler)
             
@@ -500,14 +514,23 @@ class CameraStreamer(
             codec.releaseOutputBuffer(index, false)
             
         } catch (e: IOException) {
-            Log.e(TAG, "Error sending frame", e)
-            stopStreaming()
+            Log.e(TAG, "Error sending frame during ${if (isReconnecting) "reconnection" else "streaming"}", e)
+            // Don't call stopStreaming() if we're already reconnecting
+            // This would reset reconnection state and break UI synchronization
+            if (!isReconnecting) {
+                onDisconnect()  // Trigger auto-reconnect flow
+            }
         }
     }
     
     fun stopStreaming() {
         Log.d(TAG, "Stopping streaming...")
         isStreaming = false
+        
+        // Reset reconnection state to allow manual restart
+        isReconnecting = false
+        reconnectAttempts = 0
+        
         cleanup()
         statusCallback(false)
     }
