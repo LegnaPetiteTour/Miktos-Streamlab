@@ -126,7 +126,7 @@ class DualPathEgressTester:
     realistic failure scenarios and performance validation.
     """
 
-    def __init__(self):
+    def __init__(self):  # type: ignore[no-untyped-def]
         """Initialize test framework"""
         self.logger = logging.getLogger(f"{__name__}.Tester")
         self.test_results: List[TestResult] = []
