@@ -3,6 +3,7 @@ package com.miktos.streamlabcamera
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Build
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
@@ -32,18 +33,27 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 "com.miktos.STREAM_DISCONNECTED" -> {
-                    val attempts = intent.getIntExtra("reconnect_attempts", 0)
-                    val maxAttempts = intent.getIntExtra("max_attempts", 3)
                     runOnUiThread {
-                        statusText.text = "🔄 Disconnected - Reconnecting ($attempts/$maxAttempts)"
+                        statusText.text = "🔄 Disconnected - Reconnecting..."
                         startButton.text = "RECONNECTING..."
                         startButton.isEnabled = false
                         isStreaming = false
                     }
                 }
+                "com.miktos.STREAM_RECONNECTED" -> {
+                    runOnUiThread {
+                        val ip = ipInput.text.toString()
+                        val port = portInput.text.toString()
+                        statusText.text = "✅ LIVE: Streaming to $ip:$port\n\n📺 Reconnected successfully!"
+                        startButton.text = "STOP STREAMING"
+                        startButton.isEnabled = true
+                        startButton.setBackgroundColor(getColor(android.R.color.holo_red_dark))
+                        isStreaming = true
+                    }
+                }
                 "com.miktos.STREAM_FAILED" -> {
                     runOnUiThread {
-                        statusText.text = "❌ Connection Failed - Max attempts reached"
+                        statusText.text = "❌ Connection Failed - Please retry"
                         startButton.text = "RETRY"
                         startButton.isEnabled = true
                         isStreaming = false
@@ -67,6 +77,7 @@ class MainActivity : AppCompatActivity() {
         // Register disconnect receiver
         val filter = IntentFilter().apply {
             addAction("com.miktos.STREAM_DISCONNECTED")
+            addAction("com.miktos.STREAM_RECONNECTED")
             addAction("com.miktos.STREAM_FAILED")
         }
         registerReceiver(disconnectReceiver, filter, RECEIVER_NOT_EXPORTED)
@@ -107,12 +118,22 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun requestPermissions() {
-        ActivityCompat.requestPermissions(
-            this,
+        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+        } else {
             arrayOf(
                 Manifest.permission.CAMERA,
                 Manifest.permission.RECORD_AUDIO
-            ),
+            )
+        }
+        
+        ActivityCompat.requestPermissions(
+            this,
+            permissions,
             REQUEST_CAMERA_PERMISSION
         )
     }

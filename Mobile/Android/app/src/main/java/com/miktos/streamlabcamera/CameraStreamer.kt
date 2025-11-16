@@ -10,6 +10,7 @@ import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import java.io.IOException
@@ -90,13 +91,58 @@ class CameraStreamer(
                 startCamera2()
                 isStreaming = true
                 lastWriteTime = System.currentTimeMillis() // Initialize encoder stall tracking
-                reconnectAttempts = 0 // Reset reconnection counter                statusCallback(true)
+                
+                // If this was a successful reconnection, notify UI
+                if (reconnectAttempts > 0) {
+                    Log.i(TAG, "✅ Reconnection successful after $reconnectAttempts attempts!")
+                    val intent = Intent("com.miktos.STREAM_RECONNECTED")
+                    intent.setPackage(context.packageName)
+                    context.sendBroadcast(intent)
+                }
+                
+                reconnectAttempts = 0 // Reset reconnection counter
+                statusCallback(true)
                 Log.d(TAG, "Streaming pipeline initialized")
                 
             } catch (e: Exception) {
                 Log.e(TAG, "Error starting stream", e)
                 cleanup()
                 statusCallback(false)
+                
+                // If this was a reconnection attempt, schedule the next one
+                if (reconnectAttempts > 0 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                    Log.w(TAG, "Reconnection attempt $reconnectAttempts failed - scheduling next attempt")
+                    
+                    // Increment counter BEFORE scheduling the delay
+                    reconnectAttempts++
+                    
+                    // Update UI immediately with new attempt number
+                    val intent = Intent("com.miktos.STREAM_DISCONNECTED")
+                    intent.setPackage(context.packageName)
+                    intent.putExtra("reconnect_attempts", reconnectAttempts)
+                    intent.putExtra("max_attempts", MAX_RECONNECT_ATTEMPTS)
+                    context.sendBroadcast(intent)
+                    
+                    Log.i(TAG, "🔄 Scheduling retry reconnection (attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)")
+                    
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        try {
+                            Log.i(TAG, "🚀 Attempting reconnection $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS")
+                            
+                            if (storedServerIp != null && storedServerPort != null) {
+                                startStreaming(storedServerIp!!, storedServerPort!!)
+                            } else {
+                                onReconnectionFailed()
+                            }
+                        } catch (ex: Exception) {
+                            Log.e(TAG, "Retry scheduling failed: ${ex.message}")
+                            onReconnectionFailed()
+                        }
+                    }, 3000)
+                } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                    Log.e(TAG, "❌ Max reconnection attempts reached after connection failure")
+                    onReconnectionFailed()
+                }
             }
         }
     }
@@ -146,12 +192,6 @@ class CameraStreamer(
         // Update internal state
         isStreaming = false
         
-        // Notify MainActivity via broadcast with reconnection status
-        val intent = Intent("com.miktos.STREAM_DISCONNECTED")
-        intent.putExtra("reconnect_attempts", reconnectAttempts)
-        intent.putExtra("max_attempts", MAX_RECONNECT_ATTEMPTS)
-        context.sendBroadcast(intent)
-        
         // Clean up current resources
         cleanup()
         statusCallback(false)
@@ -161,8 +201,15 @@ class CameraStreamer(
             reconnectAttempts++
             Log.i(TAG, "🔄 Auto-reconnecting in 3 seconds... (attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)")
             
-            // Schedule reconnection after 3 second delay
-            cameraHandler?.postDelayed({
+            // Notify MainActivity via broadcast with reconnection status (AFTER incrementing)
+            val intent = Intent("com.miktos.STREAM_DISCONNECTED")
+            intent.setPackage(context.packageName)
+            intent.putExtra("reconnect_attempts", reconnectAttempts)
+            intent.putExtra("max_attempts", MAX_RECONNECT_ATTEMPTS)
+            context.sendBroadcast(intent)
+            
+            // Schedule reconnection after 3 second delay on main thread (survives cleanup)
+            Handler(Looper.getMainLooper()).postDelayed({
                 try {
                     Log.i(TAG, "🚀 Attempting auto-reconnection...")
                     lastWriteTime = System.currentTimeMillis() // Reset timer
@@ -183,6 +230,7 @@ class CameraStreamer(
         } else {
             Log.e(TAG, "❌ Max reconnection attempts ($MAX_RECONNECT_ATTEMPTS) reached - giving up")
             val failIntent = Intent("com.miktos.STREAM_FAILED")
+            failIntent.setPackage(context.packageName)
             context.sendBroadcast(failIntent)
         }
     }
@@ -191,6 +239,7 @@ class CameraStreamer(
         Log.w(TAG, "Reconnection attempt failed - treating as disconnect failure")
         // Trigger the same failure logic as max attempts reached
         val failIntent = Intent("com.miktos.STREAM_FAILED")
+        failIntent.setPackage(context.packageName)
         context.sendBroadcast(failIntent)
     }
     
@@ -263,6 +312,9 @@ class CameraStreamer(
                     
                     try {
                         // Create capture session with encoder surface
+                        // Note: createCaptureSession is deprecated but SessionConfiguration requires API 28+
+                        // Since minSdk is 26, we keep the working deprecated method
+                        @Suppress("DEPRECATION")
                         val surfaces = listOf(encoderSurface!!)
                         
                         camera.createCaptureSession(surfaces, object : CameraCaptureSession.StateCallback() {
@@ -349,23 +401,32 @@ class CameraStreamer(
                 
                 // ALWAYS send codec config, and send keyframes + regular frames
                 if (isConfig || (info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0 || info.flags == 0) {
-                    outputStream?.write(data)
-                    lastWriteTime = System.currentTimeMillis() // Track data transmission time                    outputStream?.flush()
-                    
-                    when {
-                        isConfig -> Log.d(TAG, "✅ Sent codec config (SPS/PPS): ${info.size} bytes")
-                        (info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0 -> {
-                            frameCount++
-                            if (frameCount % 60 == 0) {
-                                Log.d(TAG, "🔑 Keyframe #$frameCount: ${info.size} bytes")
+                    try {
+                        outputStream?.write(data)
+                        outputStream?.flush()
+                        lastWriteTime = System.currentTimeMillis() // Track successful transmission
+                        
+                        when {
+                            isConfig -> Log.d(TAG, "✅ Sent codec config (SPS/PPS): ${info.size} bytes")
+                            (info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0 -> {
+                                frameCount++
+                                if (frameCount % 60 == 0) {
+                                    Log.d(TAG, "🔑 Keyframe #$frameCount: ${info.size} bytes")
+                                }
+                            }
+                            else -> {
+                                frameCount++
+                                if (frameCount % 300 == 0) {
+                                    Log.d(TAG, "📹 Frame #$frameCount: ${info.size} bytes")
+                                }
                             }
                         }
-                        else -> {
-                            frameCount++
-                            if (frameCount % 300 == 0) {
-                                Log.d(TAG, "📹 Frame #$frameCount: ${info.size} bytes")
-                            }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "❌ Write error - network disconnected: ${e.message}")
+                        cameraHandler?.post {
+                            onDisconnect()
                         }
+                        return
                     }
                 }
             }
