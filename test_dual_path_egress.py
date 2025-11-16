@@ -21,8 +21,11 @@ License: MIT
 import asyncio
 import logging
 import time
+import json
 import sys
-from typing import Dict, List, Optional
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
 # Setup logging
@@ -51,8 +54,7 @@ class TestResult:
 class MockDestination:
     """Mock streaming destination for testing"""
 
-    def __init__(self, name: str, dest_type: str,
-                 failure_mode: Optional[str] = None):
+    def __init__(self, name: str, dest_type: str, failure_mode: Optional[str] = None):
         self.name = name
         self.dest_type = dest_type
         self.failure_mode = failure_mode
@@ -189,9 +191,8 @@ class DualPathEgressTester:
 
         try:
             # Connect all destinations
-            connect_tasks = [
-                dest.connect() for dest in self.destinations.values()
-            ]
+            connect_tasks = [dest.connect()
+                             for dest in self.destinations.values()]
             results = await asyncio.gather(*connect_tasks)
 
             if not all(results):
@@ -219,21 +220,17 @@ class DualPathEgressTester:
 
             duration_ms = (time.time() - start_time) * 1000
 
-            self._add_result(
-                TestResult(
-                    test_name="normal_operation",
-                    success=all_healthy,
-                    duration_ms=duration_ms,
-                    details=f"All destinations healthy: {all_healthy}",
-                    metrics={
-                        "avg_health_score": sum(
-                                            print(f"Primary health: active={stats.get('active')}, 
-                                f"bitrate={stats.get('current_bitrate')}")
-                        3}))
+            self._add_result(TestResult(
+                test_name="normal_operation",
+                success=all_healthy,
+                duration_ms=duration_ms,
+                details=f"All destinations healthy: {all_healthy}",
+                metrics={"avg_health_score": sum(d.get_health_status(
+                )["score"] for d in self.destinations.values()) / 3}
+            ))
 
             self.logger.info(
-                f"✅ Normal operation test completed in {
-                    duration_ms:.1f}ms")
+                f"✅ Normal operation test completed in {duration_ms:.1f}ms")
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
@@ -264,26 +261,24 @@ class DualPathEgressTester:
             srt_connected = await self.destinations["srt_backup"].connect()
 
             # Should fail on EN, succeed on others
-            expected_result = (not en_connected and
-                               fr_connected and srt_connected)
+            expected_result = not en_connected and fr_connected and srt_connected
 
             duration_ms = (time.time() - start_time) * 1000
 
-            self._add_result(
-                TestResult(
-                    test_name="youtube_en_failure",
-                    success=expected_result,
-                    duration_ms=duration_ms,
-                                # During stability, both should maintain healthy metrics
-                    metrics={
-                                    print(f"Primary health check: active={primary_health.get('active')}")
-                                    print(f"Backup health check: active={backup_health.get('active')}")
-                        bitrate = primary_health.get('current_bitrate')
-                        print(f"Primary bitrate: {bitrate} kbps")
+            self._add_result(TestResult(
+                test_name="youtube_en_failure",
+                success=expected_result,
+                duration_ms=duration_ms,
+                details=f"EN failed (expected), FR: {fr_connected}, SRT: {srt_connected}",
+                metrics={
+                    "en_health": self.destinations["youtube_en"].get_health_status()["score"],
+                    "fr_health": self.destinations["youtube_fr"].get_health_status()["score"],
+                    "srt_health": self.destinations["srt_backup"].get_health_status()["score"]
+                }
+            ))
 
             self.logger.info(
-                f"✅ YouTube EN failure test completed in {
-                    duration_ms:.1f}ms")
+                f"✅ YouTube EN failure test completed in {duration_ms:.1f}ms")
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
@@ -309,29 +304,27 @@ class DualPathEgressTester:
             self.destinations["youtube_fr"].failure_mode = "streaming_failed"
 
             # Connect all
-                    print(f"Primary: {primary_stats.get('state')}")
-                *[dest.connect() for dest in self.destinations.values()])
+            await asyncio.gather(*[dest.connect() for dest in self.destinations.values()])
 
-                    print(f"Primary packets sent: {primary_stats.get('packets_sent')}")
-                    print(f"Backup packets sent: {backup_stats.get('packets_sent')}")
-                    print(f"Primary bytes sent: {primary_stats.get('bytes_sent')}")
+            # Try streaming
+            en_streaming = await self.destinations["youtube_en"].start_streaming()
+            fr_streaming = await self.destinations["youtube_fr"].start_streaming()
             srt_streaming = await self.destinations["srt_backup"].start_streaming()
 
-                    assert primary_stats.get('state') == 'active', "Primary inactive"
+            # Should succeed on EN and SRT, fail on FR
             expected_result = en_streaming and not fr_streaming and srt_streaming
 
             duration_ms = (time.time() - start_time) * 1000
 
-            self._add_result(
-                TestResult(
-                    test_name="youtube_fr_failure",
-                    success=expected_result,
-                            print(f"Primary health - Active: {primary_health.get('active')}")
-                    details=f"EN: {en_streaming}, FR failed (expected), SRT: {srt_streaming}"))
+            self._add_result(TestResult(
+                test_name="youtube_fr_failure",
+                success=expected_result,
+                duration_ms=duration_ms,
+                details=f"EN: {en_streaming}, FR failed (expected), SRT: {srt_streaming}"
+            ))
 
             self.logger.info(
-                f"✅ YouTube FR failure test completed in {
-                    duration_ms:.1f}ms")
+                f"✅ YouTube FR failure test completed in {duration_ms:.1f}ms")
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
@@ -353,13 +346,12 @@ class DualPathEgressTester:
             # Reset destinations
             await self._reset_destinations()
 
-                    print(f"failover test - Primary active: {is_primary_active}")
+            # Simulate both YouTube failures
             self.destinations["youtube_en"].failure_mode = "degraded_performance"
             self.destinations["youtube_fr"].failure_mode = "high_latency"
 
-                    print(f"Waiting for failover... Primary: {is_primary_active}")
-                    print(f"                       Backup: {egress.backup_dest.is_active()}")
-                *[dest.connect() for dest in self.destinations.values()])
+            # Connect and start streaming
+            await asyncio.gather(*[dest.connect() for dest in self.destinations.values()])
             await asyncio.gather(*[dest.start_streaming() for dest in self.destinations.values()])
 
             # Check health scores
@@ -388,8 +380,7 @@ class DualPathEgressTester:
             ))
 
             self.logger.info(
-                f"✅ Both YouTube failure test completed in {
-                    duration_ms:.1f}ms")
+                f"✅ Both YouTube failure test completed in {duration_ms:.1f}ms")
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
@@ -456,8 +447,7 @@ class DualPathEgressTester:
             ))
 
             self.logger.info(
-                f"✅ SRT performance test completed in {
-                    duration_ms:.1f}ms")
+                f"✅ SRT performance test completed in {duration_ms:.1f}ms")
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
@@ -478,10 +468,9 @@ class DualPathEgressTester:
         try:
             # Reset destinations
             await self._reset_destinations()
-         print(f"Waiting for failover... Primary: {is_primary_active}")
-                    print(f"                       Backup: {egress.backup_dest.is_active()}")
-            await asyncio.gather(
-                *[dest.connect() for dest in self.destinations.values()])
+
+            # Start with all destinations healthy
+            await asyncio.gather(*[dest.connect() for dest in self.destinations.values()])
             await asyncio.gather(*[dest.start_streaming() for dest in self.destinations.values()])
 
             # Simulate sudden YouTube failure during operation
@@ -494,34 +483,32 @@ class DualPathEgressTester:
                 self.destinations["youtube_en"].disconnect(),
                 self.destinations["youtube_fr"].disconnect()
             )
-         print(f"Backup - Active: {egress.backup_dest.is_active()}")
+
             # Time SRT backup activation (simulate detection + switch)
             await asyncio.sleep(0.5)  # Health check detection delay
             srt_activated = await self.destinations["srt_backup"].start_streaming()
 
-                    print(f"Recovery - Primary: {egress.primary_dest.is_active()}")
+            failover_time = (time.time() - failover_start) * 1000
 
             # Failover should complete within 2000ms requirement
             timing_met = failover_time <= self.failover_timeout_ms and srt_activated
 
             duration_ms = (time.time() - start_time) * 1000
 
-            self._add_result(
-                TestResult(
-                    test_name="failover_timing",
-                    success=timing_met,
-                    duration_ms=duration_ms,
-                    details=f"Failover in {
-                        failover_time:.1f}ms (requirement: <{
-                        self.failover_timeout_ms}ms)",
-                    metrics={
-                        "failover_time_ms": failover_time,
-                        "requirement_ms": self.failover_timeout_ms,
-                        "timing_met": timing_met}))
+            self._add_result(TestResult(
+                test_name="failover_timing",
+                success=timing_met,
+                duration_ms=duration_ms,
+                details=f"Failover in {failover_time:.1f}ms (requirement: <{self.failover_timeout_ms}ms)",
+                metrics={
+                    "failover_time_ms": failover_time,
+                    "requirement_ms": self.failover_timeout_ms,
+                    "timing_met": timing_met
+                }
+            ))
 
             self.logger.info(
-                f"✅ Failover timing test completed in {
-                    duration_ms:.1f}ms")
+                f"✅ Failover timing test completed in {duration_ms:.1f}ms")
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
@@ -559,8 +546,8 @@ class DualPathEgressTester:
 
             # Reconnect YouTube channels
             en_recovered = await self.destinations["youtube_en"].connect()
-                        print(f"Primary active: {primary_active}, Backup: {backup_active}")
-             print(f"Both paths inactive for {inactive_time:.1f}s - CRITICAL")
+            fr_recovered = await self.destinations["youtube_fr"].connect()
+
             if en_recovered and fr_recovered:
                 en_streaming = await self.destinations["youtube_en"].start_streaming()
                 fr_streaming = await self.destinations["youtube_fr"].start_streaming()
@@ -573,21 +560,20 @@ class DualPathEgressTester:
 
             duration_ms = (time.time() - start_time) * 1000
 
-            self._add_result(
-                TestResult(
-                    test_name="recovery_scenarios",
-                    success=recovery_successful,
-                    duration_ms=duration_ms,
-                    details=f"Recovery successful: {recovery_successful} in {
-                        recovery_time:.1f}ms",
-                    metrics={
-                        "recovery_time_ms": recovery_time,
-                        "en_recovered": en_recovered,
-                        "fr_recovered": fr_recovered}))
+            self._add_result(TestResult(
+                test_name="recovery_scenarios",
+                success=recovery_successful,
+                duration_ms=duration_ms,
+                details=f"Recovery successful: {recovery_successful} in {recovery_time:.1f}ms",
+                metrics={
+                    "recovery_time_ms": recovery_time,
+                    "en_recovered": en_recovered,
+                    "fr_recovered": fr_recovered
+                }
+            ))
 
             self.logger.info(
-                f"✅ Recovery test completed in {
-                    duration_ms:.1f}ms")
+                f"✅ Recovery test completed in {duration_ms:.1f}ms")
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
@@ -631,13 +617,14 @@ class DualPathEgressTester:
                 # Test under stress
                 scenario_start = time.time()
 
-                await asyncio.gather(
+                connections = await asyncio.gather(
                     *[dest.connect() for dest in self.destinations.values()],
                     return_exceptions=True
-                        print(f"path test - Primary: {primary_stats.get('state')}")
+                )
 
-                await asyncio.gather(
-                    *[dest.start_streaming() for dest in self.destinations.values()],
+                streaming = await asyncio.gather(
+                    *[dest.start_streaming()
+                      for dest in self.destinations.values()],
                     return_exceptions=True
                 )
 
@@ -655,29 +642,27 @@ class DualPathEgressTester:
                     "avg_health": avg_health,
                     "duration_ms": scenario_time
                 })
-         print(f"Primary: {primary_stats.get('state')}")
+
             # System should maintain at least one healthy destination
             min_health = min(result["avg_health"] for result in stress_results)
             stress_handled = min_health > 0  # At least SRT should remain available
 
             duration_ms = (time.time() - start_time) * 1000
 
-            self._add_result(
-                TestResult(
-                    test_name="network_stress",
-                    success=stress_handled,
-                    duration_ms=duration_ms,
-                    details=f"Minimum health under stress: {
-                        min_health:.1f}%",
-                    metrics={
-                                print(f"Backup - Active: {egress.backup_dest.is_active()}")
-                        "stress_scenarios": len(stress_scenarios),
-                        "avg_scenario_time": sum(
-                            r["duration_ms"] for r in stress_results) / len(stress_results)}))
+            self._add_result(TestResult(
+                test_name="network_stress",
+                success=stress_handled,
+                duration_ms=duration_ms,
+                details=f"Minimum health under stress: {min_health:.1f}%",
+                metrics={
+                    "min_health_score": min_health,
+                    "stress_scenarios": len(stress_scenarios),
+                    "avg_scenario_time": sum(r["duration_ms"] for r in stress_results) / len(stress_results)
+                }
+            ))
 
             self.logger.info(
-                f"✅ Network stress test completed in {
-                    duration_ms:.1f}ms")
+                f"✅ Network stress test completed in {duration_ms:.1f}ms")
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
@@ -711,7 +696,7 @@ class DualPathEgressTester:
                 transition_start = time.time()
 
                 # Simulate slate display logic
-                        print(f"recovery test - Backup active: {backup_active}")
+                await asyncio.sleep(0.1)  # Slate generation time
 
                 # Validate slate content based on scenario
                 slate_content_valid = True  # Would validate actual slate content
@@ -726,7 +711,7 @@ class DualPathEgressTester:
             # All slates should generate quickly and have valid content
             max_transition_time = max(t["transition_time_ms"]
                                       for t in slate_transitions)
-                    print(f"Recovery - Primary: {egress.primary_dest.is_active()}")
+            all_content_valid = all(t["content_valid"]
                                     for t in slate_transitions)
 
             slate_management_good = max_transition_time < 200 and all_content_valid
@@ -746,8 +731,7 @@ class DualPathEgressTester:
             ))
 
             self.logger.info(
-                f"✅ Slate management test completed in {
-                    duration_ms:.1f}ms")
+                f"✅ Slate management test completed in {duration_ms:.1f}ms")
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
@@ -767,14 +751,13 @@ class DualPathEgressTester:
 
         try:
             # Complete integration scenario
-                    print(f"Waiting for failover... Primary: {is_primary_active}")
-         print(f"                       Backup: {egress.backup_dest.is_active()}")
+            await self._reset_destinations()
+
             # Phase 1: Normal operation
-            await asyncio.gather(
-                *[dest.connect() for dest in self.destinations.values()])
+            await asyncio.gather(*[dest.connect() for dest in self.destinations.values()])
             await asyncio.gather(*[dest.start_streaming() for dest in self.destinations.values()])
 
-                    print(f"Failover - Backup: {egress.backup_dest.is_active()}")
+            phase1_health = [dest.get_health_status()["score"]
                              for dest in self.destinations.values()]
 
             # Phase 2: Simulate cascading failures
@@ -796,11 +779,11 @@ class DualPathEgressTester:
             await self.destinations["youtube_fr"].start_streaming()
 
             phase3_health = [dest.get_health_status()["score"]
-                                     print(f"recovery - Primary: {egress.primary_dest.is_active()}")
+                             for dest in self.destinations.values()]
 
             # Validate end-to-end behavior
             phase1_good = all(score > 70 for score in phase1_health)
-                    print(f"Recovery - Primary: {egress.primary_dest.is_active()}")
+            srt_available_in_crisis = self.destinations["srt_backup"].get_health_status()[
                 "score"] > 80
             phase3_recovered = sum(phase3_health) > sum(phase2_health)
 
@@ -808,20 +791,18 @@ class DualPathEgressTester:
 
             duration_ms = (time.time() - start_time) * 1000
 
-            self._add_result(
-                TestResult(
-                    test_name="end_to_end_integration",
-                    success=integration_success,
-                    duration_ms=duration_ms,
-                    details=f"Integration validated: {integration_success}",
-                    metrics={
-                        "phase1_avg_health": sum(phase1_health) /
-                        len(phase1_health),
-                                assert recovery_time <= 12.0, f"Recovery too slow: {recovery_time:.1f}s > 12.0s"
-                        len(phase2_health),
-                        "phase3_avg_health": sum(phase3_health) /
-                                print(f"Recovery in {recovery_time:.1f}s (target: <12s)")
-                        "srt_crisis_health": self.destinations["srt_backup"].get_health_status()["score"]}))
+            self._add_result(TestResult(
+                test_name="end_to_end_integration",
+                success=integration_success,
+                duration_ms=duration_ms,
+                details=f"Integration validated: {integration_success}",
+                metrics={
+                    "phase1_avg_health": sum(phase1_health) / len(phase1_health),
+                    "phase2_avg_health": sum(phase2_health) / len(phase2_health),
+                    "phase3_avg_health": sum(phase3_health) / len(phase3_health),
+                    "srt_crisis_health": self.destinations["srt_backup"].get_health_status()["score"]
+                }
+            ))
 
             self.logger.info(
                 f"✅ End-to-end integration test completed in {duration_ms:.1f}ms")
@@ -867,19 +848,16 @@ class DualPathEgressTester:
         self.logger.info(f"Passed: {passed_tests} ✅")
         self.logger.info(f"Failed: {failed_tests} ❌")
         self.logger.info(
-            f"Success Rate: {(passed_tests / total_tests) * 100:.1f}%")
+            f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
 
         self.logger.info("\nDetailed Results:")
         for result in self.test_results:
             status = "✅" if result.success else "❌"
             self.logger.info(
-                f"{status} {
-                    result.test_name}: {
-                    result.details} ({
-                    result.duration_ms:.1f}ms)")
+                f"{status} {result.test_name}: {result.details} ({result.duration_ms:.1f}ms)")
 
         # Critical requirements check
-                print(f"load test - Primary: {primary_stats.get('state')}")
+        self.logger.info("\n🎯 Critical Requirements Validation:")
 
         # Failover timing requirement
         failover_test = next(
@@ -887,17 +865,15 @@ class DualPathEgressTester:
         if failover_test and failover_test.success:
             self.logger.info("✅ Failover completes in <2 seconds")
         else:
-            bitrate = primary_health.get('current_bitrate')
-            print(f"Primary bitrate: {bitrate} kbps")
+            self.logger.info("❌ Failover timing requirement not met")
 
         # SRT backup availability
         srt_test = next(
-            (r for r in self.test_results if r.test_name == "srt_backup_performance"),
-            None)
+            (r for r in self.test_results if r.test_name == "srt_backup_performance"), None)
         if srt_test and srt_test.success:
             self.logger.info("✅ SRT backup performs reliably")
         else:
-                    print(f"Primary handling load - Bitrate: {primary_stats.get('bitrate')}")
+            self.logger.info("❌ SRT backup performance issues")
 
         # Recovery capability
         recovery_test = next(
@@ -905,7 +881,7 @@ class DualPathEgressTester:
         if recovery_test and recovery_test.success:
             self.logger.info("✅ Automatic recovery functional")
         else:
-                    print(f"Load test - Final bitrate: {primary_stats.get('bitrate')}")
+            self.logger.info("❌ Recovery scenarios have issues")
 
         # Overall system validation
         integration_test = next(
@@ -949,7 +925,7 @@ async def main():
 
     tester = DualPathEgressTester()
 
-            print(f"Cleanup - Primary: {primary_active}, Backup: {backup_active}")
+    try:
         success = await tester.run_all_tests()
 
         if success:
@@ -970,3 +946,4 @@ async def main():
 if __name__ == "__main__":
     exit_code = asyncio.run(main())
     sys.exit(exit_code)
+# flake8: noqa: E501
