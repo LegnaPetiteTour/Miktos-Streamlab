@@ -40,9 +40,13 @@ class CameraStreamer(
 
     // Advanced disconnect detection
     private var lastWriteTime = System.currentTimeMillis()
-    private val DISCONNECT_TIMEOUT = 10_000 // 10 seconds
+    private var lastSuccessfulFrameTime = System.currentTimeMillis()
+    private val WRITE_TIMEOUT = 8_000 // 8 seconds - trigger reconnect if no successful writes
+    private val FRAME_TIMEOUT = 12_000 // 12 seconds - emergency fallback
     private var reconnectAttempts = 0
-    private val MAX_RECONNECT_ATTEMPTS = 3    
+    private val MAX_RECONNECT_ATTEMPTS = 5  // Increased from 3 to 5
+    private var consecutiveWriteFailures = 0
+    private val MAX_WRITE_FAILURES = 3  // Trigger reconnect after 3 failed writes    
 
     // Connection parameters for auto-reconnection
     private var storedServerIp: String? = null
@@ -90,7 +94,9 @@ class CameraStreamer(
                 initializeEncoder()
                 startCamera2()
                 isStreaming = true
-                lastWriteTime = System.currentTimeMillis() // Initialize encoder stall tracking
+                lastWriteTime = System.currentTimeMillis()
+                lastSuccessfulFrameTime = System.currentTimeMillis()
+                consecutiveWriteFailures = 0  // Reset failure counter
                 
                 // If this was a successful reconnection, notify UI
                 if (reconnectAttempts > 0) {
@@ -149,12 +155,19 @@ class CameraStreamer(
     
     private fun connectToServer(serverIp: String, serverPort: Int) {
         Log.d(TAG, "Connecting to $serverIp:$serverPort")
-        socket = Socket(serverIp, serverPort)
+        socket = Socket()
         socket?.tcpNoDelay = true
-        socket?.soTimeout = 5000
         socket?.keepAlive = true
+        socket?.soTimeout = 3000  // 3 second socket timeout
+        socket?.connect(InetSocketAddress(serverIp, serverPort), 5000)  // 5 second connect timeout
+        
+        // Verify connection is actually established
+        if (socket?.isConnected != true || socket?.isClosed == true) {
+            throw IOException("Socket connection failed verification")
+        }
+        
         outputStream = socket?.getOutputStream()
-        Log.d(TAG, "Connected to server")
+        Log.d(TAG, "✅ Connected to server successfully")
         startConnectionHealthCheck()
     }
 
@@ -165,7 +178,7 @@ class CameraStreamer(
             try {
                 val currentTime = System.currentTimeMillis()
                 
-                // Check basic socket health
+                // Check 1: Basic socket health
                 if (socket?.isConnected == false || socket?.isClosed == true) {
                     Log.e(TAG, "❌ Socket disconnected - basic check failed")
                     cameraHandler?.post {
@@ -174,14 +187,52 @@ class CameraStreamer(
                     return@scheduleAtFixedRate
                 }
                 
-                // Check for encoder stall (no data sent for DISCONNECT_TIMEOUT)
-                if (currentTime - lastWriteTime > DISCONNECT_TIMEOUT) {
-                    Log.e(TAG, "❌ Encoder stall detected - no data for ${(currentTime - lastWriteTime)/1000}s")
+                // Check 2: Output stream health
+                if (outputStream == null) {
+                    Log.e(TAG, "❌ Output stream is null")
                     cameraHandler?.post {
                         onDisconnect()
                     }
-                }            } catch (e: Exception) {
+                    return@scheduleAtFixedRate
+                }
+                
+                // Check 3: Write timeout (no successful writes for WRITE_TIMEOUT)
+                if (isStreaming && currentTime - lastWriteTime > WRITE_TIMEOUT) {
+                    Log.e(TAG, "❌ Write timeout - no successful writes for ${(currentTime - lastWriteTime)/1000}s")
+                    cameraHandler?.post {
+                        onDisconnect()
+                    }
+                    return@scheduleAtFixedRate
+                }
+                
+                // Check 4: Frame generation timeout (emergency fallback)
+                if (isStreaming && currentTime - lastSuccessfulFrameTime > FRAME_TIMEOUT) {
+                    Log.e(TAG, "❌ Frame timeout - no frames processed for ${(currentTime - lastSuccessfulFrameTime)/1000}s")
+                    cameraHandler?.post {
+                        onDisconnect()
+                    }
+                    return@scheduleAtFixedRate
+                }
+                
+                // Check 5: Consecutive write failures
+                if (consecutiveWriteFailures >= MAX_WRITE_FAILURES) {
+                    Log.e(TAG, "❌ Too many consecutive write failures ($consecutiveWriteFailures)")
+                    cameraHandler?.post {
+                        onDisconnect()
+                    }
+                    return@scheduleAtFixedRate
+                }
+                
+                // All checks passed
+                if (currentTime % 10000 < 2000) {  // Log every ~10 seconds
+                    Log.d(TAG, "💚 Health check passed - streaming healthy")
+                }
+                
+            } catch (e: Exception) {
                 Log.e(TAG, "Heartbeat check failed: ${e.message}")
+                cameraHandler?.post {
+                    onDisconnect()
+                }
             }
         }, 1, 2, TimeUnit.SECONDS) // Check every 2 seconds
     }
@@ -189,7 +240,7 @@ class CameraStreamer(
     private fun onDisconnect() {
         Log.w(TAG, "Connection lost - attempting recovery (attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})")
         
-        // Update internal state
+        // Update internal state FIRST
         isStreaming = false
         
         // Clean up current resources
@@ -199,20 +250,27 @@ class CameraStreamer(
         // Attempt auto-reconnection if within limits
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
             reconnectAttempts++
-            Log.i(TAG, "🔄 Auto-reconnecting in 3 seconds... (attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)")
+            
+            // Calculate exponential backoff: 2^attempt * 1000ms (1s, 2s, 4s, 8s, 16s)
+            val backoffDelay = Math.min(
+                (Math.pow(2.0, reconnectAttempts.toDouble()) * 1000).toLong(),
+                30000  // Cap at 30 seconds
+            )
+            
+            Log.i(TAG, "🔄 Auto-reconnecting in ${backoffDelay/1000}s... (attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)")
             
             // Notify MainActivity via broadcast with reconnection status (AFTER incrementing)
             val intent = Intent("com.miktos.STREAM_DISCONNECTED")
             intent.setPackage(context.packageName)
             intent.putExtra("reconnect_attempts", reconnectAttempts)
             intent.putExtra("max_attempts", MAX_RECONNECT_ATTEMPTS)
+            intent.putExtra("backoff_delay_ms", backoffDelay)
             context.sendBroadcast(intent)
             
-            // Schedule reconnection after 3 second delay on main thread (survives cleanup)
+            // Schedule reconnection with exponential backoff
             Handler(Looper.getMainLooper()).postDelayed({
                 try {
-                    Log.i(TAG, "🚀 Attempting auto-reconnection...")
-                    lastWriteTime = System.currentTimeMillis() // Reset timer
+                    Log.i(TAG, "🚀 Attempting auto-reconnection $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS...")
                     
                     // Implement actual reconnection logic using stored parameters
                     if (storedServerIp != null && storedServerPort != null) {
@@ -223,12 +281,13 @@ class CameraStreamer(
                         onReconnectionFailed()
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Auto-reconnection failed: ${e.message}")
+                    Log.e(TAG, "Auto-reconnection scheduling failed: ${e.message}")
                     onReconnectionFailed()
                 }
-            }, 3000)
+            }, backoffDelay)
         } else {
             Log.e(TAG, "❌ Max reconnection attempts ($MAX_RECONNECT_ATTEMPTS) reached - giving up")
+            reconnectAttempts = 0  // Reset for next manual start
             val failIntent = Intent("com.miktos.STREAM_FAILED")
             failIntent.setPackage(context.packageName)
             context.sendBroadcast(failIntent)
@@ -404,7 +463,11 @@ class CameraStreamer(
                     try {
                         outputStream?.write(data)
                         outputStream?.flush()
-                        lastWriteTime = System.currentTimeMillis() // Track successful transmission
+                        
+                        // Track successful transmission
+                        lastWriteTime = System.currentTimeMillis()
+                        lastSuccessfulFrameTime = System.currentTimeMillis()
+                        consecutiveWriteFailures = 0  // Reset failure counter on success
                         
                         when {
                             isConfig -> Log.d(TAG, "✅ Sent codec config (SPS/PPS): ${info.size} bytes")
@@ -422,7 +485,10 @@ class CameraStreamer(
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "❌ Write error - network disconnected: ${e.message}")
+                        consecutiveWriteFailures++
+                        Log.e(TAG, "❌ Write error #$consecutiveWriteFailures - network issue: ${e.message}")
+                        
+                        // Trigger immediate disconnect if write fails
                         cameraHandler?.post {
                             onDisconnect()
                         }

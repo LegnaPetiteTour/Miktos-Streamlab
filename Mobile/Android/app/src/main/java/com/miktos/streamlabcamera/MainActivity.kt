@@ -34,11 +34,18 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 "com.miktos.STREAM_DISCONNECTED" -> {
+                    val attempts = intent.getIntExtra("reconnect_attempts", 0)
+                    val maxAttempts = intent.getIntExtra("max_attempts", 5)
+                    val backoffMs = intent.getLongExtra("backoff_delay_ms", 0)
+                    
                     runOnUiThread {
-                        statusText.text = "🔄 Disconnected - Reconnecting..."
-                        startButton.text = "RECONNECTING"
+                        statusText.text = "🔄 Connection lost - Reconnecting...\n\n" +
+                            "Attempt $attempts/$maxAttempts (${backoffMs/1000}s delay)\n\n" +
+                            "⚠️ NOT streaming - auto-reconnect in progress"
+                        startButton.text = "RECONNECTING ($attempts/$maxAttempts)"
                         startButton.isEnabled = false
-                        isStreaming = false
+                        startButton.backgroundTintList = getColorStateList(android.R.color.holo_orange_dark)
+                        isStreaming = false  // Critical: UI knows we're NOT streaming
                     }
                 }
                 "com.miktos.STREAM_RECONNECTED" -> {
@@ -49,15 +56,20 @@ class MainActivity : AppCompatActivity() {
                         startButton.text = "STOP"
                         startButton.isEnabled = true
                         startButton.backgroundTintList = getColorStateList(android.R.color.holo_red_dark)
-                        isStreaming = true
+                        isStreaming = true  // Now we're actually streaming
+                        Toast.makeText(this@MainActivity, "✅ Reconnected!", Toast.LENGTH_SHORT).show()
                     }
                 }
                 "com.miktos.STREAM_FAILED" -> {
                     runOnUiThread {
-                        statusText.text = "❌ Connection Failed - Please retry"
+                        statusText.text = "❌ Connection Failed\n\n" +
+                            "Auto-reconnect gave up after multiple attempts.\n\n" +
+                            "Please check network and tap RETRY"
                         startButton.text = "RETRY"
                         startButton.isEnabled = true
+                        startButton.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
                         isStreaming = false
+                        Toast.makeText(this@MainActivity, "❌ Reconnection failed", Toast.LENGTH_LONG).show()
                     }
                 }
             }
