@@ -66,12 +66,14 @@ This guide will walk you through testing the Miktos StreamLab Camera Android app
 ### Step 2.2: Authorize the Connection
 
 **On Your Phone:**
+
 - A popup will appear: **"Allow USB debugging?"**
 - It shows your Mac's RSA key fingerprint
 - ✅ **Check "Always allow from this computer"**
 - ✅ **Tap "OK"** or "Allow"
 
 **Important:** If you don't see this popup, try:
+
 - Unlocking your phone screen
 - Changing the USB mode: Pull down notification shade → Tap USB notification → Select "File Transfer" or "MTP"
 
@@ -83,21 +85,26 @@ This guide will walk you through testing the Miktos StreamLab Camera Android app
    - Press Enter
 
 2. **Type this command and press Enter:**
+
    ```bash
    adb devices
-   ```
+
+   ```bash
 
 3. **You should see something like:**
-   ```
+
+   ```text
    List of devices attached
    ABC123DEF456    device
-   ```
+
+   ```bash
 
    **If you see your device listed with "device" next to it:** ✅ **SUCCESS!** Continue to Part 3.
-   
+
    **If you see "unauthorized":** Go back to your phone and approve the USB debugging popup.
-   
+
    **If you see nothing:** Try:
+
    - Disconnect and reconnect the USB cable
    - Try a different USB port on your Mac
    - Make sure your cable supports data transfer (not just charging)
@@ -109,6 +116,7 @@ This guide will walk you through testing the Miktos StreamLab Camera Android app
 ### Step 3.1: Open Terminal (if not already open)
 
 If you closed Terminal, open it again:
+
 - Press `Cmd + Space`
 - Type "Terminal"
 - Press Enter
@@ -119,7 +127,8 @@ If you closed Terminal, open it again:
 
 ```bash
 cd "/Users/atorrella/Desktop/Miktos Streamlab/Mobile/Android"
-```
+
+```bash
 
 ### Step 3.3: Install the App
 
@@ -127,14 +136,17 @@ cd "/Users/atorrella/Desktop/Miktos Streamlab/Mobile/Android"
 
 ```bash
 ./gradlew installDebug
-```
+
+```bash
 
 **What you'll see:**
+
 - The command will start downloading and building
 - You'll see progress messages scrolling
 - After 10-30 seconds, you should see: **BUILD SUCCESSFUL**
 
 **On your phone:**
+
 - You'll see a notification: "App installed"
 - The **Miktos Camera** app will appear in your app drawer
 
@@ -148,20 +160,25 @@ cd "/Users/atorrella/Desktop/Miktos Streamlab/Mobile/Android"
 
 ```bash
 ifconfig | grep "inet " | grep -v 127.0.0.1
-```
+
+```bash
 
 **You'll see something like:**
-```
+
+```bash
 inet 192.168.2.36 netmask 0xffffff00 broadcast 192.168.2.255
-```
+
+```bash
 
 **Write down the IP address:** In this example, it's **192.168.2.36**
+
 - Your IP will be different!
 - It usually starts with 192.168 or 10.0
 
 ### Step 4.2: Start the Video Receiver on Your Mac
 
 **Open a NEW Terminal window:**
+
 - Press `Cmd + N` in Terminal, or
 - Press `Cmd + Space`, type "Terminal", press Enter
 
@@ -171,19 +188,22 @@ inet 192.168.2.36 netmask 0xffffff00 broadcast 192.168.2.255
 cd "/Users/atorrella/Desktop/Miktos Streamlab"
 source .venv/bin/activate
 python3 tcp_h264_receiver.py
-```
+
+```bash
 
 **You should see:**
-```
+
+```bash
 🎥 TCP H.264 Receiver started on 0.0.0.0:8554
 Waiting for Android StreamLab Camera connection...
-```
+
+```bash
 
 **Leave this Terminal window open** - this is your receiver waiting for the phone to connect.
 
 ---
 
-## 📺 Part 5: Test the Streaming!
+## 📺 Part 5: Test the Streaming
 
 ### Step 5.1: Open the App on Your Phone
 
@@ -208,7 +228,7 @@ The app will ask for permissions. **Grant them all:**
 
 **In the app, you'll see two input fields:**
 
-1. **Mac IP Address:** 
+1. **Mac IP Address:**
    - Tap the first text box
    - **Enter your Mac's IP address** (from Step 4.1)
    - Example: `192.168.2.36`
@@ -217,7 +237,7 @@ The app will ask for permissions. **Grant them all:**
    - Should already show `8554`
    - **Don't change it**
 
-### Step 5.4: Start Streaming!
+### Step 5.4: Start Streaming
 
 1. **Tap the green "START STREAMING" button**
 
@@ -227,10 +247,12 @@ The app will ask for permissions. **Grant them all:**
    - A notification appears: "📹 Streaming to Mac..."
 
 3. **On your Mac Terminal, you'll see:**
-   ```
+
+   ```text
    ✅ Connected to 192.168.2.XX:XXXXX at 2025-11-15 18:30:45
    📊 Receiving stream... 2.5 MB/s (150 frames/s)
-   ```
+
+   ```bash
 
 **Congratulations! You're streaming!** 🎉
 
@@ -249,6 +271,7 @@ The app will ask for permissions. **Grant them all:**
 1. **Turn off Wi-Fi on your phone** (swipe down, tap Wi-Fi icon)
 2. **Watch the Terminal** - it will show disconnection
 3. **Turn Wi-Fi back on**
+
 4. **The app will auto-reconnect!** (up to 3 attempts)
 
 ### Stop Streaming
@@ -264,14 +287,17 @@ The app will ask for permissions. **Grant them all:**
 ### Problem: "adb devices" shows nothing
 
 **Solution:**
+
 1. Disconnect and reconnect USB cable
 2. On phone: Settings → Developer Options → Revoke USB debugging authorizations → Re-authorize
 3. Try a different USB cable (must support data, not just charging)
+
 4. Install Android Platform Tools: `brew install android-platform-tools`
 
 ### Problem: Can't find Developer Options
 
 **Solution:**
+
 1. Make sure you tapped Build Number exactly 7 times
 2. Look in different places:
    - Settings → System → Developer options
@@ -281,14 +307,17 @@ The app will ask for permissions. **Grant them all:**
 ### Problem: Terminal shows "Connection refused"
 
 **Solution:**
+
 1. **Check Wi-Fi:** Both phone and Mac must be on the SAME Wi-Fi network
 2. **Check IP address:** Make sure you entered the correct Mac IP in the app
 3. **Check receiver:** Make sure `tcp_h264_receiver.py` is still running in Terminal
+
 4. **Check port:** Should be 8554 on both sides
 
 ### Problem: App crashes or won't start
 
 **Solution:**
+
 1. Grant all permissions (Camera, Microphone, Notifications)
 2. Restart the app
 3. Reinstall: `cd "/Users/atorrella/Desktop/Miktos Streamlab/Mobile/Android" && ./gradlew installDebug`
@@ -296,9 +325,11 @@ The app will ask for permissions. **Grant them all:**
 ### Problem: Stream connects but no video/low quality
 
 **Solution:**
+
 1. **Good lighting:** Phone camera needs good light
 2. **Stable Wi-Fi:** Move closer to Wi-Fi router
 3. **Background apps:** Close other apps using camera/network
+
 4. **Check Terminal:** Look for bitrate - should be 5-6 Mbps
 
 ---
@@ -306,37 +337,49 @@ The app will ask for permissions. **Grant them all:**
 ## 📝 Quick Command Reference
 
 ### Check Connected Devices
+
 ```bash
 adb devices
-```
+
+```bash
 
 ### Install App
+
 ```bash
 cd "/Users/atorrella/Desktop/Miktos Streamlab/Mobile/Android"
 ./gradlew installDebug
-```
+
+```bash
 
 ### Get Mac IP Address
+
 ```bash
 ifconfig | grep "inet " | grep -v 127.0.0.1
-```
+
+```bash
 
 ### Start Receiver
+
 ```bash
 cd "/Users/atorrella/Desktop/Miktos Streamlab"
 source .venv/bin/activate
 python3 tcp_h264_receiver.py
-```
+
+```bash
 
 ### Uninstall App (if needed)
+
 ```bash
 adb uninstall com.miktos.streamlabcamera
-```
+
+```bash
 
 ### View Phone Logs (advanced)
+
 ```bash
 adb logcat | grep StreamLab
-```
+
+```bash
 
 ---
 
@@ -360,6 +403,7 @@ Once you've confirmed everything works:
 1. **Test for 5-10 minutes** to verify stability
 2. **Try disconnecting/reconnecting** to test auto-reconnection
 3. **Test in different rooms** to check Wi-Fi range
+
 4. **Document any issues** you encounter
 
 ---
@@ -369,6 +413,7 @@ Once you've confirmed everything works:
 1. **Keep phone plugged in** during long tests (streaming uses battery)
 2. **Good Wi-Fi is crucial** - stay close to router for testing
 3. **Check notification** - it shows real-time streaming status
+
 4. **Terminal output** shows technical details (bitrate, frames, errors)
 5. **Screen stays on** automatically during streaming
 
@@ -377,11 +422,13 @@ Once you've confirmed everything works:
 ## 📞 Need Help?
 
 If something doesn't work:
+
 1. Read the Troubleshooting section above
 2. Check both Terminal windows for error messages
 3. Make sure both devices are on the same Wi-Fi
+
 4. Try restarting both the app and the receiver
 
 ---
 
-**Happy Streaming! 🎥📱**
+## Happy Streaming! 🎥📱
