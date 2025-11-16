@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Build
+import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
@@ -35,7 +36,7 @@ class MainActivity : AppCompatActivity() {
                 "com.miktos.STREAM_DISCONNECTED" -> {
                     runOnUiThread {
                         statusText.text = "🔄 Disconnected - Reconnecting..."
-                        startButton.text = "RECONNECTING..."
+                        startButton.text = "RECONNECTING"
                         startButton.isEnabled = false
                         isStreaming = false
                     }
@@ -45,9 +46,9 @@ class MainActivity : AppCompatActivity() {
                         val ip = ipInput.text.toString()
                         val port = portInput.text.toString()
                         statusText.text = "✅ LIVE: Streaming to $ip:$port\n\n📺 Reconnected successfully!"
-                        startButton.text = "STOP STREAMING"
+                        startButton.text = "STOP"
                         startButton.isEnabled = true
-                        startButton.setBackgroundColor(getColor(android.R.color.holo_red_dark))
+                        startButton.backgroundTintList = getColorStateList(android.R.color.holo_red_dark)
                         isStreaming = true
                     }
                 }
@@ -65,6 +66,9 @@ class MainActivity : AppCompatActivity() {
     
     companion object {
         private const val REQUEST_CAMERA_PERMISSION = 200
+        private const val PREFS_NAME = "StreamLabSettings"
+        private const val PREF_SERVER_IP = "server_ip"
+        private const val PREF_SERVER_PORT = "server_port"
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,6 +77,9 @@ class MainActivity : AppCompatActivity() {
         
         // Keep screen on during streaming to prevent camera disconnect
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        
+        // Enable immersive mode to hide navigation bar
+        enableImmersiveMode()
         
         // Register disconnect receiver
         val filter = IntentFilter().apply {
@@ -89,8 +96,8 @@ class MainActivity : AppCompatActivity() {
         startButton = findViewById(R.id.startButton)
         statusText = findViewById(R.id.statusText)
         
-        // Set default values
-        portInput.setText("8554")
+        // Load saved settings
+        loadSavedSettings()
         
         // Request permissions
         if (!hasRequiredPermissions()) {
@@ -173,14 +180,17 @@ class MainActivity : AppCompatActivity() {
             return
         }
         
+        // Save settings for next time
+        saveSettings(ip, port)
+        
         // Start the foreground service
         CameraStreamService.start(this, ip, port)
         
         // Update UI
         isStreaming = true
-        startButton.text = "STOP STREAMING"
+        startButton.text = "STOP"
         statusText.text = "✅ LIVE: Streaming to $ip:$port\n\n📺 Check notification and Mac screen!"
-        startButton.setBackgroundColor(getColor(android.R.color.holo_red_dark))
+        startButton.backgroundTintList = getColorStateList(android.R.color.holo_red_dark)
         
         Toast.makeText(this, "Service started - check notification!", Toast.LENGTH_LONG).show()
     }
@@ -191,9 +201,55 @@ class MainActivity : AppCompatActivity() {
         
         // Update UI
         isStreaming = false
-        startButton.text = "START STREAMING"
+        startButton.text = "START"
         statusText.text = "Stopped"
-        startButton.setBackgroundColor(getColor(android.R.color.holo_green_dark))
+        startButton.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
+    }
+    
+    private fun loadSavedSettings() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val savedIp = prefs.getString(PREF_SERVER_IP, "")
+        val savedPort = prefs.getInt(PREF_SERVER_PORT, 8554)
+        
+        if (!savedIp.isNullOrEmpty()) {
+            ipInput.setText(savedIp)
+        }
+        portInput.setText(savedPort.toString())
+    }
+    
+    private fun saveSettings(ip: String, port: Int) {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putString(PREF_SERVER_IP, ip)
+            putInt(PREF_SERVER_PORT, port)
+            apply()
+        }
+    }
+    
+    private fun enableImmersiveMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ (API 30+)
+            window.setDecorFitsSystemWindows(false)
+            window.insetsController?.let { controller ->
+                controller.hide(android.view.WindowInsets.Type.navigationBars())
+                controller.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            // Android 10 and below
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_FULLSCREEN
+            )
+        }
+    }
+    
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            enableImmersiveMode()
+        }
     }
     
     override fun onDestroy() {
