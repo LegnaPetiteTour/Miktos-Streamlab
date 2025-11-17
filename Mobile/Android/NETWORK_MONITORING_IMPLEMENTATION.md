@@ -9,12 +9,14 @@ Comprehensive implementation of TCP socket health monitoring, disconnect detecti
 ## Problem Statement
 
 **Original Bug:**
+
 - Phone lock/unlock caused TCP connection loss
 - App UI showed "streaming" when not actually streaming (state desynchronization)
 - No automatic reconnection - manual restart required
 - Network errors not detected until too late
 
 **Field Test Results (Nov 16, 2025):**
+
 - Stream ran 12 minutes successfully
 - Disconnect occurred during lock/unlock
 - App continued showing "streaming" incorrectly
@@ -28,6 +30,7 @@ Comprehensive implementation of TCP socket health monitoring, disconnect detecti
 **File:** `CameraStreamer.kt`
 
 **Previous Implementation:**
+
 - Basic socket connected check every 2 seconds
 - Single 10-second timeout
 - No write verification
@@ -68,6 +71,7 @@ private fun startConnectionHealthCheck() {
 ```
 
 **Key Improvements:**
+
 - **5 independent health checks** (was 2)
 - **Dual timeout tracking**: write timeout (8s) + frame timeout (12s)
 - **Consecutive failure tracking**: triggers after 3 failed writes
@@ -103,6 +107,7 @@ try {
 ```
 
 **Key Features:**
+
 - **Immediate detection**: Write failures trigger disconnect instantly
 - **Failure counting**: Tracks consecutive failures for health monitoring
 - **Dual timestamp tracking**: Both write time and frame processing time
@@ -113,6 +118,7 @@ try {
 **File:** `CameraStreamer.kt`
 
 **Previous Implementation:**
+
 - Fixed 3-second delay
 - Max 3 attempts
 - No backoff strategy
@@ -149,6 +155,7 @@ private fun onDisconnect() {
 ```
 
 **Key Improvements:**
+
 - **Exponential backoff**: 1s → 2s → 4s → 8s → 16s delays
 - **Increased attempts**: 5 max attempts (was 3)
 - **Smart capping**: Max 30-second delay prevents excessive waits
@@ -170,6 +177,7 @@ private fun onDisconnect() {
 **File:** `MainActivity.kt`
 
 **Previous Implementation:**
+
 - Generic "Reconnecting..." message
 - Button showed "RECONNECTING" without details
 - State unclear to user
@@ -208,6 +216,7 @@ private fun onDisconnect() {
 ```
 
 **Key Improvements:**
+
 - **Explicit NOT streaming message**: Users know exactly what's happening
 - **Attempt progress**: Shows "1/5", "2/5", etc.
 - **Backoff visibility**: Displays exact wait time
@@ -240,6 +249,7 @@ private fun connectToServer(serverIp: String, serverPort: Int) {
 ```
 
 **Key Features:**
+
 - **Explicit timeout**: 5-second connection timeout
 - **Post-connection verification**: Ensures socket actually connected
 - **Lower socket timeout**: 3 seconds for faster error detection
@@ -309,6 +319,7 @@ private fun connectToServer(serverIp: String, serverPort: Int) {
 ## Success Metrics
 
 ### Before Implementation
+
 - ❌ Disconnect detection: 10+ seconds
 - ❌ Auto-reconnect: Not implemented
 - ❌ UI state accuracy: Broken (showed streaming when not)
@@ -317,6 +328,7 @@ private fun connectToServer(serverIp: String, serverPort: Int) {
 - ❌ User feedback: Generic "reconnecting"
 
 ### After Implementation
+
 - ✅ Disconnect detection: <8 seconds (5 independent checks)
 - ✅ Auto-reconnect: Full implementation with exponential backoff
 - ✅ UI state accuracy: Explicit "NOT streaming" during reconnect
@@ -343,11 +355,13 @@ private fun connectToServer(serverIp: String, serverPort: Int) {
 ## Expected Behavior
 
 ### Normal Operation
+
 1. App starts streaming
 2. Health checks pass every 2 seconds
 3. Log: "💚 Health check passed - streaming healthy" (every 10s)
 
 ### Disconnect Scenario
+
 1. Network issue detected (any of 5 checks)
 2. Log: "❌ [Specific failure reason]"
 3. onDisconnect() triggered
@@ -357,6 +371,7 @@ private fun connectToServer(serverIp: String, serverPort: Int) {
 7. Reconnection attempt 1
 
 ### Reconnection Success (Attempt 2)
+
 1. Attempt 1 fails
 2. UI updates: "Attempt 2/5 (2s delay)"
 3. Wait 2 seconds
@@ -366,6 +381,7 @@ private fun connectToServer(serverIp: String, serverPort: Int) {
 7. Counter resets to 0
 
 ### Reconnection Failure (All Attempts)
+
 1. Attempts 1-5 all fail
 2. UI updates: "❌ Connection Failed"
 3. Button: "RETRY"
@@ -390,6 +406,7 @@ private fun connectToServer(serverIp: String, serverPort: Int) {
 ## Deployment
 
 ### Pre-Deployment Checklist
+
 - [ ] Unit tests written and passing
 - [ ] Integration tests written and passing
 - [ ] 15-minute field test passed
@@ -399,6 +416,7 @@ private fun connectToServer(serverIp: String, serverPort: Int) {
 - [ ] Documentation updated
 
 ### Rollout Plan
+
 1. **Alpha Testing** (1 week)
    - Internal team testing only
    - Daily 60-minute tests
