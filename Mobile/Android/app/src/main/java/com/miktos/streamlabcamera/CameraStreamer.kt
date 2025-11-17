@@ -21,6 +21,10 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 
 class CameraStreamer(
     private val context: Context,
@@ -48,10 +52,15 @@ class CameraStreamer(
     private var consecutiveWriteFailures = 0
     private val MAX_WRITE_FAILURES = 3  // Trigger reconnect after 3 failed writes
     private var isReconnecting = false  // Guard to prevent overlapping reconnections    
+    private var waitingForNetwork = false  // Waiting for WiFi to return
 
     // Connection parameters for auto-reconnection
     private var storedServerIp: String? = null
     private var storedServerPort: Int? = null
+    
+    // Network monitoring
+    private var connectivityManager: ConnectivityManager? = null
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
     
     private var cameraThread: HandlerThread? = null
     private var cameraHandler: Handler? = null
@@ -73,6 +82,12 @@ class CameraStreamer(
         storedServerIp = serverIp
         storedServerPort = serverPort
         Log.d(TAG, "Connection parameters stored: $serverIp:$serverPort")
+        
+        // Register network callback to detect WiFi restoration
+        if (networkCallback == null) {
+            registerNetworkCallback()
+        }
+        
         // Acquire wake lock to keep camera alive
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
@@ -118,11 +133,18 @@ class CameraStreamer(
             } catch (e: Exception) {
                 Log.e(TAG, "Error starting stream", e)
                 cleanup()
-                statusCallback(false)
                 
                 // If this was a reconnection attempt, schedule the next one
                 if (reconnectAttempts > 0 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
                     Log.w(TAG, "Reconnection attempt $reconnectAttempts failed - scheduling next attempt")
+                    
+                    // DON'T call statusCallback(false) during reconnection - keep service alive!
+                    
+                    // Mark that we're waiting for network if the error suggests network issue
+                    if (e is IOException || e.message?.contains("Network") == true || e.message?.contains("Connection") == true) {
+                        waitingForNetwork = true
+                        Log.i(TAG, "📵 Network issue detected - will retry immediately when WiFi returns")
+                    }
                     
                     // Increment counter BEFORE scheduling the delay
                     reconnectAttempts++
@@ -134,7 +156,13 @@ class CameraStreamer(
                     intent.putExtra("max_attempts", MAX_RECONNECT_ATTEMPTS)
                     context.sendBroadcast(intent)
                     
-                    Log.i(TAG, "🔄 Scheduling retry reconnection (attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)")
+                    // Calculate exponential backoff for retry
+                    val retryDelay = Math.min(
+                        (Math.pow(2.0, reconnectAttempts.toDouble()) * 1000).toLong(),
+                        30000  // Cap at 30 seconds
+                    )
+                    
+                    Log.i(TAG, "🔄 Scheduling retry reconnection in ${retryDelay/1000}s (attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)")
                     
                     Handler(Looper.getMainLooper()).postDelayed({
                         try {
@@ -149,10 +177,13 @@ class CameraStreamer(
                             Log.e(TAG, "Retry scheduling failed: ${ex.message}")
                             onReconnectionFailed()
                         }
-                    }, 3000)
+                    }, retryDelay)
                 } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
                     Log.e(TAG, "❌ Max reconnection attempts reached after connection failure")
                     onReconnectionFailed()
+                } else {
+                    // This was NOT a reconnection attempt - initial connection failed
+                    statusCallback(false)
                 }
             }
         }
@@ -300,21 +331,42 @@ class CameraStreamer(
                 }
             }, backoffDelay)
         } else {
-            Log.e(TAG, "❌ Max reconnection attempts ($MAX_RECONNECT_ATTEMPTS) reached - giving up")
-            reconnectAttempts = 0  // Reset for next manual start
-            val failIntent = Intent("com.miktos.STREAM_FAILED")
-            failIntent.setPackage(context.packageName)
-            context.sendBroadcast(failIntent)
+            Log.e(TAG, "❌ Max reconnection attempts ($MAX_RECONNECT_ATTEMPTS) reached")
+            
+            // If waiting for network, keep the door open for when WiFi returns
+            if (waitingForNetwork) {
+                Log.i(TAG, "⏳ Max attempts reached but waiting for network - will retry when WiFi is back")
+                // Don't reset reconnectAttempts - keep current state
+                // Network callback will trigger immediate reconnection when WiFi returns
+            } else {
+                // No network issue detected - truly failed
+                reconnectAttempts = 0
+                isReconnecting = false
+                val failIntent = Intent("com.miktos.STREAM_FAILED")
+                failIntent.setPackage(context.packageName)
+                context.sendBroadcast(failIntent)
+            }
         }
     }
 
     private fun onReconnectionFailed() {
-        Log.w(TAG, "Reconnection attempt failed - treating as disconnect failure")
-        isReconnecting = false // Clear reconnection flag on failure
-        // Trigger the same failure logic as max attempts reached
-        val failIntent = Intent("com.miktos.STREAM_FAILED")
-        failIntent.setPackage(context.packageName)
-        context.sendBroadcast(failIntent)
+        Log.w(TAG, "All reconnection attempts exhausted")
+        
+        // If we're waiting for network, keep waiting - don't fail yet
+        if (waitingForNetwork) {
+            Log.i(TAG, "⏳ Still waiting for network to return - will retry when WiFi is back")
+            // Keep isReconnecting = true and reconnectAttempts as-is
+            // The network callback will trigger reconnection when WiFi returns
+        } else {
+            // No hope of reconnection - give up
+            isReconnecting = false
+            reconnectAttempts = 0
+            waitingForNetwork = false
+            
+            val failIntent = Intent("com.miktos.STREAM_FAILED")
+            failIntent.setPackage(context.packageName)
+            context.sendBroadcast(failIntent)
+        }
     }
     
     private fun stopHeartbeat() {
@@ -530,9 +582,64 @@ class CameraStreamer(
         // Reset reconnection state to allow manual restart
         isReconnecting = false
         reconnectAttempts = 0
+        waitingForNetwork = false
+        
+        // Unregister network callback
+        unregisterNetworkCallback()
         
         cleanup()
         statusCallback(false)
+    }
+    
+    private fun registerNetworkCallback() {
+        try {
+            connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            
+            val networkRequest = NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .build()
+            
+            networkCallback = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    Log.i(TAG, "📶 Network available - WiFi connected!")
+                    
+                    // If we're waiting for network during reconnection attempts, try now
+                    if (waitingForNetwork && reconnectAttempts > 0 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                        Log.i(TAG, "🚀 Network restored - attempting immediate reconnection!")
+                        waitingForNetwork = false
+                        
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            if (storedServerIp != null && storedServerPort != null && !isStreaming) {
+                                startStreaming(storedServerIp!!, storedServerPort!!)
+                            }
+                        }, 500) // Small delay to ensure network is fully ready
+                    }
+                }
+                
+                override fun onLost(network: Network) {
+                    Log.w(TAG, "📵 Network lost - WiFi disconnected")
+                }
+            }
+            
+            connectivityManager?.registerNetworkCallback(networkRequest, networkCallback!!)
+            Log.d(TAG, "Network callback registered")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register network callback: ${e.message}")
+        }
+    }
+    
+    private fun unregisterNetworkCallback() {
+        try {
+            if (networkCallback != null && connectivityManager != null) {
+                connectivityManager?.unregisterNetworkCallback(networkCallback!!)
+                Log.d(TAG, "Network callback unregistered")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unregistering network callback: ${e.message}")
+        }
+        networkCallback = null
+        connectivityManager = null
     }
     
     private fun cleanup() {
