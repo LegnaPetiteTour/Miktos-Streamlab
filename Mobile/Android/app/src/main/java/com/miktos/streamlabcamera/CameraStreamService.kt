@@ -12,6 +12,10 @@ class CameraStreamService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "camera_stream_channel"
+        private const val PREFS_NAME = "StreamlabPrefs"
+        private const val PREF_LTE_FAILOVER = "lte_failover_enabled"
+        
+        var streamer: CameraStreamer? = null  // Expose streamer for MainActivity switch
         
         fun start(context: Context, ip: String, port: Int) {
             val intent = Intent(context, CameraStreamService::class.java).apply {
@@ -45,6 +49,10 @@ class CameraStreamService : Service() {
         val notification = createNotification("Connecting to $ip:$port...")
         startForeground(NOTIFICATION_ID, notification)
         
+        // Load LTE failover preference
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val lteFailoverEnabled = prefs.getBoolean(PREF_LTE_FAILOVER, false)
+        
         // Initialize camera streamer
         cameraStreamer = CameraStreamer(this) { isStreaming ->
             if (isStreaming) {
@@ -54,6 +62,12 @@ class CameraStreamService : Service() {
                 stopSelf()
             }
         }
+        
+        // Apply LTE failover setting
+        cameraStreamer?.setLteFailoverEnabled(lteFailoverEnabled)
+        
+        // Expose streamer to MainActivity
+        streamer = cameraStreamer
         
         // Start streaming
         cameraStreamer?.startStreaming(ip, port)
@@ -65,6 +79,7 @@ class CameraStreamService : Service() {
         super.onDestroy()
         cameraStreamer?.stopStreaming()
         cameraStreamer = null
+        streamer = null  // Clear exposed reference
     }
     
     override fun onBind(intent: Intent?): IBinder? = null

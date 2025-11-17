@@ -58,9 +58,21 @@ class CameraStreamer(
     private var storedServerIp: String? = null
     private var storedServerPort: Int? = null
     
-    // Network monitoring
+    // Network monitoring and LTE failover
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private var currentNetworkType: NetworkType = NetworkType.UNKNOWN
+    private var allowLteFailover: Boolean = false  // User preference for LTE backup
+    private var lteQualityThreshold: Float = 2.0f  // Mbps - switch to LTE if WiFi drops below this
+    private var activeNetwork: Network? = null  // Active network for socket binding
+    
+    enum class NetworkType {
+        UNKNOWN,
+        LAN_WIFI,      // Local WiFi
+        INET_WIFI,     // WiFi over internet
+        LTE_CELLULAR,  // Cellular/LTE
+        OFFLINE
+    }
     
     private var cameraThread: HandlerThread? = null
     private var cameraHandler: Handler? = null
@@ -77,11 +89,59 @@ class CameraStreamer(
     private val VIDEO_BITRATE = 6_000_000
     private val VIDEO_I_FRAME_INTERVAL = 2
     
+    // LTE failover configuration
+    fun setLteFailoverEnabled(enabled: Boolean) {
+        allowLteFailover = enabled
+        Log.i(TAG, "LTE failover ${if (enabled) "enabled" else "disabled"}")
+        
+        // Re-register network callback to include/exclude cellular
+        if (networkCallback != null) {
+            unregisterNetworkCallback()
+            registerNetworkCallback()
+        }
+    }
+    
+    fun setLteQualityThreshold(thresholdMbps: Float) {
+        lteQualityThreshold = thresholdMbps
+        Log.i(TAG, "LTE quality threshold set to $thresholdMbps Mbps")
+    }
+    
+    fun getCurrentNetworkType(): NetworkType {
+        return currentNetworkType
+    }
+    
+    private fun detectNetworkType(network: Network): NetworkType {
+        val capabilities = connectivityManager?.getNetworkCapabilities(network) ?: return NetworkType.UNKNOWN
+        
+        return when {
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> {
+                // Check if it's local WiFi or internet WiFi
+                if (capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) &&
+                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+                    NetworkType.INET_WIFI
+                } else {
+                    NetworkType.LAN_WIFI
+                }
+            }
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> {
+                NetworkType.LTE_CELLULAR
+            }
+            else -> NetworkType.UNKNOWN
+        }
+    }
+    
     fun startStreaming(serverIp: String, serverPort: Int) {
         // Store connection parameters for auto-reconnection
         storedServerIp = serverIp
         storedServerPort = serverPort
         Log.d(TAG, "Connection parameters stored: $serverIp:$serverPort")
+        
+        // Check if using local IP (LTE failover won't work with local IPs)
+        val isLocalIp = isLocalNetworkAddress(serverIp)
+        if (isLocalIp && allowLteFailover) {
+            Log.w(TAG, "⚠️ Server IP $serverIp is local - LTE failover disabled for this stream")
+            Log.i(TAG, "💡 For LTE failover to work, use a public IP or domain name")
+        }
         
         // Register network callback to detect WiFi restoration
         if (networkCallback == null) {
@@ -190,8 +250,27 @@ class CameraStreamer(
     }
     
     private fun connectToServer(serverIp: String, serverPort: Int) {
-        Log.d(TAG, "Connecting to $serverIp:$serverPort")
-        socket = Socket()
+        val isLocalIp = isLocalNetworkAddress(serverIp)
+        Log.d(TAG, "Connecting to $serverIp:$serverPort via ${if (activeNetwork != null && !isLocalIp) "bound network (${currentNetworkType})" else "default routing"}")
+        
+        // Only bind to LTE network if:
+        // 1. We have an active network
+        // 2. It's LTE
+        // 3. Server is NOT a local IP (local IPs can't be reached over LTE)
+        socket = if (activeNetwork != null && currentNetworkType == NetworkType.LTE_CELLULAR && !isLocalIp) {
+            // Create socket bound to LTE network for cellular failover
+            Log.i(TAG, "📱 Creating LTE-bound socket for cellular failover to $serverIp")
+            val lteSock = Socket()
+            activeNetwork!!.bindSocket(lteSock)
+            lteSock
+        } else {
+            if (isLocalIp && currentNetworkType == NetworkType.LTE_CELLULAR) {
+                Log.w(TAG, "⚠️ Can't use LTE for local IP $serverIp - using WiFi-only reconnection")
+            }
+            // Use default routing (WiFi preferred)
+            Socket()
+        }
+        
         socket?.tcpNoDelay = true
         socket?.keepAlive = true
         socket?.soTimeout = 3000  // 3 second socket timeout
@@ -201,6 +280,8 @@ class CameraStreamer(
         if (socket?.isConnected != true || socket?.isClosed == true) {
             throw IOException("Socket connection failed verification")
         }
+        
+        Log.d(TAG, "Connected successfully via ${currentNetworkType}")
         
         outputStream = socket?.getOutputStream()
         Log.d(TAG, "✅ Connected to server successfully")
@@ -377,6 +458,24 @@ class CameraStreamer(
     private fun initializeEncoder() {
         Log.d(TAG, "Initializing H.264 encoder")
         
+        // Adjust bitrate based on network type
+        val adaptiveBitrate = when (currentNetworkType) {
+            NetworkType.LTE_CELLULAR -> {
+                // Reduce bitrate for LTE: 6 Mbps → 4 Mbps
+                val lteBitrate = (VIDEO_BITRATE * 0.67).toInt() // ~4 Mbps
+                Log.i(TAG, "🎚️ LTE mode: Reduced bitrate to ${lteBitrate / 1_000_000} Mbps")
+                lteBitrate
+            }
+            NetworkType.LAN_WIFI, NetworkType.INET_WIFI -> {
+                Log.i(TAG, "🎚️ WiFi mode: Full bitrate ${VIDEO_BITRATE / 1_000_000} Mbps")
+                VIDEO_BITRATE
+            }
+            else -> {
+                Log.w(TAG, "🎚️ Unknown network: Using standard bitrate")
+                VIDEO_BITRATE
+            }
+        }
+        
         val format = MediaFormat.createVideoFormat(
             MediaFormat.MIMETYPE_VIDEO_AVC,
             VIDEO_WIDTH,
@@ -387,7 +486,7 @@ class CameraStreamer(
             MediaFormat.KEY_COLOR_FORMAT,
             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
         )
-        format.setInteger(MediaFormat.KEY_BIT_RATE, VIDEO_BITRATE)
+        format.setInteger(MediaFormat.KEY_BIT_RATE, adaptiveBitrate)
         format.setInteger(MediaFormat.KEY_FRAME_RATE, VIDEO_FPS)
         format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, VIDEO_I_FRAME_INTERVAL)
         format.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileHigh)
@@ -395,6 +494,9 @@ class CameraStreamer(
         
         encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
         encoder?.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        
+        // Log network type for debugging
+        Log.i(TAG, "📡 Encoding configured for network type: $currentNetworkType")
         
         Log.d(TAG, "Encoder configured")
     }
@@ -595,35 +697,112 @@ class CameraStreamer(
         try {
             connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             
-            val networkRequest = NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .build()
-            
             networkCallback = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
-                    Log.i(TAG, "📶 Network available - WiFi connected!")
+                    val networkType = detectNetworkType(network)
+                    val previousType = currentNetworkType
+                    currentNetworkType = networkType
                     
-                    // If we're waiting for network during reconnection attempts, try now
-                    if (waitingForNetwork && reconnectAttempts > 0 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-                        Log.i(TAG, "🚀 Network restored - attempting immediate reconnection!")
-                        waitingForNetwork = false
-                        
-                        Handler(Looper.getMainLooper()).postDelayed({
-                            if (storedServerIp != null && storedServerPort != null && !isStreaming) {
-                                startStreaming(storedServerIp!!, storedServerPort!!)
+                    // Store network reference for socket binding
+                    activeNetwork = network
+                    
+                    Log.i(TAG, "📶 Network available: $networkType (was: $previousType)")
+                    
+                    // Handle network type transitions
+                    when {
+                        // WiFi came back - prefer it over LTE
+                        networkType == NetworkType.LAN_WIFI || networkType == NetworkType.INET_WIFI -> {
+                            if (waitingForNetwork && reconnectAttempts > 0 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                                Log.i(TAG, "🚀 WiFi restored - attempting immediate reconnection!")
+                                waitingForNetwork = false
+                                
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    if (storedServerIp != null && storedServerPort != null && !isStreaming) {
+                                        startStreaming(storedServerIp!!, storedServerPort!!)
+                                    }
+                                }, 500)
+                            } else if (isStreaming && previousType == NetworkType.LTE_CELLULAR) {
+                                // Switch back from LTE to WiFi
+                                Log.i(TAG, "🔄 Switching from LTE back to WiFi (better quality)")
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    if (storedServerIp != null && storedServerPort != null) {
+                                        // Trigger reconnection to use WiFi
+                                        isReconnecting = true
+                                        reconnectAttempts = 1
+                                        startStreaming(storedServerIp!!, storedServerPort!!)
+                                    }
+                                }, 800)
                             }
-                        }, 500) // Small delay to ensure network is fully ready
+                        }
+                        
+                        // LTE available - use if WiFi is lost and failover enabled
+                        networkType == NetworkType.LTE_CELLULAR && allowLteFailover -> {
+                            // Check if server is reachable over LTE (not a local IP)
+                            val canUseLte = storedServerIp != null && !isLocalNetworkAddress(storedServerIp!!)
+                            
+                            if (!canUseLte) {
+                                Log.w(TAG, "⚠️ LTE available but server ${storedServerIp} is local - waiting for WiFi")
+                                // Don't attempt LTE reconnection for local IPs
+                                return@onAvailable
+                            }
+                            
+                            if (waitingForNetwork && reconnectAttempts > 0 && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                                Log.i(TAG, "📱 LTE available - attempting failover reconnection!")
+                                waitingForNetwork = false
+                                
+                                // Notify UI about LTE usage
+                                val intent = Intent("com.miktos.NETWORK_TYPE_CHANGED")
+                                intent.setPackage(context.packageName)
+                                intent.putExtra("network_type", "LTE")
+                                intent.putExtra("warning", "Using cellular data - monitor usage")
+                                context.sendBroadcast(intent)
+                                
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    if (storedServerIp != null && storedServerPort != null && !isStreaming) {
+                                        startStreaming(storedServerIp!!, storedServerPort!!)
+                                    }
+                                }, 1000) // Slightly longer delay for LTE
+                            }
+                        }
                     }
                 }
                 
                 override fun onLost(network: Network) {
-                    Log.w(TAG, "📵 Network lost - WiFi disconnected")
+                    val lostType = detectNetworkType(network)
+                    Log.w(TAG, "📵 Network lost: $lostType")
+                    
+                    // If WiFi lost and LTE failover enabled, flag it
+                    if ((lostType == NetworkType.LAN_WIFI || lostType == NetworkType.INET_WIFI) && allowLteFailover) {
+                        Log.i(TAG, "⚠️ WiFi lost but LTE failover enabled - will try cellular")
+                    }
+                    
+                    // Clear active network if this was the active one
+                    if (activeNetwork == network) {
+                        activeNetwork = null
+                        Log.d(TAG, "Cleared active network reference")
+                    }
+                    
+                    currentNetworkType = NetworkType.OFFLINE
+                }
+                
+                override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+                    // Monitor link quality for potential LTE switch
+                    if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                        val downstreamKbps = capabilities.linkDownstreamBandwidthKbps
+                        val downstreamMbps = downstreamKbps / 1000.0f
+                        
+                        if (downstreamMbps < lteQualityThreshold && allowLteFailover && isStreaming) {
+                            Log.w(TAG, "⚠️ WiFi quality poor (${downstreamMbps} Mbps < ${lteQualityThreshold} Mbps)")
+                            Log.i(TAG, "📱 Considering LTE failover due to poor WiFi quality...")
+                            // Could trigger proactive switch here if needed
+                        }
+                    }
                 }
             }
             
-            connectivityManager?.registerNetworkCallback(networkRequest, networkCallback!!)
-            Log.d(TAG, "Network callback registered")
+            // Use default network callback to monitor all network changes (WiFi + LTE)
+            connectivityManager?.registerDefaultNetworkCallback(networkCallback!!)
+            Log.d(TAG, "Network callback registered for all networks (LTE failover: $allowLteFailover)")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to register network callback: ${e.message}")
         }
@@ -640,6 +819,21 @@ class CameraStreamer(
         }
         networkCallback = null
         connectivityManager = null
+    }
+    
+    private fun isLocalNetworkAddress(ip: String): Boolean {
+        // Check if IP is in private ranges: 192.168.x.x, 10.x.x.x, 172.16-31.x.x, localhost
+        return ip.startsWith("192.168.") ||
+               ip.startsWith("10.") ||
+               ip.startsWith("172.16.") || ip.startsWith("172.17.") ||
+               ip.startsWith("172.18.") || ip.startsWith("172.19.") ||
+               ip.startsWith("172.20.") || ip.startsWith("172.21.") ||
+               ip.startsWith("172.22.") || ip.startsWith("172.23.") ||
+               ip.startsWith("172.24.") || ip.startsWith("172.25.") ||
+               ip.startsWith("172.26.") || ip.startsWith("172.27.") ||
+               ip.startsWith("172.28.") || ip.startsWith("172.29.") ||
+               ip.startsWith("172.30.") || ip.startsWith("172.31.") ||
+               ip == "localhost" || ip == "127.0.0.1"
     }
     
     private fun cleanup() {

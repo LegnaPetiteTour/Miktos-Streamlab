@@ -82,6 +82,41 @@
             android:padding="12dp"
             android:fontFamily="monospace" />
 
+        <!-- LTE Failover Toggle -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="12dp"
+            android:paddingBottom="8dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="📱 LTE Backup (Cellular Failover)"
+                android:textColor="#AAAAAA"
+                android:textSize="13sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/lteFailoverSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="false" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⚠️ Uses cellular data if WiFi fails"
+            android:textColor="#FF6600"
+            android:textSize="11sp"
+            android:paddingBottom="8dp"
+            android:visibility="gone"
+            android:id="@+id/lteWarning" />
+
         <!-- Start Button -->
         <Button
             android:id="@+id/startButton"

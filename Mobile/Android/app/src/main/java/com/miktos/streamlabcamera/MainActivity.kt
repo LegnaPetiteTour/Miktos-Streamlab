@@ -18,6 +18,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import androidx.appcompat.widget.SwitchCompat
 
 class MainActivity : AppCompatActivity() {
     
@@ -26,6 +27,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var portInput: EditText
     private lateinit var startButton: Button
     private lateinit var statusText: TextView
+    private lateinit var lteFailoverSwitch: SwitchCompat
+    private lateinit var lteWarning: TextView
     
     private var isStreaming = false
 
@@ -72,15 +75,33 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this@MainActivity, "❌ Reconnection failed", Toast.LENGTH_LONG).show()
                     }
                 }
+                "com.miktos.NETWORK_TYPE_CHANGED" -> {
+                    val networkType = intent.getStringExtra("network_type")
+                    val warning = intent.getStringExtra("warning")
+                    
+                    runOnUiThread {
+                        if (networkType == "LTE") {
+                            Toast.makeText(this@MainActivity, 
+                                "📱 Using LTE (Cellular)\n$warning", 
+                                Toast.LENGTH_LONG).show()
+                            statusText.append("\n\n📱 Network: LTE (Reduced bitrate)")
+                        } else if (networkType == "WIFI") {
+                            Toast.makeText(this@MainActivity, 
+                                "📶 Back on WiFi (Full quality)", 
+                                Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             }
         }
     }
     
     companion object {
         private const val REQUEST_CAMERA_PERMISSION = 200
-        private const val PREFS_NAME = "StreamLabSettings"
+        private const val PREFS_NAME = "StreamlabPrefs"
         private const val PREF_SERVER_IP = "server_ip"
         private const val PREF_SERVER_PORT = "server_port"
+        private const val PREF_LTE_FAILOVER = "lte_failover_enabled"
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,6 +119,7 @@ class MainActivity : AppCompatActivity() {
             addAction("com.miktos.STREAM_DISCONNECTED")
             addAction("com.miktos.STREAM_RECONNECTED")
             addAction("com.miktos.STREAM_FAILED")
+            addAction("com.miktos.NETWORK_TYPE_CHANGED")
         }
         registerReceiver(disconnectReceiver, filter, RECEIVER_NOT_EXPORTED)
         
@@ -107,9 +129,33 @@ class MainActivity : AppCompatActivity() {
         portInput = findViewById(R.id.portInput)
         startButton = findViewById(R.id.startButton)
         statusText = findViewById(R.id.statusText)
+        lteFailoverSwitch = findViewById(R.id.lteFailoverSwitch)
+        lteWarning = findViewById(R.id.lteWarning)
         
         // Load saved settings
         loadSavedSettings()
+        
+        // Set up LTE failover switch listener
+        lteFailoverSwitch.setOnCheckedChangeListener { _, isChecked ->
+            // Update service if running
+            CameraStreamService.streamer?.setLteFailoverEnabled(isChecked)
+            
+            // Show/hide warning text
+            lteWarning.visibility = if (isChecked) View.VISIBLE else View.GONE
+            
+            // Save preference
+            getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putBoolean(PREF_LTE_FAILOVER, isChecked)
+                .apply()
+            
+            // Show toast to confirm
+            val message = if (isChecked) {
+                "✅ LTE Backup Enabled\nWill use cellular if WiFi fails"
+            } else {
+                "⚠️ LTE Backup Disabled\nWiFi-only mode"
+            }
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        }
         
         // Request permissions
         if (!hasRequiredPermissions()) {
@@ -195,8 +241,13 @@ class MainActivity : AppCompatActivity() {
         // Save settings for next time
         saveSettings(ip, port)
         
-        // Start the foreground service
+        // Start the foreground service with LTE failover preference
         CameraStreamService.start(this, ip, port)
+        
+        // Apply LTE failover setting to the streamer (service will handle it)
+        val lteEnabled = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(PREF_LTE_FAILOVER, false)
+        // The service will pick up this preference when it creates the streamer
         
         // Update UI
         isStreaming = true
@@ -204,7 +255,8 @@ class MainActivity : AppCompatActivity() {
         statusText.text = "✅ LIVE: Streaming to $ip:$port\n\n📺 Check notification and Mac screen!"
         startButton.backgroundTintList = getColorStateList(android.R.color.holo_red_dark)
         
-        Toast.makeText(this, "Service started - check notification!", Toast.LENGTH_LONG).show()
+        val networkMode = if (lteEnabled) "WiFi + LTE backup" else "WiFi only"
+        Toast.makeText(this, "Service started ($networkMode) - check notification!", Toast.LENGTH_LONG).show()
     }
     
     private fun stopStreaming() {
@@ -222,11 +274,16 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val savedIp = prefs.getString(PREF_SERVER_IP, "")
         val savedPort = prefs.getInt(PREF_SERVER_PORT, 8554)
+        val lteFailoverEnabled = prefs.getBoolean(PREF_LTE_FAILOVER, false)
         
         if (!savedIp.isNullOrEmpty()) {
             ipInput.setText(savedIp)
         }
         portInput.setText(savedPort.toString())
+        
+        // Restore LTE failover setting
+        lteFailoverSwitch.isChecked = lteFailoverEnabled
+        lteWarning.visibility = if (lteFailoverEnabled) View.VISIBLE else View.GONE
     }
     
     private fun saveSettings(ip: String, port: Int) {
