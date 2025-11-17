@@ -3,6 +3,7 @@
 ## Test: 15-Minute Quick Disconnect Detection Validation
 
 ### Test Configuration
+
 - **Device**: Samsung S23 FE (R5CX346T71B)
 - **Test Type**: 15-minute quick test with lock/unlock
 - **Start Time**: 01:33:54
@@ -11,6 +12,7 @@
 - **End Time**: 01:56:51
 
 ### Test Procedure
+
 1. Started Android app at 01:33:54
 2. Confirmed streaming started (frames 1744-1757+ detected)
 3. Let stream run for ~13 minutes
@@ -25,6 +27,7 @@
 #### Evidence
 
 **Receiver Side (Mac):**
+
 - Stream ran successfully for ~12 minutes
 - Frame count: 21,510 frames at 29.5 FPS
 - Total data: 684.9 MB at 7.87 Mbps
@@ -33,6 +36,7 @@
 - Receiver waiting for reconnection
 
 **Android Side:**
+
 - App PID: 17662 (still running after unlock)
 - App UI shows: "still streaming" (INCORRECT STATE)
 - No crashes detected
@@ -42,6 +46,7 @@
 #### Root Cause Analysis
 
 **State Desynchronization:**
+
 1. Android app's UI believes streaming is active
 2. Network connection was lost during lock/unlock
 3. App did not detect the disconnect
@@ -49,6 +54,7 @@
 5. User is shown misleading "streaming" state
 
 **Timeline:**
+
 - 01:33:54 - Stream started successfully
 - 01:34:06 - Frames 1744-1757 confirmed
 - 01:47:00 - Phone locked (approximate)
@@ -70,10 +76,12 @@
 ### Comparison to Original Bug
 
 **Original Bug (60+ minutes):**
+
 - Phone unlock after 60 minutes caused permanent disconnect
 - Required manual app restart
 
 **Current Bug (13 minutes):**
+
 - Phone lock/unlock caused disconnect
 - App UI shows streaming but not actually sending data
 - App did not auto-reconnect
@@ -106,33 +114,41 @@
 #### Immediate Fixes Required
 
 1. **Add Network Monitoring**
+
    ```kotlin
    // Monitor TCP socket state
    // Detect connection drops
    // Trigger reconnection logic
+
    ```
 
 2. **Fix State Management**
+
    ```kotlin
    // Verify frames actually sent over network
    // Update UI based on actual streaming state
    // Add connection status indicator
+
    ```
 
 3. **Implement Auto-Reconnect**
+
    ```kotlin
    // Detect disconnect
    // Attempt reconnection (exponential backoff)
    // Notify user of reconnection attempts
    // Max retries with user notification
+
    ```
 
 4. **Add UI Feedback**
+
    ```kotlin
    // Connection status indicator (green/yellow/red)
    // "Reconnecting..." toast
    // Error notifications
    // Last successful frame timestamp
+
    ```
 
 #### Testing Required After Fixes
@@ -163,6 +179,7 @@
 **Commercial Viability:** Still 60-70% (backend is excellent)
 
 **Blocker Status:** **CRITICAL BLOCKER**
+
 - Disconnect bug NOT fixed
 - Manual reconnection still required
 - UI state misleading to users
@@ -170,6 +187,7 @@
 - Cannot onboard beta users
 
 **Timeline Impact:**
+
 - Add 2-3 weeks for proper network monitoring
 - Add 1 week for reconnection logic
 - Add 1 week for extended testing
