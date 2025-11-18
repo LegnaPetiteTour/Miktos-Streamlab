@@ -1,6 +1,6 @@
 # 30-Minute Studio Mode Test - Manual Procedure (Unplugged)
 
-### Best approach for accurate battery drain measurement
+## Best approach for accurate battery drain measurement
 
 ## Setup (5 minutes before test)
 

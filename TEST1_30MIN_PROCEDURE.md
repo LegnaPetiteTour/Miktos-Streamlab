@@ -66,7 +66,7 @@
 
 ### Phase 2: Unplugged Test (USB Disconnected)
 
-2. **When you see "UNPLUG USB CABLE NOW" message:**
+1. **When you see "UNPLUG USB CABLE NOW" message:**
    - **UNPLUG the USB cable from phone**
    - Leave phone in Studio Mode, undisturbed
    - Place phone in a safe location (don't touch it)
@@ -74,7 +74,7 @@
 
 ### Phase 3: Monitoring
 
-3. **During the test:**
+1. **During the test:**
    - Desktop receiver window should show live video
    - Monitor script will print updates every minute:
 

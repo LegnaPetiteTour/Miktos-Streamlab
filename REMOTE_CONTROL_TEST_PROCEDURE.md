@@ -80,7 +80,7 @@ Expected: `192.168.2.36`
    📱 Camera registered: camera_001 (or similar)
    ```
 
-3. **Run test client:**
+1. **Run test client:**
 
    ```bash
    cd "/Users/atorrella/Desktop/Miktos Streamlab"
@@ -106,13 +106,13 @@ Test each command in sequence:
 
 **Action:** Select camera → Choose "5 - STATUS"
 
-### Expected Result
+### Expected Result (STATUS)
 
 - Test client: `📬 Command 'STATUS' result: {"status": "success"}`
 - Phone logs: Status broadcast sent
 - Server logs: Status forwarded to controllers
 
-### Validation
+### Validation (STATUS)
 
 - ✅ Command sent successfully
 - ✅ Response received
@@ -124,13 +124,13 @@ Test each command in sequence:
 
 **Action:** Select camera → Choose "1 - START"
 
-### Expected Result
+### Expected Result (START)
 
 - Test client: `📬 Command 'START' result: {"status": "success"}`
 - Phone: Streaming should start (if IP/port configured)
 - Server logs: Command delivered
 
-### Validation
+### Validation (START)
 
 - ✅ Stream starts (if configured)
 - ✅ Command acknowledged
@@ -142,7 +142,7 @@ Test each command in sequence:
 
 **Action:** Select camera → Choose "3 - ENTER_STUDIO"
 
-### Expected Result
+### Expected Result (ENTER_STUDIO_MODE)
 
 - Test client: `📬 Command 'ENTER_STUDIO_MODE' result: {"status": "success"}`
 - Phone: Screen goes black with red pulsing dot
@@ -168,7 +168,7 @@ Test each command in sequence:
 - Test client: Receives status update
 - Status should show: Studio Mode active
 
-### Validation
+### Validation (STATUS in Studio)
 
 - ✅ Status reflects Studio Mode state
 - ✅ Battery level current
@@ -180,14 +180,14 @@ Test each command in sequence:
 
 **Action:** Select camera → Choose "4 - EXIT_STUDIO"
 
-### Expected Result
+### Expected Result (EXIT_STUDIO_MODE)
 
 - Test client: `📬 Command 'EXIT_STUDIO_MODE' result: {"status": "success"}`
 - Phone: Returns to MainActivity
 - Phone: Brightness restored
 - Server logs: Studio mode deactivated
 
-### Validation
+### Validation (EXIT_STUDIO_MODE)
 
 - ✅ Studio Mode exits cleanly
 - ✅ Returns to main UI
@@ -200,13 +200,13 @@ Test each command in sequence:
 
 **Action:** Select camera → Choose "2 - STOP"
 
-### Expected Result
+### Expected Result (STOP)
 
 - Test client: `📬 Command 'STOP' result: {"status": "success"}`
 - Phone: Streaming stops
 - Server logs: Command delivered
 
-### Validation
+### Validation (STOP)
 
 - ✅ Stream stops cleanly
 - ✅ Camera released
@@ -218,7 +218,7 @@ Test each command in sequence:
 
 #### Test 7: Studio Mode While Streaming
 
-### Sequence
+### Sequence (Studio While Streaming)
 
 1. START command
 2. Wait for stream to connect
@@ -237,12 +237,12 @@ Test each command in sequence:
 
 #### Test 8: Multiple Commands Rapid Fire
 
-### Sequence
+### Sequence (Rapid Fire)
 
 1. START → ENTER_STUDIO → EXIT_STUDIO → START → STOP
 2. Send commands with 1-second intervals
 
-### Expected
+### Expected (Rapid Fire)
 
 - ✅ All commands processed
 - ✅ No crashes
@@ -252,14 +252,14 @@ Test each command in sequence:
 
 #### Test 9: Reconnection Test
 
-### Sequence
+### Sequence (Reconnection)
 
 1. Enable remote control
 2. Disconnect WiFi briefly
 3. Reconnect WiFi
 4. Send STATUS command
 
-### Expected
+### Expected (Reconnection)
 
 - ✅ Auto-reconnect works
 - ✅ Commands resume
