@@ -5,15 +5,19 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 
 class CameraStreamService : Service() {
     
     companion object {
+        private const val TAG = "CameraStreamService"
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "camera_stream_channel"
         private const val PREFS_NAME = "StreamlabPrefs"
         private const val PREF_LTE_FAILOVER = "lte_failover_enabled"
+        private const val PREF_SERVER_IP = "server_ip"
+        private const val PREF_SERVER_PORT = "server_port"
         
         var streamer: CameraStreamer? = null  // Expose streamer for MainActivity switch
         
@@ -76,6 +80,15 @@ class CameraStreamService : Service() {
                     }
                 }
                 streamer = cameraStreamer
+                
+                // Load saved streaming destination for remote START commands
+                val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                val savedIp = prefs.getString(PREF_SERVER_IP, null)
+                val savedPort = prefs.getInt(PREF_SERVER_PORT, 8554)
+                if (savedIp != null) {
+                    cameraStreamer?.setStreamingDestination(savedIp, savedPort)
+                    Log.i(TAG, "📝 Loaded streaming destination: $savedIp:$savedPort for remote commands")
+                }
             }
             
             // Enable remote control

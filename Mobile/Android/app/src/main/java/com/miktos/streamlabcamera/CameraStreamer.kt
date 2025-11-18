@@ -157,6 +157,16 @@ class CameraStreamer(
         }
     }
     
+    /**
+     * Set streaming destination without starting streaming
+     * Used to configure the destination for remote START commands
+     */
+    fun setStreamingDestination(serverIp: String, serverPort: Int) {
+        storedServerIp = serverIp
+        storedServerPort = serverPort
+        Log.i(TAG, "📝 Streaming destination configured: $serverIp:$serverPort")
+    }
+    
     fun startStreaming(serverIp: String, serverPort: Int) {
         // Store connection parameters for auto-reconnection
         storedServerIp = serverIp
@@ -1035,6 +1045,12 @@ class CameraStreamer(
         cameraThread?.quitSafely()
         encoderThread?.quitSafely()
         
+        // Clear handlers so they can be recreated on next stream
+        cameraThread = null
+        cameraHandler = null
+        encoderThread = null
+        encoderHandler = null
+        
         Log.d(TAG, "Cleanup complete. Sent $frameCount total frames")
     }
     
@@ -1093,54 +1109,78 @@ class CameraStreamer(
     private fun handleRemoteCommand(command: String, params: JSONObject) {
         Log.i(TAG, "📥 Processing remote command: $command")
         
-        when (command) {
-            "START" -> {
-                val serverIp = params.optString("server_ip", storedServerIp)
-                val serverPort = params.optInt("server_port", storedServerPort ?: 8554)
+        // Define the command execution logic
+        val executeCommand: () -> Unit = {
+            when (command) {
+                "START" -> {
+                    // Get server IP/port from params or use stored values
+                    val serverIp = if (params.has("server_ip")) {
+                        params.getString("server_ip")
+                    } else {
+                        storedServerIp
+                    }
+                    
+                    val serverPort = if (params.has("server_port")) {
+                        params.getInt("server_port")
+                    } else {
+                        storedServerPort ?: 8554
+                    }
+                    
+                    if (serverIp != null && serverIp.isNotEmpty()) {
+                        Log.i(TAG, "🎬 Starting stream to $serverIp:$serverPort via remote command")
+                        startStreaming(serverIp, serverPort)
+                    } else {
+                        Log.e(TAG, "❌ START command failed - no streaming destination configured")
+                        Log.e(TAG, "   Please configure server IP in app settings first")
+                    }
+                }
                 
-                if (serverIp != null) {
-                    startStreaming(serverIp, serverPort)
-                } else {
-                    Log.e(TAG, "❌ START command missing server_ip parameter")
+                "STOP" -> {
+                    Log.i(TAG, "⏹️ Stopping stream via remote command")
+                    stopStreaming()
                 }
-            }
-            
-            "STOP" -> {
-                stopStreaming()
-            }
-            
-            "ENTER_STUDIO_MODE" -> {
-                if (isStreaming) {
+                
+                "ENTER_STUDIO_MODE" -> {
+                    Log.i(TAG, "📺 Entering Studio Mode via remote command (streaming: $isStreaming)")
+                    // Studio Mode can be entered anytime, not just when streaming
                     StudioModeActivity.start(context)
-                    Log.i(TAG, "📺 Entering Studio Mode")
-                } else {
-                    Log.w(TAG, "⚠️  Cannot enter Studio Mode - not streaming")
+                }
+                
+                "EXIT_STUDIO_MODE" -> {
+                    Log.i(TAG, "📺 Exiting Studio Mode via remote command")
+                    // Send broadcast to exit Studio Mode
+                    val intent = Intent("com.miktos.EXIT_STUDIO_MODE").apply {
+                        setPackage(context.packageName)
+                        addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+                    }
+                    context.sendBroadcast(intent)
+                }
+                
+                "GET_STATUS", "STATUS" -> {
+                    Log.d(TAG, "📊 Status requested via remote command")
+                    sendStatusUpdate()
+                }
+                
+                "SET_QUALITY" -> {
+                    // Future: Adjust bitrate/resolution
+                    val quality = params.optString("quality", "high")
+                    Log.i(TAG, "🎨 Quality change requested: $quality (not implemented yet)")
+                }
+                
+                else -> {
+                    Log.w(TAG, "⚠️  Unknown command: $command")
                 }
             }
-            
-            "EXIT_STUDIO_MODE" -> {
-                // Send broadcast to exit Studio Mode
-                val intent = Intent("com.miktos.EXIT_STUDIO_MODE").apply {
-                    setPackage(context.packageName)
-                    addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
-                }
-                context.sendBroadcast(intent)
-                Log.i(TAG, "📺 Exiting Studio Mode - broadcast sent to ${context.packageName}")
-            }
-            
-            "GET_STATUS", "STATUS" -> {
-                sendStatusUpdate()
-            }
-            
-            "SET_QUALITY" -> {
-                // Future: Adjust bitrate/resolution
-                val quality = params.optString("quality", "high")
-                Log.i(TAG, "🎨 Quality change requested: $quality (not implemented yet)")
-            }
-            
-            else -> {
-                Log.w(TAG, "⚠️  Unknown command: $command")
-            }
+            Unit  // Explicitly return Unit
+        }
+        
+        // Execute on camera handler thread if available, otherwise run directly
+        if (cameraHandler != null) {
+            cameraHandler?.post(executeCommand)
+        } else {
+            // No camera handler yet (remote control only mode), execute directly
+            Log.d(TAG, "⚡ Executing command directly (no camera handler yet)")
+            executeCommand()
         }
     }
     
