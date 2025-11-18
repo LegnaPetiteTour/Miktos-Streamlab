@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Build
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -19,6 +20,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import androidx.appcompat.widget.SwitchCompat
+import com.miktos.streamlabcamera.ui.StudioModeActivity
 
 class MainActivity : AppCompatActivity() {
     
@@ -26,11 +28,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ipInput: EditText
     private lateinit var portInput: EditText
     private lateinit var startButton: Button
+    private lateinit var studioModeButton: Button
     private lateinit var statusText: TextView
     private lateinit var lteFailoverSwitch: SwitchCompat
     private lateinit var lteWarning: TextView
+    private lateinit var remoteControlSwitch: SwitchCompat
+    private lateinit var remoteServerIp: EditText
+    private lateinit var remoteServerPort: EditText
+    private lateinit var remoteStatusIndicator: View
+    private lateinit var remoteStatusText: TextView
     
     private var isStreaming = false
+    private var isRemoteControlEnabled = false
 
     // Disconnect handling
     private val disconnectReceiver = object : BroadcastReceiver() {
@@ -49,6 +58,7 @@ class MainActivity : AppCompatActivity() {
                         startButton.isEnabled = false
                         startButton.backgroundTintList = getColorStateList(android.R.color.holo_orange_dark)
                         isStreaming = false  // Critical: UI knows we're NOT streaming
+                        studioModeButton.isEnabled = false  // Disable Studio Mode during reconnection
                     }
                 }
                 "com.miktos.STREAM_RECONNECTED" -> {
@@ -60,6 +70,7 @@ class MainActivity : AppCompatActivity() {
                         startButton.isEnabled = true
                         startButton.backgroundTintList = getColorStateList(android.R.color.holo_red_dark)
                         isStreaming = true  // Now we're actually streaming
+                        studioModeButton.isEnabled = true  // Re-enable Studio Mode
                         Toast.makeText(this@MainActivity, "✅ Reconnected!", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -72,6 +83,7 @@ class MainActivity : AppCompatActivity() {
                         startButton.isEnabled = true
                         startButton.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
                         isStreaming = false
+                        studioModeButton.isEnabled = false  // Keep Studio Mode disabled
                         Toast.makeText(this@MainActivity, "❌ Reconnection failed", Toast.LENGTH_LONG).show()
                     }
                 }
@@ -92,6 +104,46 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
+                "com.miktos.REMOTE_CONTROL_CONNECTED" -> {
+                    Log.d("MainActivity", "📡 Received REMOTE_CONTROL_CONNECTED broadcast")
+                    runOnUiThread {
+                        Log.d("MainActivity", "📡 Updating UI to show connected state")
+                        remoteStatusIndicator.setBackgroundResource(android.R.drawable.presence_online)
+                        remoteStatusText.text = "Connected"
+                        remoteStatusText.setTextColor(getColor(android.R.color.holo_green_light))
+                        Toast.makeText(this@MainActivity, "✅ Remote control connected", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                "com.miktos.REMOTE_CONTROL_DISCONNECTED" -> {
+                    Log.d("MainActivity", "📡 Received REMOTE_CONTROL_DISCONNECTED broadcast")
+                    runOnUiThread {
+                        remoteStatusIndicator.setBackgroundResource(R.drawable.red_dot)
+                        remoteStatusText.text = "Disconnected"
+                        remoteStatusText.setTextColor(getColor(android.R.color.darker_gray))
+                    }
+                }
+                "com.miktos.STREAMING_STOPPED" -> {
+                    Log.d("MainActivity", "📡 Received STREAMING_STOPPED broadcast")
+                    runOnUiThread {
+                        isStreaming = false
+                        startButton.text = "Start Streaming"
+                        startButton.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
+                        studioModeButton.isEnabled = false
+                        statusText.text = "Streaming stopped"
+                        Log.d("MainActivity", "✅ UI updated - button shows 'Start Streaming'")
+                    }
+                }
+                "com.miktos.STREAMING_STARTED" -> {
+                    Log.d("MainActivity", "📡 Received STREAMING_STARTED broadcast")
+                    runOnUiThread {
+                        isStreaming = true
+                        startButton.text = "STOP"
+                        startButton.backgroundTintList = getColorStateList(android.R.color.holo_red_dark)
+                        studioModeButton.isEnabled = true
+                        statusText.text = "Streaming..."
+                        Log.d("MainActivity", "✅ UI updated - button shows 'STOP'")
+                    }
+                }
             }
         }
     }
@@ -102,6 +154,9 @@ class MainActivity : AppCompatActivity() {
         private const val PREF_SERVER_IP = "server_ip"
         private const val PREF_SERVER_PORT = "server_port"
         private const val PREF_LTE_FAILOVER = "lte_failover_enabled"
+        private const val PREF_REMOTE_CONTROL = "remote_control_enabled"
+        private const val PREF_REMOTE_IP = "remote_server_ip"
+        private const val PREF_REMOTE_PORT = "remote_server_port"
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -120,6 +175,10 @@ class MainActivity : AppCompatActivity() {
             addAction("com.miktos.STREAM_RECONNECTED")
             addAction("com.miktos.STREAM_FAILED")
             addAction("com.miktos.NETWORK_TYPE_CHANGED")
+            addAction("com.miktos.REMOTE_CONTROL_CONNECTED")
+            addAction("com.miktos.REMOTE_CONTROL_DISCONNECTED")
+            addAction("com.miktos.STREAMING_STOPPED")
+            addAction("com.miktos.STREAMING_STARTED")
         }
         registerReceiver(disconnectReceiver, filter, RECEIVER_NOT_EXPORTED)
         
@@ -128,9 +187,15 @@ class MainActivity : AppCompatActivity() {
         ipInput = findViewById(R.id.ipInput)
         portInput = findViewById(R.id.portInput)
         startButton = findViewById(R.id.startButton)
+        studioModeButton = findViewById(R.id.studioModeButton)
         statusText = findViewById(R.id.statusText)
         lteFailoverSwitch = findViewById(R.id.lteFailoverSwitch)
         lteWarning = findViewById(R.id.lteWarning)
+        remoteControlSwitch = findViewById(R.id.remoteControlSwitch)
+        remoteServerIp = findViewById(R.id.remoteServerIp)
+        remoteServerPort = findViewById(R.id.remoteServerPort)
+        remoteStatusIndicator = findViewById(R.id.remoteStatusIndicator)
+        remoteStatusText = findViewById(R.id.remoteStatusText)
         
         // Load saved settings
         loadSavedSettings()
@@ -157,6 +222,53 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         }
         
+        // Set up remote control switch listener
+        remoteControlSwitch.setOnCheckedChangeListener { _, isChecked ->
+            isRemoteControlEnabled = isChecked
+            
+            // Enable/disable input fields
+            remoteServerIp.isEnabled = isChecked
+            remoteServerPort.isEnabled = isChecked
+            
+            // Save preference
+            getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putBoolean(PREF_REMOTE_CONTROL, isChecked)
+                .apply()
+            
+            // Enable or disable remote control immediately (even if not streaming)
+            if (isChecked) {
+                val serverIp = remoteServerIp.text.toString()
+                val serverPort = remoteServerPort.text.toString().toIntOrNull() ?: 9000
+                
+                if (serverIp.isNotEmpty()) {
+                    // Save server settings
+                    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                        .putString(PREF_REMOTE_IP, serverIp)
+                        .putInt(PREF_REMOTE_PORT, serverPort)
+                        .apply()
+                    
+                    // Start the service if not already running (just for remote control)
+                    if (!isStreaming) {
+                        // Start a minimal service instance just for remote control
+                        CameraStreamService.startForRemoteControl(this, serverIp, serverPort)
+                    } else {
+                        // Service already running, just enable remote control
+                        CameraStreamService.streamer?.enableRemoteControl(serverIp, serverPort)
+                    }
+                    Toast.makeText(this, "🎮 Connecting to remote control server...", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "⚠️ Enter server IP first", Toast.LENGTH_SHORT).show()
+                    remoteControlSwitch.isChecked = false
+                }
+            } else {
+                CameraStreamService.streamer?.disableRemoteControl()
+                remoteStatusIndicator.setBackgroundResource(R.drawable.red_dot)
+                remoteStatusText.text = "Disconnected"
+                remoteStatusText.setTextColor(getColor(android.R.color.darker_gray))
+                Toast.makeText(this, "🎮 Remote control disabled", Toast.LENGTH_SHORT).show()
+            }
+        }
+        
         // Request permissions
         if (!hasRequiredPermissions()) {
             requestPermissions()
@@ -167,6 +279,15 @@ class MainActivity : AppCompatActivity() {
                 startStreaming()
             } else {
                 stopStreaming()
+            }
+        }
+        
+        // Studio Mode button - only enabled when streaming
+        studioModeButton.setOnClickListener {
+            if (isStreaming) {
+                StudioModeActivity.start(this)
+            } else {
+                Toast.makeText(this, "⚠️ Start streaming first", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -249,11 +370,25 @@ class MainActivity : AppCompatActivity() {
             .getBoolean(PREF_LTE_FAILOVER, false)
         // The service will pick up this preference when it creates the streamer
         
+        // Enable remote control if enabled
+        if (isRemoteControlEnabled) {
+            val serverIp = remoteServerIp.text.toString()
+            val serverPort = remoteServerPort.text.toString().toIntOrNull() ?: 9000
+            
+            if (serverIp.isNotEmpty()) {
+                // Wait a moment for service to start, then enable remote control
+                startButton.postDelayed({
+                    CameraStreamService.streamer?.enableRemoteControl(serverIp, serverPort)
+                }, 500)
+            }
+        }
+        
         // Update UI
         isStreaming = true
         startButton.text = "STOP"
         statusText.text = "✅ LIVE: Streaming to $ip:$port\n\n📺 Check notification and Mac screen!"
         startButton.backgroundTintList = getColorStateList(android.R.color.holo_red_dark)
+        studioModeButton.isEnabled = true  // Enable Studio Mode when streaming
         
         val networkMode = if (lteEnabled) "WiFi + LTE backup" else "WiFi only"
         Toast.makeText(this, "Service started ($networkMode) - check notification!", Toast.LENGTH_LONG).show()
@@ -268,6 +403,7 @@ class MainActivity : AppCompatActivity() {
         startButton.text = "START"
         statusText.text = "Stopped"
         startButton.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
+        studioModeButton.isEnabled = false  // Disable Studio Mode when stopped
     }
     
     private fun loadSavedSettings() {
@@ -275,6 +411,9 @@ class MainActivity : AppCompatActivity() {
         val savedIp = prefs.getString(PREF_SERVER_IP, "")
         val savedPort = prefs.getInt(PREF_SERVER_PORT, 8554)
         val lteFailoverEnabled = prefs.getBoolean(PREF_LTE_FAILOVER, false)
+        val remoteControlEnabled = prefs.getBoolean(PREF_REMOTE_CONTROL, false)
+        val remoteIp = prefs.getString(PREF_REMOTE_IP, "192.168.2.36")  // Default to current desktop IP
+        val remotePort = prefs.getInt(PREF_REMOTE_PORT, 9000)
         
         if (!savedIp.isNullOrEmpty()) {
             ipInput.setText(savedIp)
@@ -284,6 +423,16 @@ class MainActivity : AppCompatActivity() {
         // Restore LTE failover setting
         lteFailoverSwitch.isChecked = lteFailoverEnabled
         lteWarning.visibility = if (lteFailoverEnabled) View.VISIBLE else View.GONE
+        
+        // Restore remote control settings
+        remoteControlSwitch.isChecked = remoteControlEnabled
+        isRemoteControlEnabled = remoteControlEnabled
+        remoteServerIp.isEnabled = remoteControlEnabled
+        remoteServerPort.isEnabled = remoteControlEnabled
+        
+        // Always set the remote IP (with default if empty)
+        remoteServerIp.setText(remoteIp ?: "192.168.2.36")
+        remoteServerPort.setText(remotePort.toString())
     }
     
     private fun saveSettings(ip: String, port: Int) {

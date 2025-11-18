@@ -29,6 +29,19 @@ class CameraStreamService : Service() {
             }
         }
         
+        fun startForRemoteControl(context: Context, serverIp: String, serverPort: Int) {
+            val intent = Intent(context, CameraStreamService::class.java).apply {
+                putExtra("remote_control_only", true)
+                putExtra("remote_ip", serverIp)
+                putExtra("remote_port", serverPort)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+        
         fun stop(context: Context) {
             context.stopService(Intent(context, CameraStreamService::class.java))
         }
@@ -42,6 +55,36 @@ class CameraStreamService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Check if this is remote control only mode
+        val remoteControlOnly = intent?.getBooleanExtra("remote_control_only", false) ?: false
+        
+        if (remoteControlOnly) {
+            val remoteIp = intent?.getStringExtra("remote_ip") ?: return START_NOT_STICKY
+            val remotePort = intent?.getIntExtra("remote_port", 9000) ?: 9000
+            
+            // Start foreground with remote control notification
+            val notification = createNotification("🎮 Remote Control Ready")
+            startForeground(NOTIFICATION_ID, notification)
+            
+            // Initialize streamer WITHOUT starting streaming
+            if (cameraStreamer == null) {
+                cameraStreamer = CameraStreamer(this) { isStreaming ->
+                    if (isStreaming) {
+                        updateNotification("📹 LIVE: Streaming (Remote Controlled)")
+                    } else {
+                        updateNotification("🎮 Remote Control Ready")
+                    }
+                }
+                streamer = cameraStreamer
+            }
+            
+            // Enable remote control
+            cameraStreamer?.enableRemoteControl(remoteIp, remotePort)
+            
+            return START_STICKY
+        }
+        
+        // Normal streaming mode
         val ip = intent?.getStringExtra("ip") ?: return START_NOT_STICKY
         val port = intent.getIntExtra("port", 8554)
         
@@ -53,21 +96,23 @@ class CameraStreamService : Service() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val lteFailoverEnabled = prefs.getBoolean(PREF_LTE_FAILOVER, false)
         
-        // Initialize camera streamer
-        cameraStreamer = CameraStreamer(this) { isStreaming ->
-            if (isStreaming) {
-                updateNotification("📹 LIVE: Streaming to $ip:$port")
-            } else {
-                updateNotification("⏸ Stream stopped")
-                stopSelf()
+        // Initialize camera streamer if needed
+        if (cameraStreamer == null) {
+            cameraStreamer = CameraStreamer(this) { isStreaming ->
+                if (isStreaming) {
+                    updateNotification("📹 LIVE: Streaming to $ip:$port")
+                } else {
+                    updateNotification("⏸ Stream stopped")
+                    stopSelf()
+                }
             }
+            
+            // Expose streamer to MainActivity
+            streamer = cameraStreamer
         }
         
         // Apply LTE failover setting
         cameraStreamer?.setLteFailoverEnabled(lteFailoverEnabled)
-        
-        // Expose streamer to MainActivity
-        streamer = cameraStreamer
         
         // Start streaming
         cameraStreamer?.startStreaming(ip, port)

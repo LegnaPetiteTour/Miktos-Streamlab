@@ -117,6 +117,122 @@
             android:visibility="gone"
             android:id="@+id/lteWarning" />
 
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#444444"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Remote Control Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🎮 Remote Control Settings"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
+
+        <!-- Remote Control Enable Toggle -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingBottom="8dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🎮 Enable Remote Control"
+                android:textColor="#AAAAAA"
+                android:textSize="13sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/remoteControlSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="false" />
+
+        </LinearLayout>
+
+        <!-- Remote Control Server IP -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Server IP Address:"
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:paddingTop="4dp"
+            android:id="@+id/remoteServerIpLabel" />
+
+        <EditText
+            android:id="@+id/remoteServerIp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="192.168.1.XXX"
+            android:inputType="text"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#666666"
+            android:background="#333333"
+            android:padding="12dp"
+            android:fontFamily="monospace"
+            android:enabled="false" />
+
+        <!-- Remote Control Port -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="WebSocket Port:"
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:paddingTop="4dp"
+            android:id="@+id/remoteServerPortLabel" />
+
+        <EditText
+            android:id="@+id/remoteServerPort"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="9000"
+            android:inputType="number"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#666666"
+            android:background="#333333"
+            android:padding="12dp"
+            android:fontFamily="monospace"
+            android:enabled="false" />
+
+        <!-- Remote Control Status -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="8dp"
+            android:paddingBottom="4dp"
+            android:gravity="center_vertical">
+
+            <View
+                android:id="@+id/remoteStatusIndicator"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:background="@drawable/red_dot"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/remoteStatusText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Disconnected"
+                android:textColor="#888888"
+                android:textSize="12sp"
+                android:fontFamily="monospace" />
+
+        </LinearLayout>
+
         <!-- Start Button -->
         <Button
             android:id="@+id/startButton"
@@ -128,6 +244,18 @@
             android:layout_marginTop="16dp"
             android:padding="16dp"
             android:backgroundTint="@android:color/holo_green_dark" />
+
+        <!-- Studio Mode Button -->
+        <Button
+            android:id="@+id/studioModeButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📺 ENTER STUDIO MODE"
+            android:textSize="14sp"
+            android:layout_marginTop="8dp"
+            android:padding="12dp"
+            android:enabled="false"
+            android:backgroundTint="@android:color/holo_blue_dark" />
 
     </LinearLayout>
 

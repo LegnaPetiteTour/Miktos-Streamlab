@@ -25,6 +25,13 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import com.miktos.streamlabcamera.streaming.*
+import com.miktos.streamlabcamera.streaming.monitoring.*
+import com.miktos.streamlabcamera.remote.RemoteControlClient
+import com.miktos.streamlabcamera.monitoring.ThermalMonitor
+import com.miktos.streamlabcamera.ui.StudioModeActivity
+import org.json.JSONObject
+import android.os.BatteryManager
 
 class CameraStreamer(
     private val context: Context,
@@ -41,6 +48,34 @@ class CameraStreamer(
 
     // Connection health monitoring
     private var heartbeatExecutor: ScheduledExecutorService? = null
+
+    // 4-LAYER MONITORING SYSTEM - The complete fix for disconnect detection
+    private val socketMonitor = SocketHealthMonitor { reason ->
+        Log.e(TAG, "Socket monitor detected disconnect: $reason")
+        cameraHandler?.post {
+            onDisconnect()
+        }
+    }
+    
+    private val dataFlowMonitor = DataFlowMonitor { reason ->
+        Log.e(TAG, "Data flow monitor detected problem: $reason")
+        cameraHandler?.post {
+            onDisconnect()
+        }
+    }
+    
+    private val screenMonitor = ScreenStateMonitor(context) {
+        // Screen unlocked - verify connection is still alive
+        verifyConnectionAfterUnlock()
+    }
+    
+    // State machine
+    private var currentState: StreamingState = StreamingState.Stopped
+
+    // Remote Control Integration
+    private var remoteControlClient: RemoteControlClient? = null
+    private var thermalMonitor: ThermalMonitor? = null
+    private var statusUpdateExecutor: ScheduledExecutorService? = null
 
     // Advanced disconnect detection
     private var lastWriteTime = System.currentTimeMillis()
@@ -65,14 +100,6 @@ class CameraStreamer(
     private var allowLteFailover: Boolean = false  // User preference for LTE backup
     private var lteQualityThreshold: Float = 2.0f  // Mbps - switch to LTE if WiFi drops below this
     private var activeNetwork: Network? = null  // Active network for socket binding
-    
-    enum class NetworkType {
-        UNKNOWN,
-        LAN_WIFI,      // Local WiFi
-        INET_WIFI,     // WiFi over internet
-        LTE_CELLULAR,  // Cellular/LTE
-        OFFLINE
-    }
     
     private var cameraThread: HandlerThread? = null
     private var cameraHandler: Handler? = null
@@ -166,13 +193,27 @@ class CameraStreamer(
         
         encoderHandler?.post {
             try {
+                // Update state to Starting
+                currentState = StreamingState.Starting
+                
                 connectToServer(serverIp, serverPort)
                 initializeEncoder()
                 startCamera2()
+                
+                // START ALL MONITORS - This is the critical fix!
+                socketMonitor.startMonitoring(socket!!)
+                dataFlowMonitor.startMonitoring()
+                screenMonitor.startMonitoring()
+                
                 isStreaming = true
                 lastWriteTime = System.currentTimeMillis()
                 lastSuccessfulFrameTime = System.currentTimeMillis()
                 consecutiveWriteFailures = 0  // Reset failure counter
+                
+                // Update state to Running
+                currentState = StreamingState.Running(
+                    ConnectionInfo(serverIp, serverPort, currentNetworkType, System.currentTimeMillis())
+                )
                 
                 // If this was a successful reconnection, notify UI (check BEFORE resetting)
                 val wasReconnecting = isReconnecting
@@ -186,9 +227,16 @@ class CameraStreamer(
                     val intent = Intent("com.miktos.STREAM_RECONNECTED")
                     intent.setPackage(context.packageName)
                     context.sendBroadcast(intent)
+                } else {
+                    // Notify MainActivity that streaming started (for remote START command)
+                    Intent("com.miktos.STREAMING_STARTED").also { intent ->
+                        intent.setPackage(context.packageName)
+                        context.sendBroadcast(intent)
+                        Log.d(TAG, "📡 Sent STREAMING_STARTED broadcast to MainActivity")
+                    }
                 }
                 statusCallback(true)
-                Log.d(TAG, "Streaming pipeline initialized")
+                Log.i(TAG, "✅ Streaming started - all 4 monitors active")
                 
             } catch (e: Exception) {
                 Log.e(TAG, "Error starting stream", e)
@@ -361,13 +409,26 @@ class CameraStreamer(
             return
         }
         
+        if (currentState is StreamingState.Reconnecting) {
+            Log.w(TAG, "Already in reconnecting state - ignoring duplicate disconnect")
+            return
+        }
+        
         Log.w(TAG, "Connection lost - attempting recovery (attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})")
+        
+        // Update state
+        currentState = StreamingState.Disconnected("Connection lost", System.currentTimeMillis())
         
         // Mark as reconnecting
         isReconnecting = true
         
         // Update internal state FIRST
         isStreaming = false
+        
+        // Stop socket and data flow monitors (but keep screen monitor to detect unlock)
+        socketMonitor.stopMonitoring()
+        dataFlowMonitor.stopMonitoring()
+        // Keep screen monitor running to detect unlock and trigger verification
         
         // Clean up current resources
         cleanup()
@@ -381,6 +442,13 @@ class CameraStreamer(
             val backoffDelay = Math.min(
                 (Math.pow(2.0, reconnectAttempts.toDouble()) * 1000).toLong(),
                 30000  // Cap at 30 seconds
+            )
+            
+            // Update state to Reconnecting
+            currentState = StreamingState.Reconnecting(
+                reconnectAttempts,
+                MAX_RECONNECT_ATTEMPTS,
+                System.currentTimeMillis() + backoffDelay
             )
             
             Log.i(TAG, "🔄 Auto-reconnecting in ${backoffDelay/1000}s... (attempt $reconnectAttempts/$MAX_RECONNECT_ATTEMPTS)")
@@ -440,6 +508,7 @@ class CameraStreamer(
             // The network callback will trigger reconnection when WiFi returns
         } else {
             // No hope of reconnection - give up
+            currentState = StreamingState.Error("Max reconnection attempts reached", ErrorType.NETWORK)
             isReconnecting = false
             reconnectAttempts = 0
             waitingForNetwork = false
@@ -632,6 +701,9 @@ class CameraStreamer(
                         outputStream?.write(data)
                         outputStream?.flush()
                         
+                        // CRITICAL: Tell monitor we successfully wrote data
+                        dataFlowMonitor.recordSuccessfulWrite()
+                        
                         // Track successful transmission
                         lastWriteTime = System.currentTimeMillis()
                         lastSuccessfulFrameTime = System.currentTimeMillis()
@@ -679,7 +751,15 @@ class CameraStreamer(
     
     fun stopStreaming() {
         Log.d(TAG, "Stopping streaming...")
+        
+        currentState = StreamingState.Stopping
+        
         isStreaming = false
+        
+        // Stop all monitors
+        socketMonitor.stopMonitoring()
+        dataFlowMonitor.stopMonitoring()
+        screenMonitor.stopMonitoring()
         
         // Reset reconnection state to allow manual restart
         isReconnecting = false
@@ -690,7 +770,16 @@ class CameraStreamer(
         unregisterNetworkCallback()
         
         cleanup()
+        
+        currentState = StreamingState.Stopped
         statusCallback(false)
+        
+        // Notify MainActivity that streaming stopped
+        Intent("com.miktos.STREAMING_STOPPED").also { intent ->
+            intent.setPackage(context.packageName)
+            context.sendBroadcast(intent)
+            Log.d(TAG, "📡 Sent STREAMING_STOPPED broadcast to MainActivity")
+        }
     }
     
     private fun registerNetworkCallback() {
@@ -836,6 +925,44 @@ class CameraStreamer(
                ip == "localhost" || ip == "127.0.0.1"
     }
     
+    /**
+     * Verify connection after screen unlock
+     * CRITICAL for fixing the 60+ minute lock bug
+     * 
+     * When the phone unlocks, actively verify the connection is still alive.
+     * If dead, trigger reconnection immediately.
+     */
+    private fun verifyConnectionAfterUnlock() {
+        if (currentState !is StreamingState.Running) {
+            Log.d(TAG, "Not streaming - skipping post-unlock verification")
+            return  // Not currently streaming
+        }
+        
+        Log.i(TAG, "🔓 Verifying connection after unlock...")
+        
+        // Active check: Is socket really alive?
+        try {
+            val testSocket = socket
+            if (testSocket == null || testSocket.isClosed || !testSocket.isConnected) {
+                Log.e(TAG, "❌ Post-unlock verification FAILED - socket is null/closed")
+                onDisconnect()
+                return
+            }
+            
+            // Try to write a test byte to force OS to check connection
+            testSocket.getOutputStream()?.write(0x00)
+            testSocket.getOutputStream()?.flush()
+            
+            Log.i(TAG, "✅ Post-unlock verification passed - connection is alive")
+        } catch (e: IOException) {
+            Log.e(TAG, "❌ Post-unlock verification FAILED - socket write error: ${e.message}")
+            onDisconnect()
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Post-unlock verification error: ${e.message}")
+            // Don't trigger disconnect on unexpected errors
+        }
+    }
+    
     private fun cleanup() {
         Log.d(TAG, "Cleaning up resources")
         
@@ -909,5 +1036,159 @@ class CameraStreamer(
         encoderThread?.quitSafely()
         
         Log.d(TAG, "Cleanup complete. Sent $frameCount total frames")
+    }
+    
+    // ==================== REMOTE CONTROL METHODS ====================
+    
+    /**
+     * Enable remote control via WebSocket connection to desktop server
+     * @param serverIp IP address of the desktop running websocket_server.py
+     * @param port WebSocket port (default 9000 for cameras)
+     */
+    fun enableRemoteControl(serverIp: String, port: Int = 9000) {
+        remoteControlClient = RemoteControlClient(
+            context = context,
+            onCommandReceived = { command, params ->
+                handleRemoteCommand(command, params)
+            }
+        )
+        
+        remoteControlClient?.connect(serverIp, port)
+        Log.i(TAG, "🎮 Remote control enabled - connecting to $serverIp:$port")
+        
+        // Start thermal monitoring
+        thermalMonitor = ThermalMonitor(context) { thermalState ->
+            Log.w(TAG, "🌡️ Thermal state: $thermalState")
+            // Send thermal update
+            sendStatusUpdate()
+        }
+        thermalMonitor?.startMonitoring()
+        
+        // Start periodic status updates (every 5 seconds)
+        statusUpdateExecutor = Executors.newSingleThreadScheduledExecutor()
+        statusUpdateExecutor?.scheduleAtFixedRate({
+            sendStatusUpdate()
+        }, 5, 5, TimeUnit.SECONDS)
+    }
+    
+    /**
+     * Disable remote control and cleanup
+     */
+    fun disableRemoteControl() {
+        remoteControlClient?.disconnect()
+        remoteControlClient = null
+        
+        thermalMonitor?.stopMonitoring()
+        thermalMonitor = null
+        
+        statusUpdateExecutor?.shutdown()
+        statusUpdateExecutor = null
+        
+        Log.i(TAG, "🎮 Remote control disabled")
+    }
+    
+    /**
+     * Handle commands received from desktop controller
+     */
+    private fun handleRemoteCommand(command: String, params: JSONObject) {
+        Log.i(TAG, "📥 Processing remote command: $command")
+        
+        when (command) {
+            "START" -> {
+                val serverIp = params.optString("server_ip", storedServerIp)
+                val serverPort = params.optInt("server_port", storedServerPort ?: 8554)
+                
+                if (serverIp != null) {
+                    startStreaming(serverIp, serverPort)
+                } else {
+                    Log.e(TAG, "❌ START command missing server_ip parameter")
+                }
+            }
+            
+            "STOP" -> {
+                stopStreaming()
+            }
+            
+            "ENTER_STUDIO_MODE" -> {
+                if (isStreaming) {
+                    StudioModeActivity.start(context)
+                    Log.i(TAG, "📺 Entering Studio Mode")
+                } else {
+                    Log.w(TAG, "⚠️  Cannot enter Studio Mode - not streaming")
+                }
+            }
+            
+            "EXIT_STUDIO_MODE" -> {
+                // Send broadcast to exit Studio Mode
+                val intent = Intent("com.miktos.EXIT_STUDIO_MODE").apply {
+                    setPackage(context.packageName)
+                    addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+                }
+                context.sendBroadcast(intent)
+                Log.i(TAG, "📺 Exiting Studio Mode - broadcast sent to ${context.packageName}")
+            }
+            
+            "GET_STATUS", "STATUS" -> {
+                sendStatusUpdate()
+            }
+            
+            "SET_QUALITY" -> {
+                // Future: Adjust bitrate/resolution
+                val quality = params.optString("quality", "high")
+                Log.i(TAG, "🎨 Quality change requested: $quality (not implemented yet)")
+            }
+            
+            else -> {
+                Log.w(TAG, "⚠️  Unknown command: $command")
+            }
+        }
+    }
+    
+    /**
+     * Send current status to desktop via WebSocket
+     */
+    private fun sendStatusUpdate() {
+        val status = JSONObject().apply {
+            put("state", when (currentState) {
+                is StreamingState.Stopped -> "stopped"
+                is StreamingState.Starting -> "starting"
+                is StreamingState.Running -> "running"
+                is StreamingState.Disconnected -> "disconnected"
+                is StreamingState.Reconnecting -> "reconnecting"
+                is StreamingState.Error -> "error"
+                is StreamingState.Stopping -> "stopping"
+            })
+            
+            put("is_streaming", isStreaming)
+            put("frame_count", frameCount)
+            
+            // Battery info
+            val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+            put("battery_level", batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY))
+            
+            // Network info
+            put("network_type", currentNetworkType.name)
+            
+            // Thermal info
+            put("thermal_state", thermalMonitor?.getCurrentState()?.name ?: "OK")
+            
+            // Streaming uptime
+            if (isStreaming && currentState is StreamingState.Running) {
+                val runningState = currentState as StreamingState.Running
+                val uptimeSeconds = (System.currentTimeMillis() - runningState.connectionInfo.connectedAt) / 1000
+                put("uptime_seconds", uptimeSeconds)
+            } else {
+                put("uptime_seconds", 0)
+            }
+            
+            // Connection info
+            if (currentState is StreamingState.Running) {
+                val runningState = currentState as StreamingState.Running
+                put("server_ip", runningState.connectionInfo.serverIp)
+                put("server_port", runningState.connectionInfo.serverPort)
+            }
+        }
+        
+        remoteControlClient?.sendStatus(status)
     }
 }

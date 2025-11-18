@@ -35,6 +35,16 @@
             </intent-filter>
         </activity>
 
+        <!-- Studio Mode Activity -->
+        <activity
+            android:name=".ui.StudioModeActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.StudioMode"
+            android:keepScreenOn="true"
+            android:launchMode="standard"
+            android:taskAffinity="" />
+
         <!-- Foreground Service for Camera Streaming -->
         <service
             android:name=".CameraStreamService"
