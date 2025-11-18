@@ -22,9 +22,11 @@
 ## Test 1: Studio Mode Basic Function (30 minutes)
 
 ### Objective
+
 Verify that Studio Mode provides a minimal black overlay that allows continuous streaming while preventing accidental touches.
 
 ### Prerequisites
+
 - Android device charged >80%
 - Desktop receiver running (VLC or Python receiver)
 - WiFi connection stable
@@ -32,7 +34,8 @@ Verify that Studio Mode provides a minimal black overlay that allows continuous 
 ### Test Steps
 
 1. **Start Normal Streaming**
-   ```
+
+```text
    - Open StreamLab Camera app
    - Enter server IP: [your desktop IP]
    - Tap START button
@@ -41,7 +44,8 @@ Verify that Studio Mode provides a minimal black overlay that allows continuous 
    ```
 
 2. **Enter Studio Mode**
-   ```
+
+```text
    - Tap "📺 ENTER STUDIO MODE" button
    - Expected: Screen goes black immediately
    - Expected: Small red dot appears in center
@@ -50,7 +54,8 @@ Verify that Studio Mode provides a minimal black overlay that allows continuous 
    ```
 
 3. **Verify Status Display**
-   ```
+
+```text
    - Check top-right corner for status text
    - Expected format: "[network] [battery]% [thermal]"
    - Network icons:
@@ -63,20 +68,23 @@ Verify that Studio Mode provides a minimal black overlay that allows continuous 
    ```
 
 4. **Verify Exit Hint**
-   ```
+
+```text
    - Check bottom center for "Hold 3s to exit"
    - Expected: Dimmed gray text
    ```
 
 5. **Test Touch Prevention**
-   ```
+
+```text
    - Tap screen randomly multiple times
    - Expected: No UI changes, no menus, no dialogs
    - Expected: Stream continues uninterrupted
    ```
 
 6. **Test Long-Press Exit**
-   ```
+
+```text
    - Touch and hold screen for exactly 3 seconds
    - Expected: Returns to MainActivity
    - Expected: Screen brightness restored
@@ -84,14 +92,16 @@ Verify that Studio Mode provides a minimal black overlay that allows continuous 
    ```
 
 7. **Re-Enter Studio Mode**
-   ```
+
+```text
    - Tap "📺 ENTER STUDIO MODE" again
    - Expected: Black overlay returns
    - Expected: Red dot animation restarts
    ```
 
 8. **30-Minute Continuous Test**
-   ```
+
+```text
    - Leave in Studio Mode for 30 minutes
    - Check desktop receiver every 5 minutes
    - Expected: Video stream continuous, no freezes
@@ -100,13 +110,15 @@ Verify that Studio Mode provides a minimal black overlay that allows continuous 
    ```
 
 9. **Exit and Stop**
-   ```
+
+```text
    - Long-press to exit Studio Mode
    - Tap STOP button
    - Expected: Clean shutdown
    ```
 
 ### Success Criteria
+
 - ✅ Studio Mode activates instantly
 - ✅ Red dot animation smooth and continuous
 - ✅ Status display shows correct battery/network/thermal
@@ -117,7 +129,8 @@ Verify that Studio Mode provides a minimal black overlay that allows continuous 
 - ✅ No crashes or errors
 
 ### Data to Record
-```
+
+```text
 Test Start Time: __________
 Test End Time: __________
 Total Duration: __________
@@ -136,9 +149,11 @@ Crashes: __________
 ## Test 2: Remote Control - Basic Commands
 
 ### Objective
+
 Verify WebSocket communication between Android app and desktop server, and test remote command execution.
 
 ### Prerequisites
+
 - WebSocket server running on desktop (already started)
 - Desktop IP address: `[your IP]`
 - Android device on same network
@@ -154,6 +169,7 @@ Since the app doesn't have auto-connect yet, we need to add remote control manua
    Edit `/Mobile/Android/app/src/main/java/com/miktos/streamlabcamera/CameraStreamService.kt`:
 
    Find the `onStartCommand()` method and add after streaming starts:
+
    ```kotlin
    // Enable remote control
    streamer?.enableRemoteControl("[YOUR_DESKTOP_IP]", 9000)
@@ -162,6 +178,7 @@ Since the app doesn't have auto-connect yet, we need to add remote control manua
    Or create a Settings menu in MainActivity to enable it.
 
 2. **Rebuild and Install**
+
    ```bash
    cd "/Users/atorrella/Desktop/Miktos Streamlab/Mobile/Android"
    ./gradlew assembleDebug
@@ -171,7 +188,8 @@ Since the app doesn't have auto-connect yet, we need to add remote control manua
 #### 2B: Verify WebSocket Connection
 
 1. **Start App with Streaming**
-   ```
+
+```text
    - Open StreamLab Camera app
    - Enter server IP
    - Tap START
@@ -179,14 +197,16 @@ Since the app doesn't have auto-connect yet, we need to add remote control manua
    ```
 
 2. **Check Desktop Server Logs**
-   ```
+
+```text
    Expected output:
    "📱 Camera registered: [device-id]"
    "📊 Broadcasting camera list to X controller(s)"
    ```
 
 3. **Verify Status Updates**
-   ```
+
+```text
    Expected every 5 seconds:
    "📊 Status from [device-id]: {...}"
    ```
@@ -258,6 +278,7 @@ asyncio.run(test_commands())
 ```
 
 Run the controller:
+
 ```bash
 cd "/Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend/remote_control"
 "/Users/atorrella/Desktop/Miktos Streamlab/.venv/bin/python" test_controller.py
@@ -266,39 +287,45 @@ cd "/Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend/remote_control"
 #### 2D: Verify Each Command
 
 1. **GET_STATUS**
-   ```
+
+```text
    - Expected: Status update appears in server logs
    - Expected: Contains current state, battery, network, thermal, uptime
    ```
 
 2. **ENTER_STUDIO_MODE**
-   ```
+
+```text
    - Expected: Android screen goes black
    - Expected: Red dot appears
    - Expected: Stream continues
    ```
 
 3. **EXIT_STUDIO_MODE**
-   ```
+
+```text
    - Expected: Returns to MainActivity
    - Expected: Stream still running
    ```
 
 4. **STOP**
-   ```
+
+```text
    - Expected: Stream stops on Android
    - Expected: Desktop receiver shows disconnection
    - Expected: MainActivity shows STOP button enabled
    ```
 
 5. **START**
-   ```
+
+```text
    - Expected: Stream starts automatically
    - Expected: Desktop receiver shows video
    - Expected: MainActivity shows streaming state
    ```
 
 ### Success Criteria
+
 - ✅ Camera registers with WebSocket server
 - ✅ Status updates sent every 5 seconds
 - ✅ GET_STATUS returns current state
@@ -310,7 +337,8 @@ cd "/Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend/remote_control"
 - ✅ Commands execute within 1 second
 
 ### Data to Record
-```
+
+```text
 Camera ID: __________
 Connection Time: __________
 Commands Tested: __________
@@ -325,9 +353,11 @@ Disconnections: __________
 ## Test 3: Thermal Monitoring
 
 ### Objective
+
 Verify thermal monitoring detects device temperature changes and updates Studio Mode status display.
 
 ### Prerequisites
+
 - Android device charged >80%
 - CPU-intensive app installed (e.g., CPU-Z, Geekbench, or any game)
 - Streaming already running
@@ -335,7 +365,8 @@ Verify thermal monitoring detects device temperature changes and updates Studio 
 ### Test Steps
 
 1. **Start with Cool Device**
-   ```
+
+```text
    - Let device rest for 10 minutes (cool down)
    - Start streaming
    - Enter Studio Mode
@@ -343,7 +374,8 @@ Verify thermal monitoring detects device temperature changes and updates Studio 
    ```
 
 2. **Increase Device Load**
-   ```
+
+```text
    - While streaming continues in background
    - Launch CPU-intensive app (benchmark or game)
    - Run for 5 minutes
@@ -351,7 +383,8 @@ Verify thermal monitoring detects device temperature changes and updates Studio 
    ```
 
 3. **Observe Thermal State Transitions**
-   ```
+
+```text
    Expected progression:
    - (blank) → OK state
    - 🌡️ → WARM state (PowerManager.THERMAL_STATUS_MODERATE)
@@ -360,19 +393,22 @@ Verify thermal monitoring detects device temperature changes and updates Studio 
    ```
 
 4. **Check Server Logs**
-   ```
+
+```text
    Expected: Status updates show changing thermal_state
    {"thermal_state": "OK"} → {"thermal_state": "WARM"} → etc.
    ```
 
 5. **Cool Down**
-   ```
+
+```text
    - Close CPU-intensive app
    - Wait 5 minutes
    - Monitor thermal state return to OK
    ```
 
 ### Success Criteria
+
 - ✅ Thermal monitoring detects temperature changes
 - ✅ Status display updates within 5 seconds of state change
 - ✅ Icons display correctly (🌡️ 🔥 ☠️)
@@ -381,7 +417,8 @@ Verify thermal monitoring detects device temperature changes and updates Studio 
 - ✅ Stream quality maintained (future: will auto-adjust)
 
 ### Data to Record
-```
+
+```text
 Initial Thermal State: __________
 Time to WARM: __________
 Time to HOT: __________
@@ -421,13 +458,15 @@ After completing all 3 tests:
 
 ## Next Steps After Testing
 
-### If All Tests Pass:
+### If All Tests Pass
+
 - Document results in `WEEK1_TEST_RESULTS.md`
 - Proceed to Week 2: PAUSE State + Advanced Remote Features
 - Build web-based controller UI
 - Implement quality adjustment on thermal warnings
 
-### If Tests Fail:
+### If Tests Fail
+
 - Document specific failures
 - Review logs for errors
 - Fix critical issues before Week 2
@@ -438,23 +477,27 @@ After completing all 3 tests:
 ## Support Commands
 
 ### Check if WebSocket Server is Running
+
 ```bash
 lsof -i :9000
 lsof -i :9001
 ```
 
 ### View Server Logs
+
 ```bash
 # Server is already outputting to terminal
 # Check the terminal where you started websocket_server.py
 ```
 
 ### Check Android Logs
+
 ```bash
 adb logcat -d | grep -E "CameraStreamer|RemoteControlClient|StudioMode|ThermalMonitor"
 ```
 
 ### Kill and Restart Server
+
 ```bash
 # Find process
 ps aux | grep websocket_server
@@ -469,4 +512,4 @@ cd "/Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend/remote_control"
 
 ---
 
-**Good luck with Week 1 testing! 🚀**
+### Good luck with Week 1 testing! 🚀

@@ -6,7 +6,7 @@ A complete 4-layer monitoring system to fix the disconnect detection issues, esp
 
 ### Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    CameraStreamer.kt                         │
 │                   (State Machine)                            │
@@ -34,7 +34,7 @@ A complete 4-layer monitoring system to fix the disconnect detection issues, esp
 
 ### State Machine
 
-```
+```text
 Stopped → Starting → Running ⇄ Disconnected ⇄ Reconnecting → Error
                                                   ↓
                                               Stopping → Stopped
@@ -75,7 +75,9 @@ Stopped → Starting → Running ⇄ Disconnected ⇄ Reconnecting → Error
 **Purpose:** Verify basic disconnect detection and post-unlock verification
 
 **Steps:**
+
 1. Start receiver on desktop:
+
    ```bash
    cd "/Users/atorrella/Desktop/Miktos Streamlab"
    source .venv/bin/activate
@@ -97,10 +99,13 @@ Stopped → Starting → Running ⇄ Disconnected ⇄ Reconnecting → Error
    - Desktop should show continuous data or brief reconnection gap
 
 7. Check logs:
+
    ```bash
    adb logcat -d | grep -E "CameraStream|SocketHealth|DataFlow|ScreenState"
    ```
+
    Look for:
+
    - `🔓 Screen unlocked - verifying connection`
    - `✅ Post-unlock verification passed` OR
    - `❌ Post-unlock verification FAILED - triggering reconnect`
@@ -110,6 +115,7 @@ Stopped → Starting → Running ⇄ Disconnected ⇄ Reconnecting → Error
 **Purpose:** Verify disconnect is detected within 4-6 seconds
 
 **Steps:**
+
 1. Start streaming
 2. On desktop, kill receiver: `Cmd+C` or `kill -9 <pid>`
 3. Watch Android app
@@ -130,6 +136,7 @@ Stopped → Starting → Running ⇄ Disconnected ⇄ Reconnecting → Error
 **Purpose:** Fix the original bug - phone locked for extended period
 
 **Steps:**
+
 1. Start streaming
 2. Let run for 10 minutes (verify stable)
 3. Lock phone
@@ -144,6 +151,7 @@ Stopped → Starting → Running ⇄ Disconnected ⇄ Reconnecting → Error
        - 🔄 Automatic reconnection within 15 seconds
 
 7. Check logs for the sequence:
+
    ```bash
    adb logcat -d | grep -E "Screen unlocked|Post-unlock|Reconnect"
    ```
@@ -153,6 +161,7 @@ Stopped → Starting → Running ⇄ Disconnected ⇄ Reconnecting → Error
 **Purpose:** Verify LTE failover with network monitoring
 
 **Steps:**
+
 1. Enable LTE failover toggle in app
 2. Start streaming on WiFi
 3. Turn off WiFi (forces switch to LTE or offline)
@@ -162,8 +171,9 @@ Stopped → Starting → Running ⇄ Disconnected ⇄ Reconnecting → Error
 
 ## What to Look For in Logs
 
-### Healthy Streaming:
-```
+### Healthy Streaming
+
+```text
 ✅ Streaming started - all 4 monitors active
 ✅ Socket health monitoring started (2s interval)
 ✅ Data flow monitoring started (10s timeout)
@@ -171,42 +181,48 @@ Stopped → Starting → Running ⇄ Disconnected ⇄ Reconnecting → Error
 ✓ Data flowing - last write 0s ago
 ```
 
-### Screen Unlock (Connection Alive):
-```
+### Screen Unlock (Connection Alive)
+
+```text
 📵 Screen locked - monitoring closely
 🔓 Screen unlocked - verifying connection
 ✅ Post-unlock verification passed - connection is alive
 ```
 
-### Screen Unlock (Connection Dead):
-```
+### Screen Unlock (Connection Dead)
+
+```text
 🔓 Screen unlocked - verifying connection
 ❌ Post-unlock verification FAILED - socket write error
 🔄 Auto-reconnecting in 2s... (attempt 1/5)
 ```
 
-### Disconnect Detection:
-```
+### Disconnect Detection
+
+```text
 ❌ Active probe failed - socket is DEAD: Connection reset
 Socket monitor detected disconnect: Socket health check failed
 🔄 Auto-reconnecting in 2s... (attempt 1/5)
 ```
 
-### Successful Reconnection:
-```
+### Successful Reconnection
+
+```text
 ✅ Reconnection successful after 2 attempts!
 ✅ Streaming started - all 4 monitors active
 ```
 
 ## Why This Will Work
 
-### Previous Implementation Problems:
+### Previous Implementation Problems
+
 1. ❌ `socket.isConnected` can lie - reports true when connection is dead
 2. ❌ Write timeout detection had timing issues
 3. ❌ No verification after unlock - missed dead connections
 4. ❌ UI state desync - showed "streaming" when encoder was dead
 
-### New Implementation Solutions:
+### New Implementation Solutions
+
 1. ✅ **Active Socket Probing** - Actually writes to force OS to check
 2. ✅ **Dedicated Data Flow Monitor** - Tracks confirmed writes, not just encoder state
 3. ✅ **Post-Unlock Verification** - Immediately checks when phone unlocks
@@ -234,49 +250,58 @@ Socket monitor detected disconnect: Socket health check failed
 
 ## Troubleshooting
 
-### If disconnect still not detected:
+### If disconnect still not detected
+
 1. Check logs for monitor initialization:
+
    ```bash
    adb logcat -d | grep "monitoring started"
    ```
+
    Should see all 4 monitors start.
 
 2. Check if monitors are running:
+
    ```bash
    adb logcat -d | grep -E "Socket health|Data flowing"
    ```
 
 3. Verify post-unlock trigger:
+
    ```bash
    adb logcat -d | grep "Screen unlocked"
    ```
 
-### If reconnection fails:
+### If reconnection fails
+
 1. Check network callback:
+
    ```bash
    adb logcat -d | grep "Network callback"
    ```
 
 2. Check stored connection parameters:
+
    ```bash
    adb logcat -d | grep "Connection parameters stored"
    ```
 
 3. Check reconnection attempts:
+
    ```bash
    adb logcat -d | grep "Auto-reconnecting"
    ```
 
 ## Success Criteria
 
-✅ **Test 1 passes** - Basic lock/unlock works  
-✅ **Test 2 passes** - Disconnect detected within 6 seconds  
-✅ **Test 3 passes** - 60+ minute lock reconnects on unlock  
+✅ **Test 1 passes** - Basic lock/unlock works
+✅ **Test 2 passes** - Disconnect detected within 6 seconds
+✅ **Test 3 passes** - 60+ minute lock reconnects on unlock
 
 If all three pass, the bug is FIXED! 🎉
 
 ---
 
-**Date Implemented:** November 17, 2025  
-**Commit:** Ready for testing  
+**Date Implemented:** November 17, 2025
+**Commit:** Ready for testing
 **Status:** ✅ Built and installed, ready for field test
