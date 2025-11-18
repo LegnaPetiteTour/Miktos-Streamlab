@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ipInput: EditText
     private lateinit var portInput: EditText
     private lateinit var startButton: Button
+    private lateinit var pauseResumeButton: Button
     private lateinit var studioModeButton: Button
     private lateinit var statusText: TextView
     private lateinit var lteFailoverSwitch: SwitchCompat
@@ -128,6 +129,7 @@ class MainActivity : AppCompatActivity() {
                         isStreaming = false
                         startButton.text = "Start Streaming"
                         startButton.backgroundTintList = getColorStateList(android.R.color.holo_green_dark)
+                        pauseResumeButton.visibility = android.view.View.GONE
                         studioModeButton.isEnabled = false
                         statusText.text = "Streaming stopped"
                         Log.d("MainActivity", "✅ UI updated - button shows 'Start Streaming'")
@@ -139,6 +141,9 @@ class MainActivity : AppCompatActivity() {
                         isStreaming = true
                         startButton.text = "STOP"
                         startButton.backgroundTintList = getColorStateList(android.R.color.holo_red_dark)
+                        pauseResumeButton.text = "⏸️ PAUSE"
+                        pauseResumeButton.visibility = android.view.View.VISIBLE
+                        pauseResumeButton.backgroundTintList = getColorStateList(android.R.color.holo_orange_dark)
                         studioModeButton.isEnabled = true
                         statusText.text = "Streaming..."
                         Log.d("MainActivity", "✅ UI updated - button shows 'STOP'")
@@ -179,6 +184,8 @@ class MainActivity : AppCompatActivity() {
             addAction("com.miktos.REMOTE_CONTROL_DISCONNECTED")
             addAction("com.miktos.STREAMING_STOPPED")
             addAction("com.miktos.STREAMING_STARTED")
+            addAction("com.miktos.STREAMING_PAUSED")
+            addAction("com.miktos.STREAMING_RESUMED")
         }
         registerReceiver(disconnectReceiver, filter, RECEIVER_NOT_EXPORTED)
         
@@ -187,6 +194,7 @@ class MainActivity : AppCompatActivity() {
         ipInput = findViewById(R.id.ipInput)
         portInput = findViewById(R.id.portInput)
         startButton = findViewById(R.id.startButton)
+        pauseResumeButton = findViewById(R.id.pauseResumeButton)
         studioModeButton = findViewById(R.id.studioModeButton)
         statusText = findViewById(R.id.statusText)
         lteFailoverSwitch = findViewById(R.id.lteFailoverSwitch)
@@ -279,6 +287,17 @@ class MainActivity : AppCompatActivity() {
                 startStreaming()
             } else {
                 stopStreaming()
+            }
+        }
+        
+        // Pause/Resume button - only visible when streaming
+        pauseResumeButton.setOnClickListener {
+            CameraStreamService.streamer?.let { streamer ->
+                if (streamer.isPaused) {
+                    streamer.resumeStreaming()
+                } else {
+                    streamer.pauseStreaming()
+                }
             }
         }
         
@@ -433,6 +452,19 @@ class MainActivity : AppCompatActivity() {
         // Always set the remote IP (with default if empty)
         remoteServerIp.setText(remoteIp ?: "192.168.2.36")
         remoteServerPort.setText(remotePort.toString())
+        
+        // AUTO-CONNECT: If remote control was enabled, reconnect automatically
+        if (remoteControlEnabled && !remoteIp.isNullOrEmpty()) {
+            Log.i("MainActivity", "🔄 Auto-connecting to remote control server...")
+            // Start service for remote control if not already running
+            if (!isStreaming) {
+                CameraStreamService.startForRemoteControl(this, remoteIp, remotePort)
+            } else {
+                // Service already running, just enable remote control
+                CameraStreamService.streamer?.enableRemoteControl(remoteIp, remotePort)
+            }
+            Toast.makeText(this, "🎮 Auto-connecting to remote control...", Toast.LENGTH_SHORT).show()
+        }
     }
     
     private fun saveSettings(ip: String, port: Int) {

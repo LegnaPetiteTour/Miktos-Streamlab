@@ -93,6 +93,14 @@ class CameraStreamer(
     private var storedServerIp: String? = null
     private var storedServerPort: Int? = null
     
+    // PAUSE/RESUME functionality for multi-camera switching
+    var isPaused = false  // Made public for MainActivity access
+        private set
+    private var lastFreezeFrame: ByteArray? = null
+    private var lastFreezeFrameInfo: MediaCodec.BufferInfo? = null
+    private var freezeFrameSendTime = 0L
+    private val FREEZE_FRAME_INTERVAL = 1000L  // Send freeze frame every 1 second (1 fps)
+    
     // Network monitoring and LTE failover
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
@@ -697,6 +705,13 @@ class CameraStreamer(
             val encodedData = codec.getOutputBuffer(index) ?: return
             
             if (info.size > 0 && isStreaming) {
+                // Check if we're in PAUSED state - send freeze frame instead
+                if (isPaused) {
+                    handlePausedFrame(codec, index, info, encodedData)
+                    return
+                }
+                
+                // Normal streaming mode - send all frames
                 // Check if this is codec configuration (SPS/PPS)
                 val isConfig = (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0
                 
@@ -704,6 +719,14 @@ class CameraStreamer(
                 encodedData.position(info.offset)
                 encodedData.limit(info.offset + info.size)
                 encodedData.get(data)
+                
+                // Capture keyframes as potential freeze frames for future PAUSE
+                if ((info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) {
+                    lastFreezeFrame = data.copyOf()
+                    lastFreezeFrameInfo = MediaCodec.BufferInfo().apply {
+                        set(0, data.size, info.presentationTimeUs, info.flags)
+                    }
+                }
                 
                 // ALWAYS send codec config, and send keyframes + regular frames
                 if (isConfig || (info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0 || info.flags == 0) {
@@ -759,12 +782,64 @@ class CameraStreamer(
         }
     }
     
+    /**
+     * Handle frame output when in PAUSED state
+     * Sends freeze frame at 1 fps to keep session alive with minimal bandwidth
+     */
+    private fun handlePausedFrame(
+        codec: MediaCodec,
+        index: Int,
+        info: MediaCodec.BufferInfo,
+        encodedData: java.nio.ByteBuffer
+    ) {
+        // Capture new keyframe as freeze frame candidate
+        if ((info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME) != 0) {
+            val data = ByteArray(info.size)
+            encodedData.position(info.offset)
+            encodedData.limit(info.offset + info.size)
+            encodedData.get(data)
+            
+            lastFreezeFrame = data.copyOf()
+            lastFreezeFrameInfo = MediaCodec.BufferInfo().apply {
+                set(0, data.size, info.presentationTimeUs, info.flags)
+            }
+            Log.d(TAG, "❄️ Captured new freeze frame: ${data.size} bytes")
+        }
+        
+        // Send freeze frame at 1 fps interval
+        val currentTime = System.currentTimeMillis()
+        if (lastFreezeFrame != null && currentTime - freezeFrameSendTime >= FREEZE_FRAME_INTERVAL) {
+            try {
+                outputStream?.write(lastFreezeFrame!!)
+                outputStream?.flush()
+                
+                // Track write for monitoring
+                dataFlowMonitor.recordSuccessfulWrite()
+                lastWriteTime = currentTime
+                freezeFrameSendTime = currentTime
+                consecutiveWriteFailures = 0
+                
+                Log.d(TAG, "❄️ Sent freeze frame (paused mode): ${lastFreezeFrame!!.size} bytes")
+                
+            } catch (e: Exception) {
+                consecutiveWriteFailures++
+                Log.e(TAG, "❌ Freeze frame write error: ${e.message}")
+                cameraHandler?.post { onDisconnect() }
+            }
+        }
+        
+        // Release the buffer even though we didn't send it
+        codec.releaseOutputBuffer(index, false)
+    }
+    
     fun stopStreaming() {
         Log.d(TAG, "Stopping streaming...")
         
         currentState = StreamingState.Stopping
         
         isStreaming = false
+        isPaused = false  // Clear pause state
+        lastFreezeFrame = null  // Clear freeze frame
         
         // Stop all monitors
         socketMonitor.stopMonitoring()
@@ -790,6 +865,69 @@ class CameraStreamer(
             context.sendBroadcast(intent)
             Log.d(TAG, "📡 Sent STREAMING_STOPPED broadcast to MainActivity")
         }
+    }
+    
+    /**
+     * Pause streaming - freeze current frame but keep session alive
+     * Perfect for multi-camera switching without startup latency
+     */
+    fun pauseStreaming() {
+        if (currentState !is StreamingState.Running) {
+            Log.w(TAG, "⚠️ Cannot pause - not currently running (state: $currentState)")
+            return
+        }
+        
+        val runningState = currentState as StreamingState.Running
+        
+        Log.i(TAG, "⏸️ Pausing stream - entering freeze frame mode")
+        isPaused = true
+        freezeFrameSendTime = 0L  // Force immediate send of first freeze frame
+        
+        // Update state to Paused (keeps connection info)
+        currentState = StreamingState.Paused(runningState.connectionInfo)
+        
+        // Notify MainActivity
+        Intent("com.miktos.STREAMING_PAUSED").also { intent ->
+            intent.setPackage(context.packageName)
+            context.sendBroadcast(intent)
+        }
+        
+        // Notify desktop
+        sendStatusUpdate()
+        
+        Log.i(TAG, "✅ Stream paused - will send freeze frame at 1 fps")
+    }
+    
+    /**
+     * Resume streaming - return to normal frame rate
+     * Instant resume with zero startup latency
+     */
+    fun resumeStreaming() {
+        if (currentState !is StreamingState.Paused) {
+            Log.w(TAG, "⚠️ Cannot resume - not currently paused (state: $currentState)")
+            return
+        }
+        
+        val pausedState = currentState as StreamingState.Paused
+        
+        Log.i(TAG, "▶️ Resuming stream - returning to normal frame rate")
+        isPaused = false
+        lastFreezeFrame = null  // Clear freeze frame to save memory
+        lastFreezeFrameInfo = null
+        
+        // Update state back to Running (restore connection info)
+        currentState = StreamingState.Running(pausedState.connectionInfo)
+        
+        // Notify MainActivity
+        Intent("com.miktos.STREAMING_RESUMED").also { intent ->
+            intent.setPackage(context.packageName)
+            context.sendBroadcast(intent)
+        }
+        
+        // Notify desktop
+        sendStatusUpdate()
+        
+        Log.i(TAG, "✅ Stream resumed - back to 30 fps")
     }
     
     private fun registerNetworkCallback() {
@@ -943,9 +1081,9 @@ class CameraStreamer(
      * If dead, trigger reconnection immediately.
      */
     private fun verifyConnectionAfterUnlock() {
-        if (currentState !is StreamingState.Running) {
+        if (currentState !is StreamingState.Running && currentState !is StreamingState.Paused) {
             Log.d(TAG, "Not streaming - skipping post-unlock verification")
-            return  // Not currently streaming
+            return  // Not currently streaming or paused
         }
         
         Log.i(TAG, "🔓 Verifying connection after unlock...")
@@ -1140,6 +1278,16 @@ class CameraStreamer(
                     stopStreaming()
                 }
                 
+                "PAUSE" -> {
+                    Log.i(TAG, "⏸️ Pausing stream via remote command")
+                    pauseStreaming()
+                }
+                
+                "RESUME" -> {
+                    Log.i(TAG, "▶️ Resuming stream via remote command")
+                    resumeStreaming()
+                }
+                
                 "ENTER_STUDIO_MODE" -> {
                     Log.i(TAG, "📺 Entering Studio Mode via remote command (streaming: $isStreaming)")
                     // Studio Mode can be entered anytime, not just when streaming
@@ -1193,6 +1341,7 @@ class CameraStreamer(
                 is StreamingState.Stopped -> "stopped"
                 is StreamingState.Starting -> "starting"
                 is StreamingState.Running -> "running"
+                is StreamingState.Paused -> "paused"
                 is StreamingState.Disconnected -> "disconnected"
                 is StreamingState.Reconnecting -> "reconnecting"
                 is StreamingState.Error -> "error"
@@ -1200,6 +1349,7 @@ class CameraStreamer(
             })
             
             put("is_streaming", isStreaming)
+            put("is_paused", isPaused)
             put("frame_count", frameCount)
             
             // Battery info
@@ -1212,20 +1362,29 @@ class CameraStreamer(
             // Thermal info
             put("thermal_state", thermalMonitor?.getCurrentState()?.name ?: "OK")
             
-            // Streaming uptime
-            if (isStreaming && currentState is StreamingState.Running) {
-                val runningState = currentState as StreamingState.Running
-                val uptimeSeconds = (System.currentTimeMillis() - runningState.connectionInfo.connectedAt) / 1000
-                put("uptime_seconds", uptimeSeconds)
+            // Streaming uptime (works for both Running and Paused states)
+            if (isStreaming && (currentState is StreamingState.Running || currentState is StreamingState.Paused)) {
+                val connectionInfo = when (val state = currentState) {
+                    is StreamingState.Running -> state.connectionInfo
+                    is StreamingState.Paused -> state.connectionInfo
+                    else -> null
+                }
+                
+                if (connectionInfo != null) {
+                    val uptimeSeconds = (System.currentTimeMillis() - connectionInfo.connectedAt) / 1000
+                    put("uptime_seconds", uptimeSeconds)
+                    put("server_ip", connectionInfo.serverIp)
+                    put("server_port", connectionInfo.serverPort)
+                }
             } else {
                 put("uptime_seconds", 0)
             }
             
-            // Connection info
-            if (currentState is StreamingState.Running) {
-                val runningState = currentState as StreamingState.Running
-                put("server_ip", runningState.connectionInfo.serverIp)
-                put("server_port", runningState.connectionInfo.serverPort)
+            // Pause duration (if paused)
+            if (currentState is StreamingState.Paused) {
+                val pausedState = currentState as StreamingState.Paused
+                val pausedSeconds = (System.currentTimeMillis() - pausedState.pausedAt) / 1000
+                put("paused_seconds", pausedSeconds)
             }
         }
         

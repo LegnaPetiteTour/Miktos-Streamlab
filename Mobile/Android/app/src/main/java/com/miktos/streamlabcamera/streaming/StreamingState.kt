@@ -8,6 +8,7 @@ sealed class StreamingState {
     object Stopped : StreamingState()
     object Starting : StreamingState()
     data class Running(val connectionInfo: ConnectionInfo) : StreamingState()
+    data class Paused(val connectionInfo: ConnectionInfo, val pausedAt: Long = System.currentTimeMillis()) : StreamingState()
     data class Disconnected(val reason: String, val detectedAt: Long) : StreamingState()
     data class Reconnecting(
         val attempt: Int,
