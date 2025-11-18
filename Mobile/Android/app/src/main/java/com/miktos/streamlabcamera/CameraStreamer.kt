@@ -32,6 +32,7 @@ import com.miktos.streamlabcamera.monitoring.ThermalMonitor
 import com.miktos.streamlabcamera.ui.StudioModeActivity
 import org.json.JSONObject
 import android.os.BatteryManager
+import android.os.Bundle
 
 class CameraStreamer(
     private val context: Context,
@@ -121,7 +122,10 @@ class CameraStreamer(
     private val VIDEO_WIDTH = 1920
     private val VIDEO_HEIGHT = 1080
     private val VIDEO_FPS = 30
-    private val VIDEO_BITRATE = 6_000_000
+    private val VIDEO_BITRATE_NORMAL = 6_000_000
+    private val VIDEO_BITRATE_WARM = 4_000_000      // Reduced for WARM state
+    private val VIDEO_BITRATE_HOT = 3_000_000       // Reduced for HOT state
+    private var currentBitrate = VIDEO_BITRATE_NORMAL
     private val VIDEO_I_FRAME_INTERVAL = 2
     
     // LTE failover configuration
@@ -545,23 +549,26 @@ class CameraStreamer(
     private fun initializeEncoder() {
         Log.d(TAG, "Initializing H.264 encoder")
         
-        // Adjust bitrate based on network type
+        // Adjust bitrate based on network type and thermal state
         val adaptiveBitrate = when (currentNetworkType) {
             NetworkType.LTE_CELLULAR -> {
                 // Reduce bitrate for LTE: 6 Mbps → 4 Mbps
-                val lteBitrate = (VIDEO_BITRATE * 0.67).toInt() // ~4 Mbps
+                val lteBitrate = (VIDEO_BITRATE_NORMAL * 0.67).toInt() // ~4 Mbps
                 Log.i(TAG, "🎚️ LTE mode: Reduced bitrate to ${lteBitrate / 1_000_000} Mbps")
                 lteBitrate
             }
             NetworkType.LAN_WIFI, NetworkType.INET_WIFI -> {
-                Log.i(TAG, "🎚️ WiFi mode: Full bitrate ${VIDEO_BITRATE / 1_000_000} Mbps")
-                VIDEO_BITRATE
+                Log.i(TAG, "🎚️ WiFi mode: Full bitrate ${VIDEO_BITRATE_NORMAL / 1_000_000} Mbps")
+                VIDEO_BITRATE_NORMAL
             }
             else -> {
                 Log.w(TAG, "🎚️ Unknown network: Using standard bitrate")
-                VIDEO_BITRATE
+                VIDEO_BITRATE_NORMAL
             }
         }
+        
+        // Track current bitrate
+        currentBitrate = adaptiveBitrate
         
         val format = MediaFormat.createVideoFormat(
             MediaFormat.MIMETYPE_VIDEO_AVC,
@@ -573,7 +580,7 @@ class CameraStreamer(
             MediaFormat.KEY_COLOR_FORMAT,
             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
         )
-        format.setInteger(MediaFormat.KEY_BIT_RATE, adaptiveBitrate)
+        format.setInteger(MediaFormat.KEY_BIT_RATE, currentBitrate)
         format.setInteger(MediaFormat.KEY_FRAME_RATE, VIDEO_FPS)
         format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, VIDEO_I_FRAME_INTERVAL)
         format.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileHigh)
@@ -1211,9 +1218,10 @@ class CameraStreamer(
         remoteControlClient?.connect(serverIp, port)
         Log.i(TAG, "🎮 Remote control enabled - connecting to $serverIp:$port")
         
-        // Start thermal monitoring
+        // Start thermal monitoring with automated responses
         thermalMonitor = ThermalMonitor(context) { thermalState ->
             Log.w(TAG, "🌡️ Thermal state: $thermalState")
+            handleThermalStateChange(thermalState)
             // Send thermal update
             sendStatusUpdate()
         }
@@ -1240,6 +1248,81 @@ class CameraStreamer(
         statusUpdateExecutor = null
         
         Log.i(TAG, "🎮 Remote control disabled")
+    }
+    
+    /**
+     * Handle thermal state changes with automated responses
+     * 
+     * Thermal Protection Strategy:
+     * - WARM: Reduce bitrate to 4 Mbps (from 6 Mbps)
+     * - HOT: Reduce bitrate to 3 Mbps + force Studio Mode
+     * - CRITICAL: Send alert to desktop (desktop should auto-cut camera)
+     */
+    private fun handleThermalStateChange(thermalState: ThermalMonitor.ThermalState) {
+        when (thermalState) {
+            ThermalMonitor.ThermalState.OK -> {
+                // Return to normal bitrate if we were throttled
+                if (currentBitrate != VIDEO_BITRATE_NORMAL && isStreaming) {
+                    Log.i(TAG, "🌡️ Temperature normalized - restoring bitrate to 6 Mbps")
+                    adjustBitrate(VIDEO_BITRATE_NORMAL)
+                }
+            }
+            
+            ThermalMonitor.ThermalState.WARM -> {
+                // Reduce bitrate to 4 Mbps
+                if (isStreaming) {
+                    Log.w(TAG, "🌡️ WARM - reducing bitrate to 4 Mbps")
+                    adjustBitrate(VIDEO_BITRATE_WARM)
+                }
+            }
+            
+            ThermalMonitor.ThermalState.HOT -> {
+                // Reduce bitrate to 3 Mbps + force Studio Mode
+                if (isStreaming) {
+                    Log.e(TAG, "🔥 HOT - reducing bitrate to 3 Mbps + forcing Studio Mode")
+                    adjustBitrate(VIDEO_BITRATE_HOT)
+                    
+                    // Force Studio Mode to reduce display power
+                    StudioModeActivity.start(context)
+                }
+            }
+            
+            ThermalMonitor.ThermalState.CRITICAL -> {
+                // Send critical alert - desktop should auto-cut this camera
+                Log.e(TAG, "☠️ CRITICAL THERMAL - device at risk of shutdown!")
+                Log.e(TAG, "   Desktop should switch to backup camera immediately")
+                
+                // Send immediate critical status update
+                sendStatusUpdate()
+                
+                // Optionally: could auto-stop streaming here, but better to let
+                // desktop decide (it might want to show a "technical difficulties" slate)
+            }
+        }
+    }
+    
+    /**
+     * Adjust encoder bitrate dynamically
+     * 
+     * Uses MediaCodec.setParameters() to change bitrate without restarting encoder
+     */
+    private fun adjustBitrate(newBitrate: Int) {
+        if (currentBitrate == newBitrate) {
+            return  // Already at target bitrate
+        }
+        
+        try {
+            val bundle = Bundle()
+            bundle.putInt(MediaCodec.PARAMETER_KEY_VIDEO_BITRATE, newBitrate)
+            encoder?.setParameters(bundle)
+            
+            currentBitrate = newBitrate
+            val mbps = newBitrate / 1_000_000.0
+            Log.i(TAG, "✅ Bitrate adjusted to %.1f Mbps".format(mbps))
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to adjust bitrate: ${e.message}")
+        }
     }
     
     /**
@@ -1362,6 +1445,9 @@ class CameraStreamer(
             
             // Thermal info
             put("thermal_state", thermalMonitor?.getCurrentState()?.name ?: "OK")
+            
+            // Bitrate info (for quality monitoring)
+            put("current_bitrate_mbps", currentBitrate / 1_000_000.0)
             
             // Streaming uptime (works for both Running and Paused states)
             if (isStreaming && (currentState is StreamingState.Running || currentState is StreamingState.Paused)) {
