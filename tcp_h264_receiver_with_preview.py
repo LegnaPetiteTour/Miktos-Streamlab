@@ -134,19 +134,29 @@ class TCPReceiverWithPreview:
         buffer_size = 8192
         last_receive_time = time.time()
         frame_count = 0
-        # 1 second timeout for detection
-        self.client_socket.settimeout(1.0)
+        last_frame_time = time.time()
+        current_fps = 0.0
+        # 30 second timeout for PAUSE mode compatibility (1 fps freeze frames)
+        self.client_socket.settimeout(30.0)
+        print(f"📊 Socket timeout set to 30 seconds (supports PAUSE mode at 1 fps)")
 
         try:
             while self.running and self.client_socket:
                 try:
                     data = self.client_socket.recv(buffer_size)
+                    current_time = time.time()
                     if not data:
-                        print("\n❌ Client disconnected (no data)")
+                        elapsed = current_time - last_receive_time
+                        print(f"\n❌ [{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] Client disconnected (no data) - last data {elapsed:.1f}s ago")
                         break
 
                     self.bytes_received += len(data)
-                    last_receive_time = time.time()
+                    time_since_last = current_time - last_receive_time
+                    last_receive_time = current_time
+                    
+                    # Log every data receive with timestamp and delta
+                    if time_since_last > 0.5:  # Log if gap > 500ms
+                        print(f"📦 [{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] Received {len(data)} bytes (gap: {time_since_last:.3f}s)")
 
                     # Send data to ffplay for display
                     if (self.show_preview and self.ffplay_process and
@@ -161,43 +171,49 @@ class TCPReceiverWithPreview:
                     # Detect frame types for logging
                     if data.startswith(b'\x00\x00\x00\x01'):
                         frame_count += 1
-                        # Log every 30 frames (~1 second at 30fps)
-                        if frame_count % 30 == 0:
-                            frame_type = "Unknown"
-                            if len(data) > 4:
-                                nalu_type = data[4] & 0x1F
-                                if nalu_type == 5:
-                                    frame_type = "I-Frame"
-                                elif nalu_type == 1:
-                                    frame_type = "P-Frame"
-                                elif nalu_type == 7:
-                                    frame_type = "SPS"
-                                elif nalu_type == 8:
-                                    frame_type = "PPS"
-
-                            elapsed = time.time() - self.start_time
-                            fps = (frame_count / elapsed
-                                   if elapsed > 0 else 0)
-                            mbps = ((self.bytes_received * 8) /
-                                    (elapsed * 1_000_000)
-                                    if elapsed > 0 else 0)
-
-                            print(
-                                f"📊 {frame_type} | "
-                                f"Frames: {frame_count} | "
-                                f"FPS: {fps:.1f} | "
-                                f"Bitrate: {mbps:.2f} Mbps | "
-                                f"Total: "
-                                f"{self.bytes_received / 1024 / 1024:.1f} MB")
+                        frame_time_delta = current_time - last_frame_time
+                        last_frame_time = current_time
+                        current_fps = 1.0 / frame_time_delta if frame_time_delta > 0 else 0
+                        
+                        frame_type = "Unknown"
+                        if len(data) > 4:
+                            nalu_type = data[4] & 0x1F
+                            if nalu_type == 5:
+                                frame_type = "I-Frame (keyframe)"
+                            elif nalu_type == 1:
+                                frame_type = "P-Frame"
+                            elif nalu_type == 7:
+                                frame_type = "SPS"
+                            elif nalu_type == 8:
+                                frame_type = "PPS"
+                        
+                        # Detect PAUSE mode (frame rate < 2 fps)
+                        mode_indicator = "🟡 PAUSED" if current_fps < 2 else "🟢 LIVE"
+                        
+                        # Log every frame with detailed info
+                        elapsed = current_time - self.start_time
+                        avg_fps = (frame_count / elapsed if elapsed > 0 else 0)
+                        mbps = ((self.bytes_received * 8) / (elapsed * 1_000_000) if elapsed > 0 else 0)
+                        
+                        print(
+                            f"🎬 [{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] {mode_indicator} | "
+                            f"{frame_type} | Frame #{frame_count} | "
+                            f"Current: {current_fps:.1f} fps | Avg: {avg_fps:.1f} fps | "
+                            f"Delta: {frame_time_delta:.3f}s | Size: {len(data)} bytes | "
+                            f"Bitrate: {mbps:.2f} Mbps")
 
                 except socket.timeout:
                     # Check for timeout (no data received for a while)
-                    if time.time() - last_receive_time > 10:
+                    elapsed_since_data = time.time() - last_receive_time
+                    if elapsed_since_data > 25:
                         print(
-                            "\n⏰ Timeout: No data for 10 seconds - "
-                            "client likely disconnected")
+                            f"\n⏰ [{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] "
+                            f"Timeout: No data for {elapsed_since_data:.1f}s - "
+                            f"client disconnected or stopped")
                         break
-                    # Otherwise just continue (normal timeout for checking)
+                    else:
+                        # Log periodic timeout checks for visibility
+                        print(f"⏱️  [{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] Socket timeout check - last data {elapsed_since_data:.1f}s ago (waiting...)")
                     continue
                 except socket.error as e:
                     print(f"\n❌ Receive error: {e}")

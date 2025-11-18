@@ -25,7 +25,7 @@ class DataFlowMonitor(
     private val TAG = "DataFlowMonitor"
     private var executor: ScheduledExecutorService? = null
     private var lastSuccessfulWrite: Long = 0
-    private val DATA_FLOW_TIMEOUT = 10_000L // 10 seconds no data = problem
+    private val DATA_FLOW_TIMEOUT = 30_000L // 30 seconds no data = problem (allows 1 fps PAUSE mode)
     
     /**
      * Start monitoring data flow
@@ -39,7 +39,7 @@ class DataFlowMonitor(
             checkDataFlow()
         }, 3, 3, TimeUnit.SECONDS)
         
-        Log.i(TAG, "✅ Data flow monitoring started (10s timeout)")
+        Log.i(TAG, "✅ Data flow monitoring started (30s timeout for PAUSE mode compatibility)")
     }
     
     /**

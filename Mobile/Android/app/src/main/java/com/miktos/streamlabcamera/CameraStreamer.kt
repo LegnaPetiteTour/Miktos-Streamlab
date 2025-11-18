@@ -339,7 +339,7 @@ class CameraStreamer(
         
         socket?.tcpNoDelay = true
         socket?.keepAlive = true
-        socket?.soTimeout = 3000  // 3 second socket timeout
+        socket?.soTimeout = 30000  // 30 second socket timeout (allows 1 fps freeze frames during PAUSE)
         socket?.connect(InetSocketAddress(serverIp, serverPort), 5000)  // 5 second connect timeout
         
         // Verify connection is actually established
@@ -813,9 +813,10 @@ class CameraStreamer(
                 outputStream?.write(lastFreezeFrame!!)
                 outputStream?.flush()
                 
-                // Track write for monitoring
+                // Track write for monitoring AND update frame time (critical for health checks)
                 dataFlowMonitor.recordSuccessfulWrite()
                 lastWriteTime = currentTime
+                lastSuccessfulFrameTime = currentTime  // Update frame time to prevent timeout during PAUSE
                 freezeFrameSendTime = currentTime
                 consecutiveWriteFailures = 0
                 
