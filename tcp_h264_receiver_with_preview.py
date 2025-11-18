@@ -138,7 +138,8 @@ class TCPReceiverWithPreview:
         current_fps = 0.0
         # 30 second timeout for PAUSE mode compatibility (1 fps freeze frames)
         self.client_socket.settimeout(30.0)
-        print(f"📊 Socket timeout set to 30 seconds (supports PAUSE mode at 1 fps)")
+        print("📊 Socket timeout set to 30 seconds "
+              "(supports PAUSE mode at 1 fps)")
 
         try:
             while self.running and self.client_socket:
@@ -147,16 +148,20 @@ class TCPReceiverWithPreview:
                     current_time = time.time()
                     if not data:
                         elapsed = current_time - last_receive_time
-                        print(f"\n❌ [{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] Client disconnected (no data) - last data {elapsed:.1f}s ago")
+                        timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                        print(f"\n❌ [{timestamp}] Client disconnected "
+                              f"(no data) - last data {elapsed:.1f}s ago")
                         break
 
                     self.bytes_received += len(data)
                     time_since_last = current_time - last_receive_time
                     last_receive_time = current_time
-                    
+
                     # Log every data receive with timestamp and delta
                     if time_since_last > 0.5:  # Log if gap > 500ms
-                        print(f"📦 [{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] Received {len(data)} bytes (gap: {time_since_last:.3f}s)")
+                        timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                        print(f"📦 [{timestamp}] Received {len(data)} bytes "
+                              f"(gap: {time_since_last:.3f}s)")
 
                     # Send data to ffplay for display
                     if (self.show_preview and self.ffplay_process and
@@ -173,8 +178,10 @@ class TCPReceiverWithPreview:
                         frame_count += 1
                         frame_time_delta = current_time - last_frame_time
                         last_frame_time = current_time
-                        current_fps = 1.0 / frame_time_delta if frame_time_delta > 0 else 0
-                        
+                        current_fps = (
+                            1.0 / frame_time_delta if frame_time_delta > 0
+                            else 0)
+
                         frame_type = "Unknown"
                         if len(data) > 4:
                             nalu_type = data[4] & 0x1F
@@ -186,34 +193,50 @@ class TCPReceiverWithPreview:
                                 frame_type = "SPS"
                             elif nalu_type == 8:
                                 frame_type = "PPS"
-                        
+
                         # Detect PAUSE mode (frame rate < 2 fps)
-                        mode_indicator = "🟡 PAUSED" if current_fps < 2 else "🟢 LIVE"
-                        
+                        mode_indicator = (
+                            "🟡 PAUSED" if current_fps < 2
+                            else "🟢 LIVE")
+
                         # Log every frame with detailed info
                         elapsed = current_time - self.start_time
-                        avg_fps = (frame_count / elapsed if elapsed > 0 else 0)
-                        mbps = ((self.bytes_received * 8) / (elapsed * 1_000_000) if elapsed > 0 else 0)
-                        
+                        avg_fps = (
+                            frame_count / elapsed if elapsed > 0 else 0)
+                        mbps = (
+                            (self.bytes_received * 8) / (elapsed * 1_000_000)
+                            if elapsed > 0 else 0)
+
+                        timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
                         print(
-                            f"🎬 [{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] {mode_indicator} | "
+                            f"🎬 [{timestamp}] {mode_indicator} | "
                             f"{frame_type} | Frame #{frame_count} | "
-                            f"Current: {current_fps:.1f} fps | Avg: {avg_fps:.1f} fps | "
-                            f"Delta: {frame_time_delta:.3f}s | Size: {len(data)} bytes | "
+                            f"Current: {current_fps:.1f} fps | "
+                            f"Avg: {avg_fps:.1f} fps | "
+                            f"Delta: {frame_time_delta:.3f}s | "
+                            f"Size: {len(data)} bytes | "
                             f"Bitrate: {mbps:.2f} Mbps")
 
                 except socket.timeout:
                     # Check for timeout (no data received for a while)
                     elapsed_since_data = time.time() - last_receive_time
                     if elapsed_since_data > 25:
+                        timestamp = (
+                            datetime.now().strftime('%H:%M:%S.%f')[:-3])
                         print(
-                            f"\n⏰ [{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] "
-                            f"Timeout: No data for {elapsed_since_data:.1f}s - "
+                            f"\n⏰ [{timestamp}] "
+                            f"Timeout: No data for "
+                            f"{elapsed_since_data:.1f}s - "
                             f"client disconnected or stopped")
                         break
                     else:
                         # Log periodic timeout checks for visibility
-                        print(f"⏱️  [{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] Socket timeout check - last data {elapsed_since_data:.1f}s ago (waiting...)")
+                        timestamp = (
+                            datetime.now().strftime('%H:%M:%S.%f')[:-3])
+                        print(
+                            f"⏱️  [{timestamp}] Socket timeout check - "
+                            f"last data {elapsed_since_data:.1f}s ago "
+                            f"(waiting...)")
                     continue
                 except socket.error as e:
                     print(f"\n❌ Receive error: {e}")
