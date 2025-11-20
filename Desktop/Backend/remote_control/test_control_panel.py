@@ -3,6 +3,7 @@
 Quick test for Desktop Control Panel
 Verifies that all components are working
 """
+# mypy: disable-error-code="import-untyped"
 
 import sys
 import time
@@ -15,8 +16,8 @@ def test_imports():
     print("🔍 Testing Python imports...")
     try:
         import flask  # noqa: F401
-        import flask_socketio  # noqa: F401
-        import flask_cors  # noqa: F401
+        import flask_socketio  # noqa: F401  # type: ignore[import-untyped]
+        import flask_cors  # noqa: F401  # type: ignore[import-untyped]
         import websockets  # noqa: F401
         print("✅ All packages installed")
         return True
