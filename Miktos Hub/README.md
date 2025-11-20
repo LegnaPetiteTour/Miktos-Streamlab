@@ -12,7 +12,7 @@ Miktos Hub is the central orchestrator for the Miktos Streamlab platform. It pro
 
 ## 🏗️ Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                      MIKTOS HUB                              │
 │                 (The Central Orchestrator)                   │
@@ -69,11 +69,12 @@ Miktos Hub is the central orchestrator for the Miktos Streamlab platform. It pro
 │                                                              │
 │  FastAPI Server  +  WebSocket  +  REST Endpoints            │
 └──────────────────────────────────────────────────────────────┘
+
 ```
 
 ## 📁 Directory Structure
 
-```
+```text
 Miktos Hub/
 ├── models/              # Data structures
 │   ├── __init__.py
@@ -133,14 +134,17 @@ Miktos Hub/
     ├── test_stream_router.py
     ├── test_session_manager.py
     └── test_integration.py
+
 ```
 
 ## 🔑 Key Concepts
 
 ### 1. Device Registry
+
 **What**: Central registry for all camera devices  
 **Why**: Single source of truth for cameras  
 **Example**:
+
 ```python
 registry = DeviceRegistry()
 registry.register(CameraDevice(
@@ -149,22 +153,28 @@ registry.register(CameraDevice(
     transport=TransportType.SRT,
     url="srt://192.168.1.100:8888"
 ))
+
 ```
 
 ### 2. Stream Router
+
 **What**: Routes cameras → scenes → destinations  
 **Why**: Decouples inputs from composition from outputs  
 **Example**:
+
 ```python
 router = StreamRouter()
 router.attach_camera_to_scene(camera, scene)
 router.route_scene_to_output(scene, destination)
+
 ```
 
 ### 3. Session Manager
+
 **What**: Manages complete streaming session lifecycle  
 **Why**: Coordinates all components for a single show  
 **Example**:
+
 ```python
 manager = SessionManager(registry, router)
 session = manager.create_session(SessionConfig(
@@ -173,22 +183,28 @@ session = manager.create_session(SessionConfig(
     destination_ids=["youtube-en", "youtube-fr"]
 ))
 manager.start_session(session.id)
+
 ```
 
 ### 4. Processing Pipeline
+
 **What**: Chains audio/video processors  
 **Why**: Modular, stackable enhancement  
 **Example**:
+
 ```python
 pipeline = ProcessingPipeline("audio_main")
 pipeline.add_processor(NoiseReductionProcessor())
 pipeline.add_processor(NormalizationProcessor())
+
 ```
 
 ### 5. Event Bus
+
 **What**: Pub/sub system for loose coupling  
 **Why**: Components communicate without dependencies  
 **Example**:
+
 ```python
 event_bus.subscribe("camera_connected", on_camera_connected)
 event_bus.emit(Event(
@@ -196,11 +212,13 @@ event_bus.emit(Event(
     data={"camera_id": "phone-001"},
     source="device_registry"
 ))
+
 ```
 
 ## 🚀 Current Status
 
 ### ✅ Completed (Foundation)
+
 - ✅ Models (camera, destination, scene, session, processing)
 - ✅ Device Registry
 - ✅ Stream Router
@@ -210,10 +228,12 @@ event_bus.emit(Event(
 - ✅ OBS Engine Adapter (started)
 
 ### 🚧 In Progress
+
 - 🚧 Services Layer (wrapping existing modules)
 - 🚧 Modules Layer (multi-camera manager, etc.)
 
 ### 📋 Next Steps
+
 - [ ] Complete Service Wrappers
 - [ ] Build Multi-Camera Manager
 - [ ] Build Multi-Platform Streaming Module
@@ -261,23 +281,29 @@ print(f"FPS: {health.fps}, Dropped: {health.dropped_frames}")
 
 # 7. End session
 session_manager.end_session(session.id)
+
 ```
 
 ## 🎯 Design Principles
 
 ### 1. **Lego Architecture**
+
 Components stack like Lego bricks. Foundation is built once, features snap on top.
 
 ### 2. **Engine Agnostic**
+
 Hub doesn't care if you use OBS, Epiphan, or vMix. Adapters translate.
 
 ### 3. **Loose Coupling**
+
 Components communicate via interfaces and events, not direct calls.
 
 ### 4. **Testability**
+
 Every service has a Protocol interface. Easy to mock and test.
 
 ### 5. **Extensibility**
+
 Add new cameras, engines, or platforms without modifying core code.
 
 ## 📚 Documentation
@@ -290,6 +316,7 @@ Add new cameras, engines, or platforms without modifying core code.
 ## 🤝 Contributing
 
 This is a personal project but follows professional standards:
+
 - Type hints everywhere
 - Comprehensive docstrings
 - Unit tests for all services
