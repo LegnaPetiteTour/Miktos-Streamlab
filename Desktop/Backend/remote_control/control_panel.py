@@ -12,8 +12,8 @@ from datetime import datetime
 from typing import Dict
 
 from flask import Flask, render_template, jsonify, request
-from flask_socketio import SocketIO, emit
-from flask_cors import CORS
+from flask_socketio import SocketIO, emit  # type: ignore[import-untyped]
+from flask_cors import CORS  # type: ignore[import-untyped]
 import websockets
 
 logging.basicConfig(
