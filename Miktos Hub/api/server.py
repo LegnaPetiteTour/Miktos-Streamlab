@@ -41,14 +41,14 @@ logger = logging.getLogger(__name__)
 
 class HubState:
     """Global Hub state container"""
-    
+
     def __init__(self):
         # Core services
         self.device_registry: Optional[DeviceRegistry] = None
         self.session_manager: Optional[SessionManager] = None
         self.stream_router: Optional[StreamRouter] = None
         self.event_bus: Optional[EventBus] = None
-        
+
         # Service wrappers
         self.transcription_service: Optional[TranscriptionService] = None
         self.quality_service: Optional[QualityService] = None
@@ -56,15 +56,20 @@ class HubState:
         self.network_service: Optional[NetworkService] = None
         self.recording_service: Optional[RecordingService] = None
         self.export_service: Optional[ExportService] = None
-        
+
         # Feature modules
         self.camera_manager: Optional[MultiCameraManager] = None
         self.streaming_module: Optional[MultiPlatformStreaming] = None
         self.obs_orchestrator: Optional[OBSOrchestrator] = None
-        
+
         # State
         self.initialized = False
         self.start_time = datetime.now()
+
+    @property
+    def streaming_manager(self):
+        """Alias for streaming_module (backward compatibility)"""
+        return self.streaming_module
 
 
 # Global Hub state
@@ -81,14 +86,14 @@ app_state = hub_state
 async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
-    
+
     Handles startup and shutdown of all Hub components.
     """
     # STARTUP
     logger.info("=" * 60)
     logger.info("MIKTOS HUB API STARTING")
     logger.info("=" * 60)
-    
+
     try:
         # Initialize core services
         logger.info("Initializing core services...")
@@ -99,7 +104,7 @@ async def lifespan(app: FastAPI):
             hub_state.device_registry,
             hub_state.stream_router
         )
-        
+
         # Initialize service wrappers
         logger.info("Initializing service wrappers...")
         hub_state.transcription_service = TranscriptionService()
@@ -108,7 +113,7 @@ async def lifespan(app: FastAPI):
         hub_state.network_service = NetworkService()
         hub_state.recording_service = RecordingService()
         hub_state.export_service = ExportService()
-        
+
         # Initialize feature modules
         logger.info("Initializing feature modules...")
         hub_state.camera_manager = MultiCameraManager(
@@ -124,7 +129,7 @@ async def lifespan(app: FastAPI):
             hub_state.stream_router,
             hub_state.event_bus
         )
-        
+
         # Connect to OBS
         logger.info("Connecting to OBS...")
         try:
@@ -133,53 +138,53 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning(f"⚠ Could not connect to OBS: {e}")
             logger.warning("  Hub will continue without OBS integration")
-        
+
         # Start camera discovery
         logger.info("Starting camera discovery...")
         await hub_state.camera_manager.start_discovery()
         logger.info("✓ Camera discovery active")
-        
+
         hub_state.initialized = True
-        
+
         logger.info("=" * 60)
         logger.info("MIKTOS HUB API READY")
         logger.info("=" * 60)
-        logger.info(f"API Docs: http://localhost:8000/docs")
-        logger.info(f"Health Check: http://localhost:8000/api/health")
+        logger.info("API Docs: http://localhost:8000/docs")
+        logger.info("Health Check: http://localhost:8000/api/health")
         logger.info("=" * 60)
-        
+
         yield
-        
+
     except Exception as e:
         logger.error(f"Startup failed: {e}", exc_info=True)
         raise
-    
+
     finally:
         # SHUTDOWN
         logger.info("=" * 60)
         logger.info("MIKTOS HUB API SHUTTING DOWN")
         logger.info("=" * 60)
-        
+
         try:
             # Stop camera discovery
             if hub_state.camera_manager:
                 logger.info("Stopping camera discovery...")
                 await hub_state.camera_manager.shutdown()
-            
+
             # Stop all active streams
             if hub_state.streaming_module:
                 logger.info("Stopping active streams...")
                 await hub_state.streaming_module.shutdown()
-            
+
             # Disconnect from OBS
             if hub_state.obs_orchestrator:
                 logger.info("Disconnecting from OBS...")
                 await hub_state.obs_orchestrator.shutdown()
-            
+
             logger.info("=" * 60)
             logger.info("MIKTOS HUB API STOPPED")
             logger.info("=" * 60)
-            
+
         except Exception as e:
             logger.error(f"Shutdown error: {e}", exc_info=True)
 
@@ -191,12 +196,12 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """
     Create and configure the FastAPI application.
-    
+
     Returns:
         Configured FastAPI app
     """
     config = get_config()
-    
+
     # Create app with lifespan
     app = FastAPI(
         title="Miktos Hub API",
@@ -204,42 +209,42 @@ def create_app() -> FastAPI:
         version="1.0.0",
         lifespan=lifespan,
     )
-    
+
     # CORS configuration
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=config.api.cors_origins or ["*"],
+        allow_origins=config.api.allowed_origins or ["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     # Add request logging middleware
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
         """Log all requests"""
         start_time = datetime.now()
-        
+
         # Process request
         response = await call_next(request)
-        
+
         # Calculate duration
         duration_ms = (datetime.now() - start_time).total_seconds() * 1000
-        
+
         # Log
         logger.info(
             f"{request.method} {request.url.path} "
             f"- {response.status_code} - {duration_ms:.2f}ms"
         )
-        
+
         return response
-    
+
     # Global exception handler
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
         """Handle uncaught exceptions"""
         logger.error(f"Unhandled exception: {exc}", exc_info=True)
-        
+
         return JSONResponse(
             status_code=500,
             content={
@@ -248,7 +253,7 @@ def create_app() -> FastAPI:
                 "timestamp": datetime.now().isoformat(),
             }
         )
-    
+
     # Root endpoint
     @app.get("/")
     async def root():
@@ -257,11 +262,13 @@ def create_app() -> FastAPI:
             "name": "Miktos Hub API",
             "version": "1.0.0",
             "status": "running" if hub_state.initialized else "starting",
-            "uptime_seconds": (datetime.now() - hub_state.start_time).total_seconds(),
+            "uptime_seconds": (
+                datetime.now() - hub_state.start_time
+            ).total_seconds(),
             "docs": "/docs",
             "health": "/api/health",
         }
-    
+
     # Import and include routers
     from api.routes import (
         sessions_router,
@@ -271,20 +278,21 @@ def create_app() -> FastAPI:
         health_router
     )
     from api import websocket
-    
+
     # Include route modules under /api prefix
     app.include_router(sessions_router, prefix="/api")
     app.include_router(cameras_router, prefix="/api")
     app.include_router(scenes_router, prefix="/api")
     app.include_router(streaming_router, prefix="/api")
     app.include_router(health_router, prefix="/api")
-    
+
     # Include WebSocket handler
     app.include_router(websocket.router)
-    
-    # Start periodic WebSocket broadcasts
-    websocket.start_periodic_broadcasts()
-    
+
+    # Note: Periodic broadcasts will start when server runs via startup
+    # event. websocket.start_periodic_broadcasts() shouldn't be called
+    # here - needs event loop
+
     return app
 
 
@@ -294,9 +302,9 @@ def create_app() -> FastAPI:
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     config = get_config()
-    
+
     # Run server
     uvicorn.run(
         "api.server:create_app",

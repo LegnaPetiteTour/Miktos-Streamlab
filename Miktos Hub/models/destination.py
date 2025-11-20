@@ -21,6 +21,19 @@ class DestinationType(Enum):
     CUSTOM_SRT = "custom_srt"
 
 
+# Alias for backward compatibility
+Platform = DestinationType
+
+
+class DestinationStatus(Enum):
+    """Status of a streaming destination"""
+    IDLE = "idle"  # Configured but not streaming
+    CONNECTING = "connecting"  # Attempting to connect
+    LIVE = "live"  # Actively streaming
+    ERROR = "error"  # Connection/stream error
+    DISCONNECTED = "disconnected"  # Was connected, now disconnected
+
+
 @dataclass
 class DestinationHealth:
     """Real-time health metrics for a streaming destination"""
@@ -114,6 +127,7 @@ class StreamDestination:
     extra: Dict[str, Any] = field(default_factory=dict)
     
     # Runtime state
+    status: DestinationStatus = DestinationStatus.IDLE  # For compatibility
     health: Optional[DestinationHealth] = None
     last_connected_at: Optional[datetime] = None
     last_disconnected_at: Optional[datetime] = None

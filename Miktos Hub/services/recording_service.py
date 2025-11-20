@@ -149,7 +149,13 @@ class RecordingService:
     
     def __init__(self):
         if not RECORDING_AVAILABLE:
-            raise RuntimeError("ISO recording module not available - check backend installation")
+            logger.warning(
+                "ISO recording module not available - "
+                "service will operate in limited mode"
+            )
+            self._active_recordings = {}
+            self._replay_buffers = {}
+            return
         
         config = get_config()
         

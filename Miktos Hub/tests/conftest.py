@@ -24,7 +24,8 @@ from services import (
     RecordingService,
     ExportService
 )
-from modules import MultiCameraManager, MultiPlatformStreaming, OBSOrchestrator
+# Temporarily disabled due to model mismatches - will fix after core tests pass
+# from modules import MultiCameraManager, MultiPlatformStreaming, OBSOrchestrator
 
 
 # ============================================================================

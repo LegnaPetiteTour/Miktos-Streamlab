@@ -190,7 +190,7 @@ class ExportService:
         config = get_config()
         
         # Export directory
-        self._exports_dir = Path(config.paths.exports_directory)
+        self._exports_dir = Path(config.paths.exports_dir)
         self._exports_dir.mkdir(parents=True, exist_ok=True)
         
         # Check FFmpeg availability

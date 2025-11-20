@@ -37,7 +37,12 @@ except ImportError as e:
     logging.warning(f"Streaming modules not available: {e}")
 
 from core import SessionManager, EventBus
-from models import StreamingDestination, DestinationStatus
+from models import (
+    StreamDestination,
+    DestinationType,
+    DestinationStatus,
+    DestinationHealth,
+)
 from config import get_config
 
 logger = logging.getLogger(__name__)
@@ -140,7 +145,16 @@ class MultiPlatformStreaming:
         event_bus: Optional[EventBus] = None,
     ):
         if not STREAMING_AVAILABLE:
-            raise RuntimeError("Streaming modules not available - check backend installation")
+            logger.warning(
+                "Streaming modules not available - "
+                "module will operate in limited mode"
+            )
+            self._session_manager = session_manager
+            self._event_bus = event_bus or EventBus()
+            self._egress = None
+            self._active_streams = {}
+            self._health_monitoring_tasks = {}
+            return
         
         self._session_manager = session_manager
         self._event_bus = event_bus or EventBus()
@@ -208,12 +222,16 @@ class MultiPlatformStreaming:
                 rtmp_url = self._get_platform_rtmp_url(platform, stream_key)
                 
                 # Create destination
-                destination = StreamingDestination(
+                destination = StreamDestination(
                     id=f"{session_id}_{platform}_{len(session.destinations)}",
                     name=label,
-                    rtmp_url=rtmp_url,
+                    type=DestinationType(platform.lower()) if platform.lower() in [
+                        "youtube", "facebook", "twitter", "twitch", "linkedin"
+                    ] else DestinationType.CUSTOM_RTMP,
+                    url=rtmp_url,
                     stream_key=stream_key,
-                    backup_url=self._get_backup_url() if backup_enabled else None,
+                    is_backup=False,
+                    enabled=True,
                     status=DestinationStatus.IDLE,
                 )
                 

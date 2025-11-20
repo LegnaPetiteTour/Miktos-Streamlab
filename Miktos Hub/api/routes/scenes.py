@@ -6,9 +6,8 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from models.scene import Scene, SceneLayout, TransitionType
-from models.camera import CameraDevice
-from api.models import SuccessResponse, ErrorResponse
+from models.scene import SceneLayout, TransitionType
+from api.models import SuccessResponse
 
 router = APIRouter(prefix="/scenes", tags=["scenes"])
 
@@ -16,13 +15,16 @@ router = APIRouter(prefix="/scenes", tags=["scenes"])
 # REQUEST/RESPONSE MODELS
 # ============================================================================
 
+
 class CreateSceneRequest(BaseModel):
     """Request to create a new scene"""
     session_id: str = Field(..., description="Session ID")
     name: str = Field(..., description="Scene name")
     layout: SceneLayout = Field(..., description="Scene layout type")
-    camera_ids: List[str] = Field(default=[], description="Camera IDs to include")
+    camera_ids: List[str] = Field(
+        default=[], description="Camera IDs to include")
     description: Optional[str] = Field(None, description="Scene description")
+
 
 class SceneSwitchRequest(BaseModel):
     """Request to switch active scene"""
@@ -39,6 +41,7 @@ class SceneSwitchRequest(BaseModel):
         le=5000
     )
 
+
 class SceneResponse(BaseModel):
     """Scene information response"""
     id: str
@@ -48,6 +51,7 @@ class SceneResponse(BaseModel):
     camera_ids: List[str]
     is_active: bool
     description: Optional[str] = None
+
 
 class ScenesListResponse(BaseModel):
     """List of scenes response"""
@@ -59,6 +63,7 @@ class ScenesListResponse(BaseModel):
 # DEPENDENCY INJECTION
 # ============================================================================
 
+
 def get_obs_orchestrator():
     """Get OBS orchestrator instance"""
     from api.server import app_state
@@ -69,6 +74,7 @@ def get_obs_orchestrator():
         )
     return app_state.obs_orchestrator
 
+
 def get_session_manager():
     """Get session manager instance"""
     from api.server import app_state
@@ -78,6 +84,7 @@ def get_session_manager():
             detail="Session manager not initialized"
         )
     return app_state.session_manager
+
 
 def get_device_registry():
     """Get device registry instance"""
@@ -93,6 +100,7 @@ def get_device_registry():
 # SCENE ROUTES
 # ============================================================================
 
+
 @router.get(
     "",
     response_model=ScenesListResponse,
@@ -107,7 +115,7 @@ async def list_scenes(
     try:
         scenes = await obs.list_scenes(session_id)
         active_scene_id = await obs.get_active_scene(session_id)
-        
+
         scene_responses = [
             SceneResponse(
                 id=scene.id,
@@ -120,13 +128,13 @@ async def list_scenes(
             )
             for scene in scenes
         ]
-        
+
         return ScenesListResponse(
             scenes=scene_responses,
             total=len(scenes),
             active_scene_id=active_scene_id
         )
-        
+
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -134,6 +142,7 @@ async def list_scenes(
             status_code=500,
             detail=f"Failed to list scenes: {str(e)}"
         )
+
 
 @router.get(
     "/{scene_id}",
@@ -148,15 +157,15 @@ async def get_scene(
     """Get scene by ID"""
     try:
         scene = await obs.get_scene(scene_id)
-        
+
         if not scene:
             raise HTTPException(
                 status_code=404,
                 detail=f"Scene {scene_id} not found"
             )
-        
+
         active_scene_id = await obs.get_active_scene(scene.session_id)
-        
+
         return SceneResponse(
             id=scene.id,
             session_id=scene.session_id,
@@ -166,7 +175,7 @@ async def get_scene(
             is_active=(scene.id == active_scene_id),
             description=scene.description
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -174,6 +183,7 @@ async def get_scene(
             status_code=500,
             detail=f"Failed to get scene: {str(e)}"
         )
+
 
 @router.post(
     "",
@@ -197,7 +207,7 @@ async def create_scene(
                 status_code=404,
                 detail=f"Session {request.session_id} not found"
             )
-        
+
         # Validate cameras exist
         for camera_id in request.camera_ids:
             camera = registry.get(camera_id)
@@ -206,7 +216,7 @@ async def create_scene(
                     status_code=404,
                     detail=f"Camera {camera_id} not found"
                 )
-        
+
         # Create scene
         if len(request.camera_ids) == 1:
             scene = await obs.create_scene_for_camera(
@@ -219,7 +229,7 @@ async def create_scene(
                 layout=request.layout,
                 name=request.name
             )
-        
+
         return SceneResponse(
             id=scene.id,
             session_id=scene.session_id,
@@ -229,7 +239,7 @@ async def create_scene(
             is_active=False,
             description=request.description
         )
-        
+
     except HTTPException:
         raise
     except ValueError as e:
@@ -239,6 +249,7 @@ async def create_scene(
             status_code=500,
             detail=f"Failed to create scene: {str(e)}"
         )
+
 
 @router.post(
     "/switch",
@@ -257,12 +268,12 @@ async def switch_scene(
             transition=request.transition,
             duration_ms=request.transition_duration_ms
         )
-        
+
         return SuccessResponse(
             message=f"Switched to scene {request.scene_id}",
             data={"scene_id": request.scene_id}
         )
-        
+
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -270,6 +281,7 @@ async def switch_scene(
             status_code=500,
             detail=f"Failed to switch scene: {str(e)}"
         )
+
 
 @router.delete(
     "/{scene_id}",
@@ -289,21 +301,24 @@ async def delete_scene(
                 status_code=404,
                 detail=f"Scene {scene_id} not found"
             )
-        
+
         # Check if scene is active
         active_scene_id = await obs.get_active_scene(scene.session_id)
         if scene_id == active_scene_id:
             raise HTTPException(
                 status_code=400,
-                detail="Cannot delete active scene. Switch to another scene first."
+                detail=(
+                    "Cannot delete active scene. "
+                    "Switch to another scene first."
+                )
             )
-        
+
         await obs.delete_scene(scene_id)
-        
+
         return SuccessResponse(
             message=f"Scene {scene_id} deleted successfully"
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -315,6 +330,7 @@ async def delete_scene(
 # ============================================================================
 # SCENE TEMPLATES
 # ============================================================================
+
 
 @router.get(
     "/templates",
@@ -329,12 +345,13 @@ async def list_templates(
     try:
         templates = await obs.list_scene_templates()
         return templates
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to list templates: {str(e)}"
         )
+
 
 @router.post(
     "/from-template",
@@ -358,7 +375,7 @@ async def create_from_template(
             camera_ids=camera_ids,
             name=scene_name
         )
-        
+
         return SceneResponse(
             id=scene.id,
             session_id=scene.session_id,
@@ -367,7 +384,7 @@ async def create_from_template(
             camera_ids=scene.camera_ids,
             is_active=False
         )
-        
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

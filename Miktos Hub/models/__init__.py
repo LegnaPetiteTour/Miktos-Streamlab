@@ -21,13 +21,16 @@ from models.session import (
 from models.scene import (
     Scene,
     SceneLayout,
+    TransitionType,
     SourceConfig,
 )
 
 from models.destination import (
     StreamDestination,
     DestinationType,
+    DestinationStatus,
     DestinationHealth,
+    Platform,  # Alias for DestinationType
 )
 
 from models.processing import (
@@ -51,11 +54,14 @@ __all__ = [
     # Scene
     "Scene",
     "SceneLayout",
+    "TransitionType",
     "SourceConfig",
     # Destination
     "StreamDestination",
     "DestinationType",
+    "DestinationStatus",
     "DestinationHealth",
+    "Platform",
     # Processing
     "MediaProcessor",
     "AudioProcessor",

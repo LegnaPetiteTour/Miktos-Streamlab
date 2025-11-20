@@ -169,7 +169,12 @@ class NetworkService:
     
     def __init__(self):
         if not NETWORK_AVAILABLE:
-            raise RuntimeError("Network module not available - check backend installation")
+            logger.warning(
+                "Network module not available - "
+                "service will operate in limited mode"
+            )
+            self._monitoring_sessions = {}
+            return
         
         config = get_config()
         

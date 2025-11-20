@@ -131,7 +131,12 @@ class EnhancementService:
     
     def __init__(self):
         if not ENHANCEMENT_AVAILABLE:
-            raise RuntimeError("Enhancement engine module not available - check backend installation")
+            logger.warning(
+                "Enhancement engine module not available - "
+                "service will operate in limited mode"
+            )
+            self._enhancer = None
+            return
         
         config = get_config()
         

@@ -107,7 +107,16 @@ class QualityService:
     
     def __init__(self):
         if not QUALITY_ANALYZER_AVAILABLE:
-            raise RuntimeError("Quality analyzer module not available - check backend installation")
+            logger.warning(
+                "Quality analyzer module not available - "
+                "service will operate in limited mode"
+            )
+            self._analyzer = None
+            self._exposure_threshold = 0.7
+            self._focus_threshold = 0.7
+            self._noise_threshold = 0.7
+            self._color_threshold = 0.7
+            return
         
         config = get_config()
         

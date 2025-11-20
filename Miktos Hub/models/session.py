@@ -48,6 +48,9 @@ class SessionConfig:
     enable_recording: bool = True
     enable_iso_recording: bool = False  # Record each camera separately
     
+    # Additional metadata
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
     # Extra configuration
     extra: Dict[str, Any] = field(default_factory=dict)
 
@@ -112,6 +115,7 @@ class Session:
     # Error tracking
     errors: List[Dict[str, Any]] = field(default_factory=list)
     warnings: List[Dict[str, Any]] = field(default_factory=list)
+    events: List[Dict[str, Any]] = field(default_factory=list)
     
     def is_live(self) -> bool:
         """Check if session is currently streaming"""

@@ -15,8 +15,11 @@ class OBSConfig:
     """OBS Studio connection settings"""
     host: str = "localhost"
     port: int = 4455
-    password: str = ""
+    password: str = "DmMpVONSo86VU3Eh"
     auto_connect: bool = True
+    canvas_width: int = 1920
+    canvas_height: int = 1080
+    auto_create_scenes: bool = True
 
 
 @dataclass
@@ -46,6 +49,7 @@ class CameraConfig:
     enable_mdns_discovery: bool = True
     mdns_service_name: str = "_miktos-camera._tcp.local."
     default_srt_port: int = 8888
+    default_port: int = 8554
     health_check_interval_seconds: float = 5.0
     connection_timeout_seconds: float = 30.0
 

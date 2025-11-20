@@ -57,7 +57,14 @@ class TranscriptionService:
     
     def __init__(self):
         if not TRANSCRIPTION_AVAILABLE:
-            raise RuntimeError("Transcription module not available - check backend installation")
+            logger.warning(
+                "Transcription module not available - "
+                "service will operate in limited mode"
+            )
+            self._transcriber = None
+            self._default_language = "en"
+            self._supported_languages = ["en"]
+            return
         
         config = get_config()
         

@@ -6,8 +6,8 @@ Tests the foundational services: DeviceRegistry, SessionManager, StreamRouter, E
 import pytest
 from datetime import datetime
 
-from core import DeviceRegistry, SessionManager, StreamRouter, EventBus
-from models import CameraDevice, Session, TransportType, SessionState, Route
+from core import DeviceRegistry, SessionManager, StreamRouter, EventBus, Route
+from models import CameraDevice, Session, TransportType, SessionState
 
 
 # ============================================================================
@@ -52,7 +52,7 @@ class TestDeviceRegistry:
     def test_remove_device(self, device_registry, mock_camera):
         """Test removing a device"""
         device_registry.register(mock_camera)
-        device_registry.remove(mock_camera.id)
+        device_registry.unregister(mock_camera.id)
         
         assert mock_camera.id not in device_registry._devices
         assert device_registry.get(mock_camera.id) is None
@@ -60,7 +60,7 @@ class TestDeviceRegistry:
     def test_remove_nonexistent_device_raises_error(self, device_registry):
         """Test removing a device that doesn't exist"""
         with pytest.raises(KeyError):
-            device_registry.remove("nonexistent-id")
+            device_registry.unregister("nonexistent-id")
     
     def test_list_all_devices(self, device_registry, mock_cameras):
         """Test listing all registered devices"""

@@ -13,11 +13,23 @@ import uuid
 class SceneLayout(Enum):
     """Pre-defined scene layouts"""
     SINGLE_FULL = "single_full"  # One camera, full screen
+    FULLSCREEN = "single_full"  # Alias for backward compatibility
     PICTURE_IN_PICTURE = "picture_in_picture"  # Main + small overlay
     SIDE_BY_SIDE = "side_by_side"  # Two cameras side-by-side
+    SPLIT_HORIZONTAL = "side_by_side"  # Alias for side-by-side
+    SPLIT_VERTICAL = "split_vertical"  # Two cameras stacked vertically
+    GRID = "grid_2x2"  # Alias for 2x2 grid
     GRID_2X2 = "grid_2x2"  # Four cameras in 2x2 grid
     GRID_3X3 = "grid_3x3"  # Nine cameras in 3x3 grid
     CUSTOM = "custom"  # Custom positioning
+
+
+class TransitionType(Enum):
+    """Scene transition types"""
+    CUT = "cut"  # Instant switch
+    FADE = "fade"  # Crossfade
+    SLIDE = "slide"  # Slide transition
+    WIPE = "wipe"  # Wipe transition
 
 
 @dataclass
