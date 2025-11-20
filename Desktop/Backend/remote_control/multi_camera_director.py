@@ -10,6 +10,7 @@ Production-ready multi-camera control interface with:
 - Click to switch active camera
 - Thermal alerts and auto-actions
 """
+# mypy: disable-error-code="annotation-unchecked"
 
 import asyncio
 import websockets
