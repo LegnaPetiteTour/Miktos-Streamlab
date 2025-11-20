@@ -13,7 +13,7 @@ from typing import Dict, Set
 from datetime import datetime
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,  # Changed to DEBUG to see status messages
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -125,6 +125,13 @@ class CameraControlServer:
                     if message.get("type") == "status":
                         # Forward status to all controllers
                         message["camera_id"] = camera_id
+                        data = message.get('data', {})
+                        ssid = data.get('wifi_ssid', 'N/A')
+                        net_type = data.get('network_type', 'N/A')
+                        logger.info(
+                            f"📊 Status from {camera_id}: "
+                            f"wifi_ssid={ssid}, network_type={net_type}"
+                        )
                         await self.broadcast_to_controllers(message)
 
                     msg_type = message.get('type')

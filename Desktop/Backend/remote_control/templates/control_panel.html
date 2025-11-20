@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miktos StreamLab - Control Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            color: #999;
+            font-size: 1.1em;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-item .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .status-item .label {
+            color: #999;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .cameras-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .camera-card {
+            background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .camera-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .camera-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 48px rgba(102, 126, 234, 0.2);
+        }
+        
+        .camera-card:hover::before {
+            opacity: 1;
+        }
+        
+        .camera-card.streaming::before {
+            opacity: 1;
+            background: linear-gradient(90deg, #00ff88 0%, #00cc66 100%);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .camera-card.paused::before {
+            opacity: 1;
+            background: linear-gradient(90deg, #ffaa00 0%, #ff8800 100%);
+        }
+        
+        .camera-card.offline {
+            opacity: 0.6;
+        }
+        
+        .camera-card.offline::before {
+            opacity: 1;
+            background: #ff4444;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .camera-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .camera-id {
+            font-size: 0.85em;
+            color: #666;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        
+        .camera-state {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .state-idle { background: #3a3a3a; color: #999; }
+        .state-running { background: #00ff88; color: #000; }
+        .state-paused { background: #ffaa00; color: #000; }
+        .state-stopped { background: #ff4444; color: #fff; }
+        .state-offline { background: #666; color: #fff; }
+        
+        .camera-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .stat {
+            text-align: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        
+        .stat-icon {
+            font-size: 1.5em;
+            margin-bottom: 4px;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .stat-label {
+            font-size: 0.75em;
+            color: #999;
+            margin-top: 4px;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+            color: #ffffff;
+            border: 1px solid #4a4a4a;
+            padding: 14px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        button.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+        }
+        
+        button.primary:hover {
+            background: linear-gradient(135deg, #7b8ff0 0%, #8a5ab8 100%);
+        }
+        
+        button.success {
+            background: linear-gradient(135deg, #00cc66 0%, #00aa55 100%);
+            border-color: #00cc66;
+        }
+        
+        button.success:hover {
+            background: linear-gradient(135deg, #00dd77 0%, #00bb66 100%);
+        }
+        
+        button.danger {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            border-color: #ff4444;
+        }
+        
+        button.danger:hover {
+            background: linear-gradient(135deg, #ff5555 0%, #dd1111 100%);
+        }
+        
+        button.warning {
+            background: linear-gradient(135deg, #ffaa00 0%, #ff8800 100%);
+            border-color: #ffaa00;
+            color: #000;
+        }
+        
+        button.warning:hover {
+            background: linear-gradient(135deg, #ffbb11 0%, #ff9911 100%);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        .empty-state h2 {
+            margin-bottom: 10px;
+            color: #999;
+        }
+        
+        .empty-state p {
+            color: #666;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            background: #2a2a2a;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateX(400px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            border-left-color: #00cc66;
+        }
+        
+        .notification.error {
+            border-left-color: #ff4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📹 Miktos StreamLab</h1>
+        <p>Remote Camera Control Panel</p>
+    </div>
+    
+    <div class="status-bar">
+        <div class="status-item">
+            <div class="value" id="totalCameras">0</div>
+            <div class="label">Connected Cameras</div>
+        </div>
+        <div class="status-item">
+            <div class="value" id="streamingCameras">0</div>
+            <div class="label">Streaming</div>
+        </div>
+        <div class="status-item">
+            <div class="value" id="pausedCameras">0</div>
+            <div class="label">Paused</div>
+        </div>
+    </div>
+    
+    <div id="cameras" class="cameras-grid">
+        <div class="empty-state">
+            <div class="empty-state-icon">📱</div>
+            <h2>No Cameras Connected</h2>
+            <p>Enable remote control in your mobile app and connect to this server</p>
+        </div>
+    </div>
+    
+    <div id="notification" class="notification"></div>
+    
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        let cameras = {};
+        window.cameraStates = {};  // Track previous camera states to reduce flickering
+        
+        // Connect to SocketIO
+        socket.on('connect', () => {
+            console.log('✅ Connected to control panel');
+            showNotification('Connected to server', 'success');
+        });
+        
+        socket.on('disconnect', () => {
+            console.log('❌ Disconnected from control panel');
+            showNotification('Disconnected from server', 'error');
+        });
+        
+        // Receive camera list
+        socket.on('cameras', (data) => {
+            console.log('📋 Received cameras:', data);
+            cameras = data.cameras.reduce((acc, id) => {
+                acc[id] = data.statuses[id] || { state: 'offline', online: false };
+                return acc;
+            }, {});
+            renderCameras();
+        });
+        
+        // Camera online event
+        socket.on('camera_online', (data) => {
+            console.log('📱 Camera online:', data.camera_id);
+            cameras[data.camera_id] = { 
+                state: 'IDLE', 
+                online: true,
+                battery: 0,
+                network_type: 'UNKNOWN',
+                thermal: 'OK'
+            };
+            renderCameras();
+            showNotification(`Camera ${data.camera_id.substring(0, 8)} connected`, 'success');
+        });
+        
+        // Camera offline event
+        socket.on('camera_offline', (data) => {
+            console.log('📱 Camera offline:', data.camera_id);
+            // Remove camera from list instead of just marking offline
+            if (cameras[data.camera_id]) {
+                delete cameras[data.camera_id];
+            }
+            renderCameras();
+            showNotification(`Camera ${data.camera_id.substring(0, 8)} disconnected`, 'error');
+        });
+        
+        // Status update
+        socket.on('status_update', (data) => {
+            console.log('📊 Status update:', data);
+            // Merge status update instead of replacing entire object
+            if (!cameras[data.camera_id]) {
+                cameras[data.camera_id] = {};
+                Object.assign(cameras[data.camera_id], data.status);
+                renderCameras(); // New camera - full render
+            } else {
+                Object.assign(cameras[data.camera_id], data.status);
+                updateCameraCard(data.camera_id); // Existing camera - update only
+            }
+        });
+        
+        // Update a single camera card without recreating buttons
+        function updateCameraCard(id) {
+            const status = cameras[id];
+            if (!status) return;
+            
+            const card = document.querySelector(`[data-camera-id="${id}"]`);
+            if (!card) {
+                renderCameras(); // Card doesn't exist, do full render
+                return;
+            }
+            
+            const state = status.state || 'OFFLINE';
+            const online = status.online !== false;
+            const stateClass = state.toLowerCase().replace('_', '-');
+            
+            // Update card class
+            card.className = `camera-card ${stateClass} ${!online ? 'offline' : ''}`;
+            
+            // Update state badge
+            const displayState = state === 'RUNNING' ? 'CONNECTED' : state;
+            const stateBadge = card.querySelector('.camera-state');
+            if (stateBadge) {
+                stateBadge.className = `camera-state state-${stateClass}`;
+                stateBadge.textContent = displayState;
+            }
+            
+            // Update battery
+            const batteryIcon = getBatteryIcon(status.battery || 0, status.charging);
+            const batteryValue = card.querySelector('.stat:nth-child(1) .stat-value');
+            const batteryIconEl = card.querySelector('.stat:nth-child(1) .stat-icon');
+            if (batteryValue) batteryValue.textContent = `${status.battery || 0}%`;
+            if (batteryIconEl) batteryIconEl.textContent = batteryIcon;
+            
+            // Update network status
+            const wifiStatus = status.wifi_status || 'Disconnected';
+            const lteStatus = status.lte_status || 'Disconnected';
+            const wifiConnected = wifiStatus === 'Connected';
+            const lteConnected = lteStatus === 'Connected';
+            const networkValue = card.querySelector('.stat:nth-child(2) .stat-value');
+            if (networkValue) {
+                networkValue.innerHTML = `WiFi: ${wifiConnected ? '✅' : '❌'}<br>LTE: ${lteConnected ? '✅' : '❌'}`;
+            }
+            
+            // Update bitrate
+            const hasBitrate = status.is_streaming && status.bitrate_mbps > 0;
+            const bitrateDisplay = hasBitrate ? `${status.bitrate_mbps.toFixed(1)} Mbps` : 'N/A';
+            const bitrateValue = card.querySelector('.stat:nth-child(3) .stat-value');
+            if (bitrateValue) bitrateValue.textContent = bitrateDisplay;
+            
+            // Update thermal
+            const thermalIcon = getThermalIcon(status.thermal || 'OK');
+            const thermalValue = card.querySelector('.stat:nth-child(4) .stat-value');
+            const thermalIconEl = card.querySelector('.stat:nth-child(4) .stat-icon');
+            if (thermalValue) thermalValue.textContent = status.thermal || 'OK';
+            if (thermalIconEl) thermalIconEl.textContent = thermalIcon;
+            
+            // Update button states without recreating them
+            const buttons = card.querySelectorAll('.controls button');
+            buttons.forEach(btn => {
+                const onclick = btn.getAttribute('onclick');
+                if (!onclick) return;
+                
+                if (onclick.includes('START')) {
+                    btn.disabled = !online || state === 'RUNNING';
+                } else if (onclick.includes('STOP')) {
+                    btn.disabled = !online || state === 'IDLE' || state === 'STOPPED';
+                } else if (onclick.includes('PAUSE')) {
+                    btn.disabled = !online || state !== 'RUNNING';
+                } else if (onclick.includes('RESUME')) {
+                    btn.disabled = !online || state !== 'PAUSED';
+                } else if (onclick.includes('STUDIO_MODE') || onclick.includes('Refresh')) {
+                    btn.disabled = !online;
+                }
+            });
+            
+            updateStatusBar();
+        }
+        
+        // Render cameras - smart update to prevent button flickering
+        function renderCameras() {
+            const container = document.getElementById('cameras');
+            const cameraIds = Object.keys(cameras);
+            
+            if (cameraIds.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📱</div>
+                        <h2>No Cameras Connected</h2>
+                        <p>Enable remote control in your mobile app and connect to this server</p>
+                    </div>
+                `;
+                updateStatusBar();
+                return;
+            }
+            
+            // Remove cards for disconnected cameras
+            const existingCards = container.querySelectorAll('.camera-card');
+            existingCards.forEach(card => {
+                const cardId = card.dataset.cameraId;
+                if (!cameraIds.includes(cardId)) {
+                    card.remove();
+                }
+            });
+            
+            cameraIds.forEach(id => {
+                const status = cameras[id];
+                // Safety check: skip if camera object is undefined or invalid
+                if (!status || typeof status !== 'object') {
+                    console.warn('⚠️ Skipping invalid camera:', id);
+                    return;
+                }
+                const state = status.state || 'OFFLINE';
+                const online = status.online !== false;
+                
+                // Cache last known streaming state to reduce flickering
+                const prevState = window.cameraStates[id];
+                const isStreaming = status.is_streaming || (state === 'RUNNING' && !status.is_paused);
+                
+                // Check if card already exists
+                let card = container.querySelector(`[data-camera-id="${id}"]`);
+                const cardExists = !!card;
+                
+                // Only recreate card if it doesn't exist or state changed significantly
+                if (!cardExists) {
+                    card = document.createElement('div');
+                    card.dataset.cameraId = id;
+                }
+                
+                // Only update cached state if there's a real change
+                if (prevState === undefined || prevState !== isStreaming) {
+                    window.cameraStates[id] = isStreaming;
+                }
+                
+                const stateClass = state.toLowerCase().replace('_', '-');
+                card.className = `camera-card ${stateClass} ${!online ? 'offline' : ''}`;
+                
+                const batteryIcon = getBatteryIcon(status.battery || 0, status.charging);
+                const thermalIcon = getThermalIcon(status.thermal || 'OK');
+                
+                // Network status - always show WiFi and LTE connection status
+                const wifiStatus = status.wifi_status || 'Disconnected';
+                const lteStatus = status.lte_status || 'Disconnected';
+                const wifiConnected = wifiStatus === 'Connected';
+                const lteConnected = lteStatus === 'Connected';
+                
+                // Bitrate - only show when streaming with actual bitrate
+                const hasBitrate = status.is_streaming && status.bitrate_mbps > 0;
+                const bitrateDisplay = hasBitrate ? `${status.bitrate_mbps.toFixed(1)} Mbps` : 'N/A';
+                
+                // Show "CONNECTED" instead of "RUNNING" when streaming
+                const displayState = state === 'RUNNING' ? 'CONNECTED' : state;
+                
+                card.innerHTML = `
+                    <div class="camera-header">
+                        <div class="camera-id">📱 ${id.substring(0, 12)}...</div>
+                        <div class="camera-state state-${stateClass}">${displayState}</div>
+                    </div>
+                    
+                    <div class="camera-stats">
+                        <div class="stat">
+                            <div class="stat-icon">${batteryIcon}</div>
+                            <div class="stat-value">${status.battery || 0}%</div>
+                            <div class="stat-label">Battery</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-icon">📶</div>
+                            <div class="stat-value" style="font-size: 0.9em;">
+                                WiFi: ${wifiConnected ? '✅' : '❌'}<br>
+                                LTE: ${lteConnected ? '✅' : '❌'}
+                            </div>
+                            <div class="stat-label">Network</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-value">${bitrateDisplay}</div>
+                            <div class="stat-label">Bitrate</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-icon">${thermalIcon}</div>
+                            <div class="stat-value">${status.thermal || 'OK'}</div>
+                            <div class="stat-label">Thermal</div>
+                        </div>
+                    </div>
+                    
+                    <div class="controls">
+                        <button class="success" onclick="sendCommand('${id}', 'START')" 
+                                ${!online || state === 'RUNNING' ? 'disabled' : ''}>
+                            ▶️ START
+                        </button>
+                        <button class="danger" onclick="sendCommand('${id}', 'STOP')"
+                                ${!online || state === 'IDLE' || state === 'STOPPED' ? 'disabled' : ''}>
+                            ⏹️ STOP
+                        </button>
+                        <button class="warning" onclick="sendCommand('${id}', 'PAUSE')"
+                                ${!online || state !== 'RUNNING' ? 'disabled' : ''}>
+                            ⏸️ PAUSE
+                        </button>
+                        <button class="primary" onclick="sendCommand('${id}', 'RESUME')"
+                                ${!online || state !== 'PAUSED' ? 'disabled' : ''}>
+                            ▶️ RESUME
+                        </button>
+                        ${status.is_studio_mode ? 
+                            `<button class="warning" onclick="sendCommand('${id}', 'EXIT_STUDIO_MODE')"
+                                    ${!online ? 'disabled' : ''}>
+                                🌙 Exit Studio
+                            </button>` :
+                            `<button onclick="sendCommand('${id}', 'ENTER_STUDIO_MODE')"
+                                    ${!online ? 'disabled' : ''}>
+                                🌙 Studio Mode
+                            </button>`
+                        }
+                        <button onclick="sendCommand('${id}', 'GET_STATUS')"
+                                ${!online ? 'disabled' : ''}>
+                            🔄 Refresh
+                        </button>
+                    </div>
+                `;
+                
+                if (!cardExists) {
+                    container.appendChild(card);
+                }
+            });
+            
+            updateStatusBar();
+        }
+        
+        // Update status bar
+        function updateStatusBar() {
+            const cameraIds = Object.keys(cameras);
+            const total = cameraIds.filter(id => cameras[id].online !== false).length;
+            const streaming = cameraIds.filter(id => cameras[id].is_streaming === true).length;
+            const paused = cameraIds.filter(id => cameras[id].is_paused === true).length;
+            
+            document.getElementById('totalCameras').textContent = total;
+            document.getElementById('streamingCameras').textContent = streaming;
+            document.getElementById('pausedCameras').textContent = paused;
+        }
+        
+        // Send command to camera
+        async function sendCommand(cameraId, command) {
+            console.log(`📤 Sending command: ${command} to ${cameraId}`);
+            
+            try {
+                const response = await fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        camera_id: cameraId,
+                        command: command,
+                        params: {}
+                    })
+                });
+                
+                const result = await response.json();
+                console.log(`📥 Command result:`, result);
+                
+                if (result.status === 'success' || result.status === 'sent') {
+                    showNotification(`${command} sent`, 'success');
+                    // Request status update after 500ms (don't spam GET_STATUS)
+                    if (command !== 'GET_STATUS') {
+                        setTimeout(() => {
+                            sendCommand(cameraId, 'GET_STATUS');
+                        }, 500);
+                    }
+                } else if (result.status === 'error') {
+                    showNotification(`Failed: ${result.message || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Command failed:', error);
+                showNotification(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Helper functions
+        function getBatteryIcon(level, charging) {
+            if (charging) return '⚡';
+            if (level > 75) return '🔋';
+            if (level > 25) return '🔋';
+            return '🪫';
+        }
+        
+        function getNetworkIcon(type) {
+            if (type.includes('WIFI')) return '📶';
+            if (type.includes('CELLULAR')) return '📱';
+            return '📵';
+        }
+        
+        function getThermalIcon(state) {
+            switch(state) {
+                case 'OK': return '✅';
+                case 'WARM': return '🌡️';
+                case 'HOT': return '🔥';
+                case 'CRITICAL': return '☠️';
+                default: return '❓';
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

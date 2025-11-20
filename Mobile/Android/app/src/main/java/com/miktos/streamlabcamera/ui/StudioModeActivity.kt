@@ -17,6 +17,19 @@ import com.miktos.streamlabcamera.MainActivity
 
 class StudioModeActivity : AppCompatActivity() {
     
+    companion object {
+        private var activeInstance: StudioModeActivity? = null
+        
+        fun isActive(): Boolean = activeInstance != null
+        
+        fun start(context: Context) {
+            val intent = Intent(context, StudioModeActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }
+    }
+    
     private lateinit var redDot: View
     private lateinit var statusText: TextView
     private lateinit var powerManager: PowerManager
@@ -66,6 +79,7 @@ class StudioModeActivity : AppCompatActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        activeInstance = this
         setContentView(R.layout.activity_studio_mode)
         
         // Initialize views
@@ -201,6 +215,7 @@ class StudioModeActivity : AppCompatActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
+        activeInstance = null
         unregisterReceiver(statusReceiver)
         unregisterReceiver(batteryReceiver)
         
@@ -212,13 +227,5 @@ class StudioModeActivity : AppCompatActivity() {
             }
         }
         wakeLock = null
-    }
-    
-    companion object {
-        fun start(context: Context) {
-            val intent = Intent(context, StudioModeActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            context.startActivity(intent)
-        }
     }
 }

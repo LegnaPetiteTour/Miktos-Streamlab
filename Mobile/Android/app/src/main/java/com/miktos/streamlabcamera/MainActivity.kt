@@ -21,6 +21,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.appcompat.widget.SwitchCompat
 import com.miktos.streamlabcamera.ui.StudioModeActivity
+import android.text.TextWatcher
+import android.text.Editable
 
 class MainActivity : AppCompatActivity() {
     
@@ -207,6 +209,62 @@ class MainActivity : AppCompatActivity() {
         
         // Load saved settings
         loadSavedSettings()
+        
+        // Auto-save streaming IP when changed
+        ipInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val ip = s.toString()
+                if (ip.isNotEmpty()) {
+                    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                        .putString(PREF_SERVER_IP, ip)
+                        .apply()
+                }
+            }
+        })
+        
+        // Auto-save streaming port when changed
+        portInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val port = s.toString().toIntOrNull()
+                if (port != null) {
+                    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                        .putInt(PREF_SERVER_PORT, port)
+                        .apply()
+                }
+            }
+        })
+        
+        // Auto-save remote control IP when changed
+        remoteServerIp.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val ip = s.toString()
+                if (ip.isNotEmpty()) {
+                    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                        .putString(PREF_REMOTE_IP, ip)
+                        .apply()
+                }
+            }
+        })
+        
+        // Auto-save remote control port when changed
+        remoteServerPort.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val port = s.toString().toIntOrNull()
+                if (port != null) {
+                    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                        .putInt(PREF_REMOTE_PORT, port)
+                        .apply()
+                }
+            }
+        })
         
         // Set up LTE failover switch listener
         lteFailoverSwitch.setOnCheckedChangeListener { _, isChecked ->

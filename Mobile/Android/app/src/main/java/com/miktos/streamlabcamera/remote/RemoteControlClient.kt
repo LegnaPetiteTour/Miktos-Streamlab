@@ -10,7 +10,8 @@ import java.util.concurrent.TimeUnit
 
 class RemoteControlClient(
     private val context: Context,
-    private val onCommandReceived: (String, JSONObject) -> Unit
+    private val onCommandReceived: (String, JSONObject) -> Unit,
+    private val onConnected: (() -> Unit)? = null
 ) {
     private val TAG = "RemoteControlClient"
     
@@ -34,6 +35,18 @@ class RemoteControlClient(
     }
     
     fun connect(serverIp: String, port: Int = 9000) {
+        // Disconnect existing connection first to prevent duplicates
+        webSocket?.let {
+            Log.w(TAG, "⚠️  Closing existing WebSocket before new connection")
+            it.close(1000, "Reconnecting")
+            webSocket = null
+            isConnected = false
+        }
+        
+        // Cancel any pending reconnection attempts
+        reconnectJob?.cancel()
+        reconnectJob = null
+        
         val request = Request.Builder()
             .url("ws://$serverIp:$port")
             .build()
@@ -70,6 +83,9 @@ class RemoteControlClient(
                 } catch (e: Exception) {
                     Log.e(TAG, "❌ Failed to send registration: ${e.message}", e)
                 }
+                
+                // Trigger immediate status update callback
+                onConnected?.invoke()
             }
             
             override fun onMessage(webSocket: WebSocket, text: String) {

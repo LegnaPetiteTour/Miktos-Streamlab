@@ -25,6 +25,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.net.wifi.WifiManager
 import com.miktos.streamlabcamera.streaming.*
 import com.miktos.streamlabcamera.streaming.monitoring.*
 import com.miktos.streamlabcamera.remote.RemoteControlClient
@@ -106,6 +107,7 @@ class CameraStreamer(
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var currentNetworkType: NetworkType = NetworkType.UNKNOWN
+    private var currentWifiSSID: String = "N/A"
     private var allowLteFailover: Boolean = false  // User preference for LTE backup
     private var lteQualityThreshold: Float = 2.0f  // Mbps - switch to LTE if WiFi drops below this
     private var activeNetwork: Network? = null  // Active network for socket binding
@@ -127,6 +129,11 @@ class CameraStreamer(
     private val VIDEO_BITRATE_HOT = 3_000_000       // Reduced for HOT state
     private var currentBitrate = VIDEO_BITRATE_NORMAL
     private val VIDEO_I_FRAME_INTERVAL = 2
+    
+    // Actual bitrate tracking
+    private var totalBytesSent = 0L
+    private var lastBitrateCalculation = System.currentTimeMillis()
+    private var measuredBitrateMbps = 0.0
     
     // LTE failover configuration
     fun setLteFailoverEnabled(enabled: Boolean) {
@@ -166,6 +173,52 @@ class CameraStreamer(
                 NetworkType.LTE_CELLULAR
             }
             else -> NetworkType.UNKNOWN
+        }
+    }
+    
+    private fun getWifiSSID(): String {
+        try {
+            if (currentNetworkType == NetworkType.INET_WIFI || currentNetworkType == NetworkType.LAN_WIFI) {
+                val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                val wifiInfo = wifiManager.connectionInfo
+                
+                // Get SSID and remove quotes
+                wifiInfo.ssid?.let { ssid ->
+                    if (ssid != "<unknown ssid>" && ssid != "0x") {
+                        return ssid.replace("\"", "")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get WiFi SSID: ${e.message}")
+        }
+        return "N/A"
+    }
+    
+    private fun detectInitialNetworkState() {
+        try {
+            if (connectivityManager == null) {
+                connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            }
+            
+            connectivityManager?.activeNetwork?.let { network ->
+                val initialNetworkType = detectNetworkType(network)
+                currentNetworkType = initialNetworkType
+                currentWifiSSID = getWifiSSID()
+                activeNetwork = network
+                Log.i(TAG, "📶 Initial network detected: $initialNetworkType")
+                if (currentWifiSSID != "N/A") {
+                    Log.i(TAG, "📶 WiFi SSID: $currentWifiSSID")
+                }
+            } ?: run {
+                Log.w(TAG, "⚠️ No active network found")
+                currentNetworkType = NetworkType.OFFLINE
+                currentWifiSSID = "N/A"
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to detect initial network state: ${e.message}")
+            currentNetworkType = NetworkType.UNKNOWN
+            currentWifiSSID = "N/A"
         }
     }
     
@@ -744,6 +797,9 @@ class CameraStreamer(
                         // CRITICAL: Tell monitor we successfully wrote data
                         dataFlowMonitor.recordSuccessfulWrite()
                         
+                        // Track bytes sent for actual bitrate calculation
+                        totalBytesSent += info.size.toLong()
+                        
                         // Track successful transmission
                         lastWriteTime = System.currentTimeMillis()
                         lastSuccessfulFrameTime = System.currentTimeMillis()
@@ -948,10 +1004,16 @@ class CameraStreamer(
                     val previousType = currentNetworkType
                     currentNetworkType = networkType
                     
+                    // Update WiFi SSID if on WiFi
+                    currentWifiSSID = getWifiSSID()
+                    
                     // Store network reference for socket binding
                     activeNetwork = network
                     
                     Log.i(TAG, "📶 Network available: $networkType (was: $previousType)")
+                    if (currentWifiSSID != "N/A") {
+                        Log.i(TAG, "📶 WiFi SSID: $currentWifiSSID")
+                    }
                     
                     // Handle network type transitions
                     when {
@@ -1048,6 +1110,22 @@ class CameraStreamer(
             // Use default network callback to monitor all network changes (WiFi + LTE)
             connectivityManager?.registerDefaultNetworkCallback(networkCallback!!)
             Log.d(TAG, "Network callback registered for all networks (LTE failover: $allowLteFailover)")
+            
+            // Detect current network state immediately (callback only fires on changes)
+            connectivityManager?.activeNetwork?.let { network ->
+                val initialNetworkType = detectNetworkType(network)
+                currentNetworkType = initialNetworkType
+                currentWifiSSID = getWifiSSID()
+                activeNetwork = network
+                Log.i(TAG, "📶 Initial network detected: $initialNetworkType")
+                if (currentWifiSSID != "N/A") {
+                    Log.i(TAG, "📶 WiFi SSID: $currentWifiSSID")
+                }
+            } ?: run {
+                Log.w(TAG, "⚠️ No active network found at startup")
+                currentNetworkType = NetworkType.OFFLINE
+                currentWifiSSID = "N/A"
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to register network callback: ${e.message}")
         }
@@ -1208,10 +1286,24 @@ class CameraStreamer(
      * @param port WebSocket port (default 9000 for cameras)
      */
     fun enableRemoteControl(serverIp: String, port: Int = 9000) {
+        // Disconnect any existing connection first to prevent duplicates
+        if (remoteControlClient != null) {
+            Log.w(TAG, "⚠️  Existing remote control connection found - disconnecting first")
+            disableRemoteControl()
+        }
+        
+        // Detect initial network state before connecting
+        detectInitialNetworkState()
+        
         remoteControlClient = RemoteControlClient(
             context = context,
             onCommandReceived = { command, params ->
                 handleRemoteCommand(command, params)
+            },
+            onConnected = {
+                // Send immediate status update when remote control connects
+                // This ensures control panel shows WiFi SSID and current state right away
+                sendStatusUpdate()
             }
         )
         
@@ -1376,6 +1468,8 @@ class CameraStreamer(
                     Log.i(TAG, "📺 Entering Studio Mode via remote command (streaming: $isStreaming)")
                     // Studio Mode can be entered anytime, not just when streaming
                     StudioModeActivity.start(context)
+                    // Send status update after 500ms to reflect studio mode change
+                    Handler(Looper.getMainLooper()).postDelayed({ sendStatusUpdate() }, 500)
                 }
                 
                 "EXIT_STUDIO_MODE" -> {
@@ -1386,6 +1480,8 @@ class CameraStreamer(
                         addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
                     }
                     context.sendBroadcast(intent)
+                    // Send status update after 500ms to reflect studio mode change
+                    Handler(Looper.getMainLooper()).postDelayed({ sendStatusUpdate() }, 500)
                 }
                 
                 "GET_STATUS", "STATUS" -> {
@@ -1419,7 +1515,11 @@ class CameraStreamer(
     /**
      * Send current status to desktop via WebSocket
      */
-    private fun sendStatusUpdate() {
+    /**
+     * Send current status to remote control server
+     * Called internally on state changes and periodically, can also be called externally
+     */
+    fun sendStatusUpdate() {
         val status = JSONObject().apply {
             put("state", when (currentState) {
                 is StreamingState.Stopped -> "stopped"
@@ -1440,14 +1540,36 @@ class CameraStreamer(
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
             put("battery_level", batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY))
             
-            // Network info
+            // Network info with SSID
             put("network_type", currentNetworkType.name)
+            put("wifi_ssid", currentWifiSSID)
+            
+            // Separate WiFi and LTE status based on actual network connection
+            val isWiFi = currentNetworkType.name.contains("WIFI")
+            val isLTE = currentNetworkType.name.contains("LTE") || currentNetworkType.name.contains("CELLULAR")
+            
+            put("wifi_status", if (isWiFi) "Connected" else "Disconnected")
+            put("lte_status", if (isLTE) "Connected" else "Disconnected")
             
             // Thermal info
             put("thermal_state", thermalMonitor?.getCurrentState()?.name ?: "OK")
             
-            // Bitrate info (for quality monitoring)
-            put("current_bitrate_mbps", currentBitrate / 1_000_000.0)
+            // Studio Mode status
+            put("is_studio_mode", StudioModeActivity.isActive())
+            
+            // Calculate actual bitrate from bytes sent
+            val now = System.currentTimeMillis()
+            val timeDiff = now - lastBitrateCalculation
+            if (timeDiff >= 1000 && isStreaming) {  // Calculate every second while streaming
+                val bytesSentInInterval = totalBytesSent
+                measuredBitrateMbps = (bytesSentInInterval * 8.0 / 1_000_000.0) / (timeDiff / 1000.0)
+                totalBytesSent = 0  // Reset counter
+                lastBitrateCalculation = now
+            }
+            
+            // Send actual measured bitrate (not target bitrate)
+            put("actual_bitrate_mbps", if (isStreaming) measuredBitrateMbps else 0.0)
+            put("target_bitrate_mbps", currentBitrate / 1_000_000.0)
             
             // Streaming uptime (works for both Running and Paused states)
             if (isStreaming && (currentState is StreamingState.Running || currentState is StreamingState.Paused)) {
