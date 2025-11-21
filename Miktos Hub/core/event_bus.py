@@ -104,7 +104,7 @@ class EventBus:
         event_type: str,
         callback: Callable,
         priority: EventPriority = EventPriority.NORMAL
-    ) -> str:
+    ) -> int:
         """
         Subscribe to an event type
 

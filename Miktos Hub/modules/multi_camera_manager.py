@@ -40,7 +40,7 @@ class DiscoveryMethod(Enum):
 class PairingRequest:
     """A manual pairing request"""
     pairing_code: str
-    device_info: Dict[str, any]
+    device_info: Dict[str, Any]
     timestamp: datetime
     expires_at: datetime
 
@@ -229,7 +229,7 @@ class MultiCameraManager:
         Returns:
             List of discovered cameras
         """
-        discovered = []
+        discovered: List[CameraDevice] = []
 
         try:
             # This is a simplified implementation
@@ -310,25 +310,29 @@ class MultiCameraManager:
             # Parse device info
             device_info = json.loads(response.decode())
 
+            # Create camera metadata
+            from models.camera import CameraMetadata
+            metadata = CameraMetadata(
+                extra={
+                    "ip": ip,
+                    "port": port,
+                    "device_info": device_info,
+                    "discovered_at": datetime.now().isoformat(),
+                }
+            )
+
             # Create camera device
             camera = CameraDevice(
                 id=device_info.get("id", f"camera_{ip.replace('.', '_')}"),
                 label=device_info.get("label", f"Camera at {ip}"),
                 transport=TransportType.SRT,
-                connection_url=(
+                url=(
                     f"srt://{ip}:{device_info.get('srt_port', 8554)}"
                 ),
                 capabilities=(
                     device_info.get("capabilities", ["video", "audio"])
                 ),
-                metadata={
-                    "ip": ip,
-                    "port": port,
-                    "device_info": device_info,
-                    "discovered_at": (
-                        datetime.now().isoformat()
-                    ),
-                }
+                metadata=metadata,
             )
 
             return camera
@@ -591,52 +595,66 @@ class MultiCameraManager:
                     )
 
                     # Update camera health from network metrics
-                    camera.health.network_quality = (
-                        network_metrics.quality.value
-                    )
-                    camera.health.is_connected = (
-                        network_metrics.is_connected
-                    )
+                    if camera.health:
+                        camera.health.network_quality = (
+                            network_metrics.quality.value
+                        )
+                        camera.health.is_connected = (
+                            network_metrics.is_connected
+                        )
 
                 except Exception as e:
                     logger.error(
                         f"Network check failed for {camera_id}: {e}"
                     )
-                    camera.health.is_connected = False
+                    if camera.health:
+                        camera.health.is_connected = False
 
                 # Get battery/thermal from camera metadata
                 # (phone app reports this)
-                camera.health.battery_percent = (
-                    camera.metadata.get("battery_percent", 0)
-                )
-                camera.health.temperature_celsius = camera.metadata.get(
-                    "temperature_celsius", 0)
+                if camera.health:
+                    # Update battery level if available
+                    battery = camera.metadata.extra.get("battery_percent")
+                    if battery is not None:
+                        camera.health.battery_level = float(battery) / 100.0
 
-                # Update overall status
-                camera.health.update_overall_status()
+                    # Update temperature if available
+                    temp = camera.metadata.extra.get("temperature_celsius")
+                    if temp is not None:
+                        camera.health.temperature_celsius = float(temp)
 
-                # Emit health update event
-                await self._event_bus.publish("camera_health_updated", {
-                    "camera_id": camera.id,
-                    "health": camera.health.to_dict(),
-                    "timestamp": datetime.now().isoformat(),
-                })
+                    # Emit health update event
+                    await self._event_bus.publish("camera_health_updated", {
+                        "camera_id": camera.id,
+                        "health": {
+                            "is_connected": camera.health.is_connected,
+                            "bitrate_kbps": camera.health.bitrate_kbps,
+                            "fps": camera.health.fps,
+                            "dropped_frames": camera.health.dropped_frames,
+                            "battery_level": camera.health.battery_level,
+                            "temperature_celsius": (
+                                camera.health.temperature_celsius
+                            ),
+                            "network_quality": camera.health.network_quality,
+                        },
+                        "timestamp": datetime.now().isoformat(),
+                    })
 
-                # Check for critical issues
-                if camera.health.overall_status == "critical":
-                    logger.warning(
-                        f"Camera {camera.id} in critical state: "
-                        f"{camera.health}"
-                    )
+                    # Check for critical issues
+                    if not camera.health.is_healthy():
+                        logger.warning(
+                            f"Camera {camera.id} in unhealthy state"
+                        )
 
-                    await self._event_bus.publish(
-                        "camera_health_critical",
-                        {
-                            "camera_id": camera.id,
-                            "health": camera.health.to_dict(),
-                            "timestamp": datetime.now().isoformat(),
-                        }
-                    )
+                        await self._event_bus.publish(
+                            "camera_health_critical",
+                            {
+                                "camera_id": camera.id,
+                                "is_connected": camera.health.is_connected,
+                                "fps": camera.health.fps,
+                                "timestamp": datetime.now().isoformat(),
+                            }
+                        )
 
                 # Wait before next check
                 await asyncio.sleep(

@@ -40,26 +40,26 @@ class DestinationHealth:
     timestamp: datetime
     is_connected: bool
     is_streaming: bool
-    
+
     # Stream metrics
     bitrate_kbps: float = 0.0
     fps: float = 0.0
     dropped_frames: int = 0
     total_frames_sent: int = 0
-    
+
     # Network metrics
     rtt_ms: Optional[float] = None  # Round-trip time
     packet_loss_percent: Optional[float] = None
     jitter_ms: Optional[float] = None
-    
+
     # Platform-specific
     viewer_count: Optional[int] = None
     concurrent_viewers: Optional[int] = None
-    
+
     # Error tracking
     last_error: Optional[str] = None
     error_count: int = 0
-    
+
     def is_healthy(self) -> bool:
         """Quick health check"""
         return (
@@ -75,9 +75,10 @@ class DestinationHealth:
 class StreamDestination:
     """
     Represents a streaming destination (platform or custom server).
-    
-    Destinations can be platforms like YouTube/Facebook or custom RTMP/SRT servers.
-    
+
+    Destinations can be platforms like YouTube/Facebook or
+    custom RTMP/SRT servers.
+
     Example:
         ```python
         # YouTube destination
@@ -89,7 +90,7 @@ class StreamDestination:
             stream_key="xxxx-xxxx-xxxx-xxxx",
             enabled=True,
         )
-        
+
         # Custom RTMP server
         custom = StreamDestination(
             id="backup-server",
@@ -101,60 +102,66 @@ class StreamDestination:
         )
         ```
     """
-    
+
     # Identity
     id: str
     name: str
     type: DestinationType
-    
+
     # Connection details
     url: str  # RTMP or SRT URL
     stream_key: str  # Stream key/password
-    
+
+    # Platform info
+    platform: str = ""  # Platform name for compatibility
+
     # Configuration
     enabled: bool = True
     is_backup: bool = False  # Is this a failover backup?
     priority: int = 0  # Higher priority = preferred destination
-    
+
     # Quality settings
     target_bitrate_kbps: int = 6000
     target_fps: int = 30
     keyframe_interval: int = 2  # seconds
-    
+
     # Platform-specific settings
     channel_id: Optional[str] = None  # For YouTube
     page_id: Optional[str] = None  # For Facebook
     extra: Dict[str, Any] = field(default_factory=dict)
-    
+
     # Runtime state
     status: DestinationStatus = DestinationStatus.IDLE  # For compatibility
     health: Optional[DestinationHealth] = None
     last_connected_at: Optional[datetime] = None
     last_disconnected_at: Optional[datetime] = None
-    
+
     # Failover state
     using_backup: bool = False  # Currently using backup path?
     failover_count: int = 0  # How many times we've failed over
-    
+
     def is_healthy(self) -> bool:
         """Check if destination is currently healthy"""
         return self.health is not None and self.health.is_healthy()
-    
+
     def is_connected(self) -> bool:
         """Check if destination is currently connected"""
         return self.health is not None and self.health.is_connected
-    
+
     def should_failover(self) -> bool:
         """Check if we should failover to backup"""
         if not self.health:
             return True
-        
+
         # Failover conditions:
         # - Not connected
         # - High packet loss
         # - Too many errors
         return (
             not self.health.is_connected
-            or (self.health.packet_loss_percent is not None and self.health.packet_loss_percent > 10.0)
+            or (
+                self.health.packet_loss_percent is not None
+                and self.health.packet_loss_percent > 10.0
+            )
             or self.health.error_count > 3
         )
