@@ -10,7 +10,7 @@ The Desktop Control Panel is a professional web-based interface for remotely con
 
 ## Architecture
 
-```
+```text
 ┌─────────────────┐         ┌──────────────────┐         ┌─────────────────┐
 │   Android App   │◄────────┤  WebSocket       │◄────────┤  Web Control    │
 │   (Camera)      │         │  Server          │         │  Panel (Flask)  │
@@ -24,6 +24,7 @@ The Desktop Control Panel is a professional web-based interface for remotely con
 ## Features
 
 ### Real-Time Camera Monitoring
+
 - ✅ Live connection status (online/offline)
 - ✅ Streaming state (IDLE, RUNNING, PAUSED, STOPPED)
 - ✅ Battery level and charging status
@@ -31,6 +32,7 @@ The Desktop Control Panel is a professional web-based interface for remotely con
 - ✅ Thermal state (OK, WARM, HOT, CRITICAL)
 
 ### Remote Control Commands
+
 - **START** - Begin streaming from camera
 - **STOP** - Stop streaming
 - **PAUSE** - Freeze current frame (keeps connection alive)
@@ -39,6 +41,7 @@ The Desktop Control Panel is a professional web-based interface for remotely con
 - **GET_STATUS** - Request current status update
 
 ### Multi-Camera Support
+
 - Control multiple cameras simultaneously
 - Independent state management for each camera
 - Color-coded status indicators
@@ -47,6 +50,7 @@ The Desktop Control Panel is a professional web-based interface for remotely con
 ## Installation
 
 ### Prerequisites
+
 - Python 3.10+ with virtual environment
 - Flask, Flask-SocketIO, websockets packages
 - Android app with remote control enabled
@@ -54,17 +58,20 @@ The Desktop Control Panel is a professional web-based interface for remotely con
 ### Setup
 
 1. **Navigate to remote control directory:**
+
    ```bash
    cd Desktop/Backend/remote_control
    ```
 
 2. **Install dependencies (if not already installed):**
+
    ```bash
    source ../../../.venv/bin/activate
    pip install flask flask-socketio flask-cors websockets
    ```
 
 3. **Verify files exist:**
+
    ```bash
    ls -la
    # Should show:
@@ -78,18 +85,21 @@ The Desktop Control Panel is a professional web-based interface for remotely con
 
 ### Quick Start
 
-**Option 1: Using the startup script (recommended)**
+#### Option 1: Using the startup script (recommended)
+
 ```bash
 ./start_control_panel.sh
 ```
 
 This automatically starts both:
+
 - WebSocket server (ports 9000-9001)
 - Web control panel (port 5000)
 
-**Option 2: Manual startup**
+#### Option 2: Manual startup
 
 Terminal 1 - Start WebSocket server:
+
 ```bash
 cd Desktop/Backend/remote_control
 source ../../../.venv/bin/activate
@@ -97,6 +107,7 @@ python3 websocket_server.py
 ```
 
 Terminal 2 - Start control panel:
+
 ```bash
 cd Desktop/Backend/remote_control
 source ../../../.venv/bin/activate
@@ -106,11 +117,13 @@ python3 control_panel.py
 ### Accessing the Control Panel
 
 1. **Open your browser:**
-   ```
+
+   ```text
    http://localhost:5000
    ```
 
 2. **You should see:**
+
    - Header: "Miktos StreamLab - Remote Camera Control Panel"
    - Status bar showing connected cameras count
    - Empty state if no cameras connected
@@ -127,6 +140,7 @@ python3 control_panel.py
 6. Tap "Connect"
 
 **Expected behavior:**
+
 - Phone logs: "✅ WebSocket connected"
 - Desktop logs: "📱 Camera registered: [device-id]"
 - Web UI: Camera card appears automatically
@@ -137,7 +151,7 @@ python3 control_panel.py
 
 Each camera displays:
 
-```
+```text
 ┌────────────────────────────────────┐
 │ 📱 abc123...     [RUNNING]         │  ← Header
 ├────────────────────────────────────┤
@@ -152,6 +166,7 @@ Each camera displays:
 ### Status Bar
 
 Top of page shows:
+
 - **Connected Cameras** - Total online cameras
 - **Streaming** - Cameras currently in RUNNING state
 - **Paused** - Cameras in PAUSED state
@@ -159,12 +174,14 @@ Top of page shows:
 ### Visual Indicators
 
 **Card Border Colors:**
+
 - **Green pulse** - Streaming (RUNNING)
 - **Orange** - Paused
 - **Red** - Offline
 - **Gray** - Idle
 
 **State Badges:**
+
 - `IDLE` - Connected, not streaming
 - `RUNNING` - Actively streaming
 - `PAUSED` - Frozen frame, connection alive
@@ -174,6 +191,7 @@ Top of page shows:
 ## Testing Procedures
 
 ### Test 1: Basic Connection
+
 ```bash
 1. Start control panel: ./start_control_panel.sh
 2. Open browser: http://localhost:5000
@@ -185,6 +203,7 @@ Top of page shows:
 **Expected result:** ✅ Camera card appears within 2 seconds
 
 ### Test 2: START/STOP Commands
+
 ```bash
 1. Click "START" button
 2. Verify: Android starts streaming
@@ -198,6 +217,7 @@ Top of page shows:
 **Expected result:** ✅ Commands execute within 1 second
 
 ### Test 3: PAUSE/RESUME
+
 ```bash
 1. Start streaming
 2. Click "PAUSE"
@@ -212,6 +232,7 @@ Top of page shows:
 **Expected result:** ✅ No disconnect during pause
 
 ### Test 4: Studio Mode
+
 ```bash
 1. Click "🌙 Studio Mode"
 2. Verify: Phone screen goes black with red dot
@@ -223,6 +244,7 @@ Top of page shows:
 **Expected result:** ✅ Studio mode activates/exits cleanly
 
 ### Test 5: Multi-Camera
+
 ```bash
 1. Connect phone #1
 2. Verify: 1 camera card shown
@@ -241,12 +263,14 @@ Top of page shows:
 ### Problem: Camera doesn't appear in web UI
 
 **Check:**
+
 1. WebSocket server running? `ps aux | grep websocket_server`
 2. Android shows "connected"? Check app logs
 3. Correct IP address? Use Mac's local IP, not 127.0.0.1
 4. Firewall blocking? Check Mac firewall settings
 
 **Solution:**
+
 ```bash
 # Check Mac IP
 ifconfig | grep "inet "
@@ -260,11 +284,13 @@ curl http://localhost:5000/api/cameras
 ### Problem: Commands don't work
 
 **Check:**
+
 1. Camera shows "online" in web UI?
 2. Browser console errors? (F12 → Console)
 3. Desktop logs show command sent?
 
 **Solution:**
+
 ```bash
 # Check desktop logs
 # Look for: "📤 Command sent to [camera-id]: START"
@@ -279,11 +305,13 @@ pkill -f control_panel
 ### Problem: Status updates not appearing
 
 **Check:**
+
 1. Android sending status? Check app logs
 2. SocketIO connected? Check browser console
 3. Camera ID matching?
 
 **Solution:**
+
 ```bash
 # Click "Refresh" button on camera card
 # This requests immediate status update
@@ -295,10 +323,12 @@ pkill -f control_panel
 ### Problem: Web UI won't load
 
 **Check:**
+
 1. Flask server running on port 5000?
 2. Port already in use?
 
 **Solution:**
+
 ```bash
 # Check what's using port 5000
 lsof -i :5000
@@ -315,6 +345,7 @@ kill -9 [PID]
 ### Custom Server Configuration
 
 Edit `control_panel.py`:
+
 ```python
 # Change ports
 app.run(host='0.0.0.0', port=8080)  # Web UI port
@@ -337,11 +368,13 @@ To access from another device on your network:
 ### Logging
 
 Control panel logs to console. To save:
+
 ```bash
 ./start_control_panel.sh 2>&1 | tee control_panel.log
 ```
 
 View real-time:
+
 ```bash
 tail -f control_panel.log
 ```
@@ -350,7 +383,8 @@ tail -f control_panel.log
 
 ### REST Endpoints
 
-**GET /api/cameras**
+#### GET /api/cameras
+
 ```json
 {
   "cameras": ["camera-id-1", "camera-id-2"],
@@ -367,7 +401,8 @@ tail -f control_panel.log
 }
 ```
 
-**POST /api/command**
+#### POST /api/command
+
 ```json
 Request:
 {
@@ -388,9 +423,11 @@ Response:
 ### SocketIO Events
 
 **Client → Server:**
+
 - `request_status` - Request status update for camera
 
 **Server → Client:**
+
 - `cameras` - Initial camera list
 - `camera_online` - New camera connected
 - `camera_offline` - Camera disconnected
@@ -399,11 +436,13 @@ Response:
 ## Performance
 
 **Expected Latency:**
+
 - Command execution: <500ms
 - Status update propagation: <1s
 - UI refresh: <100ms
 
 **Scalability:**
+
 - Tested with: 3 cameras
 - Theoretical max: 20+ cameras
 - Network bandwidth: ~10KB/s per camera (status updates)
@@ -411,11 +450,13 @@ Response:
 ## Security Notes
 
 **Current Implementation:**
+
 - ⚠️ No authentication
 - ⚠️ No encryption (WebSocket, not WSS)
 - ⚠️ Intended for local network only
 
 **Production Recommendations:**
+
 - Add JWT authentication
 - Use WSS (WebSocket Secure)
 - Implement rate limiting
@@ -431,11 +472,13 @@ After testing the control panel:
    - ✅ Multi-camera support verified
 
 2. **Week 3 Focus:**
+
    - Implement SessionLogger
    - Run 5-hour stress test
    - Production polish
 
 3. **Future Enhancements:**
+
    - Stream preview in web UI
    - Recording controls
    - Quality adjustment sliders
@@ -445,11 +488,13 @@ After testing the control panel:
 ## Support
 
 **Logs Location:**
+
 - WebSocket server: Console output
 - Flask server: Console output
 - Android app: Logcat (tag: RemoteControlClient)
 
 **Debug Mode:**
+
 ```bash
 # Enable verbose logging
 export FLASK_DEBUG=1
@@ -459,6 +504,7 @@ python3 control_panel.py
 ## Changelog
 
 ### Version 1.0.0 (November 18, 2025)
+
 - Initial release
 - Basic camera control (START/STOP/PAUSE/RESUME)
 - Studio Mode support
