@@ -97,6 +97,7 @@ class StreamHealth:
         """Get list of destinations with issues"""
         degraded = []
         for dest_id, health in self.destinations.items():
+            # type: ignore[attr-defined]
             if health.status not in ["healthy", "live"]:
                 degraded.append(dest_id)
         return degraded

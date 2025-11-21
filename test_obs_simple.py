@@ -49,8 +49,10 @@ async def test_obs_websocket(host="localhost", port=4455, password=None):
         # Get scenes
         print("🎞️  Available Scenes:")
         scenes_response = ws.get_scene_list()
-        # type: ignore[attr-defined]
-        current_scene = scenes_response.current_program_scene_name
+        # Extract with type: ignore for untyped library
+        # Get current scene name
+        current_scene = (  # type: ignore[attr-defined]
+            scenes_response.current_program_scene_name)
         scenes = scenes_response.scenes  # type: ignore[attr-defined]
 
         if not scenes:

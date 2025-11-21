@@ -6,6 +6,7 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
+# type: ignore[import-not-found]
 from models.scene import SceneLayout, TransitionType
 from api.models import SuccessResponse
 

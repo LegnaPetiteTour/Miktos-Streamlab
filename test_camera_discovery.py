@@ -4,7 +4,7 @@ Camera Discovery Test Script
 Tests mDNS discovery and camera registration
 """
 
-import requests
+import requests  # type: ignore[import-untyped]
 import time
 from datetime import datetime
 

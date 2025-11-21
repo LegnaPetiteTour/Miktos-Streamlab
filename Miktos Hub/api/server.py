@@ -20,8 +20,9 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
 
-from core import DeviceRegistry, SessionManager, StreamRouter, EventBus
-from services import (
+from core import (  # type: ignore[import-not-found]
+    DeviceRegistry, SessionManager, StreamRouter, EventBus)
+from services import (  # type: ignore[import-not-found]
     TranscriptionService,
     QualityService,
     EnhancementService,
@@ -29,8 +30,10 @@ from services import (
     RecordingService,
     ExportService,
 )
-from modules import MultiCameraManager, MultiPlatformStreaming, OBSOrchestrator
-from config import get_config
+# type: ignore[import-not-found]
+from modules import (  # type: ignore[import-not-found]
+    MultiCameraManager, MultiPlatformStreaming, OBSOrchestrator)
+from config import get_config  # type: ignore[import-not-found]
 
 logger = logging.getLogger(__name__)
 
@@ -270,14 +273,15 @@ def create_app() -> FastAPI:
         }
 
     # Import and include routers
-    from api.routes import (
+    from api.routes import (  # type: ignore[import-not-found]
         sessions_router,
         cameras_router,
         scenes_router,
         streaming_router,
         health_router
     )
-    from api import websocket
+    # type: ignore[import-not-found]
+    from api import websocket  # type: ignore[import-not-found]
 
     # Include route modules under /api prefix
     app.include_router(sessions_router, prefix="/api")

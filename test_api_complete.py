@@ -4,7 +4,7 @@ Complete API Test Suite
 Tests all major endpoints of Miktos Hub
 """
 
-import requests
+import requests  # type: ignore[import-untyped]
 import time
 from datetime import datetime
 
