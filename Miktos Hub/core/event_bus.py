@@ -86,7 +86,7 @@ class EventBus:
         ))
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Handlers organized by event type
         self._handlers: Dict[str, List[EventHandler]] = {}
 
