@@ -203,7 +203,6 @@ echo $ANDROID_HOME
 
 2. Connect phone via USB
 
-
 3. Install APK:
 
 ```bash
@@ -346,7 +345,6 @@ tail -f /tmp/miktos_server.log | grep -E "(ERROR|camera|scene|stream)"
 ```
 
 **Check metrics:**
-
 
 ```bash
 # Run in another terminal
