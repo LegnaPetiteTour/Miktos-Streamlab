@@ -186,7 +186,7 @@ class ExportService:
         ```
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         config = get_config()
 
         # Export directory
