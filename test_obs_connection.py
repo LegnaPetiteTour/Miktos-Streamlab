@@ -11,10 +11,10 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent / "Miktos Hub"))
 
-from config.settings import (  # noqa: E402
-    Settings)  # type: ignore[import-not-found]
-from adapters.obs_engine import (  # noqa: E402
-    OBSEngine)  # type: ignore[import-not-found]
+# type: ignore[import-not-found]
+from config.settings import Settings  # noqa: E402
+# type: ignore[import-not-found]
+from adapters.obs_engine import OBSEngine  # noqa: E402
 
 
 async def test_obs_connection():
