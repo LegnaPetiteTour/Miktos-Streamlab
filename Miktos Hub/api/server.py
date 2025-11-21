@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 class HubState:
     """Global Hub state container"""
 
-    def __init__(self):
+    def __init__(self) -> None:  # type: ignore[annotation-unchecked]
         # Core services
         self.device_registry: Optional[DeviceRegistry] = None
         self.session_manager: Optional[SessionManager] = None
