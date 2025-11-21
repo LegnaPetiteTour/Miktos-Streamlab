@@ -36,40 +36,40 @@ class TransitionType(Enum):
 class SourceConfig:
     """
     Configuration for a source within a scene.
-    
+
     A source can be a camera, screen share, image, video, etc.
     """
-    
+
     # Identity
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     type: str = "camera"  # "camera", "screen", "image", "video", "text"
-    
+
     # Reference to device/resource
     device_id: Optional[str] = None  # For cameras
     file_path: Optional[str] = None  # For images/videos
-    
+
     # Position and size (normalized 0.0 - 1.0)
     x: float = 0.0  # Left position
     y: float = 0.0  # Top position
     width: float = 1.0  # Width
     height: float = 1.0  # Height
-    
+
     # Display properties
     z_index: int = 0  # Layer order (higher = on top)
     opacity: float = 1.0  # 0.0 (transparent) to 1.0 (opaque)
     visible: bool = True
-    
+
     # Transform
     rotation: float = 0.0  # Degrees
     scale: float = 1.0
-    
+
     # Filters/effects
     filters: List[str] = field(default_factory=list)
-    
+
     # Audio
     include_audio: bool = True
     audio_volume: float = 1.0  # 0.0 (muted) to 1.0 (full volume)
-    
+
     # Extra configuration
     extra: Dict[str, Any] = field(default_factory=dict)
 
@@ -78,10 +78,10 @@ class SourceConfig:
 class Scene:
     """
     A scene defines how sources are composed into the final output.
-    
+
     Scenes can have multiple sources (cameras, images, text, etc.) positioned
     and layered to create the final composition.
-    
+
     Example:
         ```python
         # Single camera full screen
@@ -97,7 +97,7 @@ class Scene:
                 )
             ]
         )
-        
+
         # Picture-in-picture
         scene = Scene(
             name="Main + Speaker",
@@ -123,43 +123,43 @@ class Scene:
         )
         ```
     """
-    
+
     # Identity
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
     description: Optional[str] = None
-    
+
     # Layout
     layout: SceneLayout = SceneLayout.SINGLE_FULL
-    
+
     # Sources in this scene
     sources: List[SourceConfig] = field(default_factory=list)
-    
+
     # Transition settings
     default_transition: str = "fade"  # "cut", "fade", "slide", etc.
     transition_duration_ms: int = 300
-    
+
     # Audio mixing
     audio_sources: List[str] = field(default_factory=list)  # Source IDs to mix
-    
+
     # Extra configuration
     extra: Dict[str, Any] = field(default_factory=dict)
-    
+
     def add_source(self, source: SourceConfig):
         """Add a source to the scene"""
         self.sources.append(source)
-    
+
     def remove_source(self, source_id: str):
         """Remove a source from the scene"""
         self.sources = [s for s in self.sources if s.id != source_id]
-    
+
     def get_source(self, source_id: str) -> Optional[SourceConfig]:
         """Get a specific source by ID"""
         for source in self.sources:
             if source.id == source_id:
                 return source
         return None
-    
+
     def get_camera_sources(self) -> List[SourceConfig]:
         """Get all camera sources in this scene"""
         return [s for s in self.sources if s.type == "camera"]
