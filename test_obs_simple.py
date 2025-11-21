@@ -8,7 +8,7 @@ import asyncio
 import sys
 
 try:
-    import obsws_python as obs
+    import obsws_python as obs  # type: ignore[import-untyped]
     OBSWS_AVAILABLE = True
 except ImportError:
     OBSWS_AVAILABLE = False
@@ -40,15 +40,18 @@ async def test_obs_websocket(host="localhost", port=4455, password=None):
         # Get version info
         print("📋 OBS Version Information:")
         version = ws.get_version()
-        print(f"   OBS Version: {version.obs_version}")
-        print(f"   WebSocket Version: {version.obs_web_socket_version}")
+        obs_ver = version.obs_version  # type: ignore[attr-defined]
+        ws_ver = version.obs_web_socket_version  # type: ignore[attr-defined]
+        print(f"   OBS Version: {obs_ver}")
+        print(f"   WebSocket Version: {ws_ver}")
         print()
 
         # Get scenes
         print("🎞️  Available Scenes:")
         scenes_response = ws.get_scene_list()
+        # type: ignore[attr-defined]
         current_scene = scenes_response.current_program_scene_name
-        scenes = scenes_response.scenes
+        scenes = scenes_response.scenes  # type: ignore[attr-defined]
 
         if not scenes:
             print("   ⚠️  No scenes found!")
@@ -62,15 +65,15 @@ async def test_obs_websocket(host="localhost", port=4455, password=None):
         # Get video settings
         print("🎥 Video Settings:")
         video_settings = ws.get_video_settings()
-        print(
-            f"   Canvas: {video_settings.base_width}x"
-            f"{video_settings.base_height}")
-        print(
-            f"   Output: {video_settings.output_width}x"
-            f"{video_settings.output_height}")
-        print(
-            f"   FPS: {video_settings.fps_numerator}/"
-            f"{video_settings.fps_denominator}")
+        base_w = video_settings.base_width  # type: ignore[attr-defined]
+        base_h = video_settings.base_height  # type: ignore[attr-defined]
+        out_w = video_settings.output_width  # type: ignore[attr-defined]
+        out_h = video_settings.output_height  # type: ignore[attr-defined]
+        fps_n = video_settings.fps_numerator  # type: ignore[attr-defined]
+        fps_d = video_settings.fps_denominator  # type: ignore[attr-defined]
+        print(f"   Canvas: {base_w}x{base_h}")
+        print(f"   Output: {out_w}x{out_h}")
+        print(f"   FPS: {fps_n}/{fps_d}")
         print()
 
         # Test scene creation
@@ -90,7 +93,8 @@ async def test_obs_websocket(host="localhost", port=4455, password=None):
 
         # Verify it exists
         scenes_response = ws.get_scene_list()
-        scene_names = [s['sceneName'] for s in scenes_response.scenes]
+        scene_list = scenes_response.scenes  # type: ignore[attr-defined]
+        scene_names = [s['sceneName'] for s in scene_list]
         if test_scene_name in scene_names:
             print("   ✅ Scene verified in scene list")
 
@@ -103,8 +107,10 @@ async def test_obs_websocket(host="localhost", port=4455, password=None):
         print("📡 Streaming Status:")
         try:
             stream_status = ws.get_stream_status()
-            if stream_status.output_active:
-                duration = stream_status.output_duration / 1000
+            active = stream_status.output_active  # type: ignore[attr-defined]
+            if active:
+                d = stream_status.output_duration  # type: ignore[attr-defined]
+                duration = d / 1000
                 print(f"   🔴 LIVE - {duration:.1f}s")
             else:
                 print("   ⚫ Not streaming")
