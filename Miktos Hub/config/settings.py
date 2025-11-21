@@ -76,6 +76,13 @@ class StreamingConfig:
     failover_threshold_failures: int = 3
     failover_recovery_threshold: int = 5
 
+    # Health monitoring
+    health_check_interval_seconds: float = 5.0
+
+    # SRT backup settings
+    srt_backup_host: str = "localhost"
+    srt_backup_port: int = 9000
+
 
 @dataclass
 class ProcessingConfig:
