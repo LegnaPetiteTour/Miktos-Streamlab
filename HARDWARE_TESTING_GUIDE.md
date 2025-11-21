@@ -1,4 +1,5 @@
 # Hardware Integration Testing Guide
+
 **Date:** November 20, 2025  
 **Status:** Ready for Day 2 Testing
 
@@ -17,18 +18,21 @@
 ## 📋 Pre-Testing Checklist
 
 ### Server Status
+
 - [x] Miktos Hub server running on `http://127.0.0.1:8000`
 - [x] API docs accessible at `http://127.0.0.1:8000/docs`
 - [x] Health metrics endpoint responding
 - [x] Camera discovery active
 
 ### Software Requirements
+
 - [x] OBS Studio installed at `/Applications/OBS.app`
 - [ ] OBS WebSocket plugin installed (v5.x required)
 - [ ] Android app built and installed on phone
 - [ ] Phone and Mac on same WiFi network
 
 ### Network Setup
+
 - [ ] Mac WiFi IP address: `_____________`
 - [ ] Phone WiFi IP address: `_____________`
 - [ ] Firewall allows incoming connections on port 8888 (SRT)
@@ -41,15 +45,18 @@
 ### 1.1 Configure OBS WebSocket
 
 **If OBS WebSocket is not installed:**
+
 1. Open OBS Studio
 2. Go to `Tools` → `WebSocket Server Settings`
 3. If option doesn't exist, install obs-websocket:
+
    ```bash
    # Download from: https://github.com/obsproject/obs-websocket/releases
    # Install the .pkg file for macOS
    ```
 
 **Configure WebSocket:**
+
 1. Enable WebSocket Server
 2. Set Server Port: `4455` (default)
 3. Set Password: Leave blank or use simple password
@@ -63,6 +70,7 @@ open -a OBS
 ```
 
 **Initial Setup (if first time):**
+
 - Choose "Optimize for streaming"
 - Canvas resolution: 1920x1080
 - FPS: 30
@@ -116,7 +124,8 @@ EOF
 ```
 
 **Expected Output:**
-```
+
+```text
 🔌 Testing OBS connection...
 ✅ OBS Connected!
 📺 OBS Studio version: 30.x.x
@@ -185,6 +194,7 @@ echo $ANDROID_HOME
 ```
 
 **Install on Phone:**
+
 1. Enable Developer Mode on phone:
    - Go to Settings → About Phone
    - Tap "Build Number" 7 times
@@ -193,13 +203,16 @@ echo $ANDROID_HOME
 
 2. Connect phone via USB
 
+
 3. Install APK:
+
 ```bash
 adb devices  # Verify phone is connected
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 **OR use wireless installation:**
+
 1. Upload APK to cloud (Google Drive, Dropbox)
 2. Download on phone
 3. Install (may need to allow "Install from Unknown Sources")
@@ -207,6 +220,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ### 2.2 Configure Phone App
 
 **On the phone:**
+
 1. Open "Miktos StreamLab" app
 2. Go to Settings
 3. Enter Hub IP address: `192.168.x.x` (your Mac's IP)
@@ -216,6 +230,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 7. Save settings
 
 **Find your Mac's IP:**
+
 ```bash
 ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'
 ```
@@ -223,6 +238,7 @@ ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}'
 ### 2.3 Test Camera Discovery
 
 **Start discovery on Hub:**
+
 ```bash
 python << 'EOF'
 import requests
@@ -246,12 +262,14 @@ EOF
 ```
 
 **On the phone:**
+
 1. Launch Miktos StreamLab app
 2. Tap "Connect to Hub"
 3. Should see "Discovering..." then "Connected"
 4. Camera should start streaming
 
 **Verify on Hub:**
+
 ```bash
 # List discovered cameras
 curl http://127.0.0.1:8000/api/cameras
@@ -322,11 +340,14 @@ EOF
 ### 3.3 Monitor Stream Health
 
 **Watch server logs:**
+
 ```bash
 tail -f /tmp/miktos_server.log | grep -E "(ERROR|camera|scene|stream)"
 ```
 
 **Check metrics:**
+
+
 ```bash
 # Run in another terminal
 watch -n 2 'curl -s http://127.0.0.1:8000/api/health/metrics | python -m json.tool'
@@ -339,6 +360,7 @@ watch -n 2 'curl -s http://127.0.0.1:8000/api/health/metrics | python -m json.to
 ### Common Issues
 
 #### OBS Won't Connect
+
 ```bash
 # Check if OBS is running
 ps aux | grep OBS
@@ -351,6 +373,7 @@ lsof -i :4455
 ```
 
 #### Camera Not Discovered
+
 ```bash
 # Check mDNS is working
 dns-sd -B _miktos-camera._tcp
@@ -363,6 +386,7 @@ ping <phone-ip>
 ```
 
 #### Stream Quality Issues
+
 ```bash
 # Check network stats
 netstat -i
@@ -409,22 +433,26 @@ pip list | grep -E "obs|websocket|srt"
 ### Test Run: ___________
 
 **OBS Connection:**
+
 - Status: ⬜ Pass / ⬜ Fail
 - Notes: _________________________________
 
 **Camera Discovery:**
+
 - Cameras found: _____
 - Registration time: _____ seconds
 - Status: ⬜ Pass / ⬜ Fail
 - Notes: _________________________________
 
 **Scene Management:**
+
 - Scenes created: _____
 - Scene switches: _____
 - Status: ⬜ Pass / ⬜ Fail
 - Notes: _________________________________
 
 **Streaming Quality:**
+
 - Bitrate: _____ kbps
 - Frame rate: _____ fps
 - Dropped frames: _____ %
@@ -432,9 +460,10 @@ pip list | grep -E "obs|websocket|srt"
 - Status: ⬜ Pass / ⬜ Fail
 
 **Issues Found:**
-1. _________________________________
-2. _________________________________
-3. _________________________________
+
+1. Issue description here
+2. Issue description here
+3. Issue description here
 
 **Overall Result:** ⬜ Pass / ⬜ Needs Work
 
