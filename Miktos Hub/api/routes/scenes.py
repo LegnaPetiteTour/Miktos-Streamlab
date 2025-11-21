@@ -6,10 +6,9 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-# type: ignore[import-not-found]
-from models.scene import SceneLayout, TransitionType
-# type: ignore[import-not-found]
-from api.models import SuccessResponse
+from models.scene import (  # type: ignore[import-not-found]
+    SceneLayout, TransitionType)
+from api.models import SuccessResponse  # type: ignore[import-not-found]
 
 router = APIRouter(prefix="/scenes", tags=["scenes"])
 
