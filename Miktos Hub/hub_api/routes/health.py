@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
 
-from api.models import SuccessResponse
+from hub_api.models import SuccessResponse
 
 router = APIRouter(prefix="/health", tags=["health"])
 
@@ -78,7 +78,7 @@ class MetricsResponse(BaseModel):
 
 def get_session_manager():
     """Get session manager instance"""
-    from api.server import app_state
+    from hub_api.server import app_state
     if not app_state.session_manager:
         raise HTTPException(
             status_code=503,
@@ -88,7 +88,7 @@ def get_session_manager():
 
 def get_camera_manager():
     """Get camera manager instance"""
-    from api.server import app_state
+    from hub_api.server import app_state
     if not app_state.camera_manager:
         raise HTTPException(
             status_code=503,
@@ -98,7 +98,7 @@ def get_camera_manager():
 
 def get_streaming_module():
     """Get streaming module instance"""
-    from api.server import app_state
+    from hub_api.server import app_state
     if not app_state.streaming_module:
         raise HTTPException(
             status_code=503,
@@ -108,7 +108,7 @@ def get_streaming_module():
 
 def get_obs_orchestrator():
     """Get OBS orchestrator instance"""
-    from api.server import app_state
+    from hub_api.server import app_state
     if not app_state.obs_orchestrator:
         raise HTTPException(
             status_code=503,

@@ -9,7 +9,7 @@ from enum import Enum
 
 from models.destination import StreamDestination, Platform
 from models.session import SessionState
-from api.models import SuccessResponse, ErrorResponse
+from hub_api.models import SuccessResponse, ErrorResponse
 
 router = APIRouter(prefix="/streaming", tags=["streaming"])
 
@@ -98,7 +98,7 @@ class DestinationsListResponse(BaseModel):
 
 def get_streaming_module():
     """Get multi-platform streaming module instance"""
-    from api.server import app_state
+    from hub_api.server import app_state
     if not app_state.streaming_module:
         raise HTTPException(
             status_code=503,
@@ -108,7 +108,7 @@ def get_streaming_module():
 
 def get_session_manager():
     """Get session manager instance"""
-    from api.server import app_state
+    from hub_api.server import app_state
     if not app_state.session_manager:
         raise HTTPException(
             status_code=503,

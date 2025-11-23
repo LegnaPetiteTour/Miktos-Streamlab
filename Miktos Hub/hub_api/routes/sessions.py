@@ -7,7 +7,7 @@ Endpoints for creating, managing, and controlling streaming sessions.
 import logging
 from fastapi import APIRouter, HTTPException, Depends
 
-from api.models import (
+from hub_api.models import (
     SessionCreateRequest,
     SessionCreateResponse,
     SessionResponse,
@@ -17,7 +17,7 @@ from api.models import (
     SuccessResponse,
     SessionStateAPI,
 )
-from api.server import hub_state
+from hub_api.server import hub_state
 
 logger = logging.getLogger(__name__)
 

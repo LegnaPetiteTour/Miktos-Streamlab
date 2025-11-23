@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from models.scene import (  # type: ignore[import-not-found]
     SceneLayout, TransitionType)
-from api.models import SuccessResponse  # type: ignore[import-not-found]
+from hub_api.models import SuccessResponse  # type: ignore[import-not-found]
 
 router = APIRouter(prefix="/scenes", tags=["scenes"])
 
@@ -67,7 +67,7 @@ class ScenesListResponse(BaseModel):
 
 def get_obs_orchestrator():
     """Get OBS orchestrator instance"""
-    from api.server import app_state  # type: ignore[import-not-found]
+    from hub_api.server import app_state  # type: ignore[import-not-found]
     if not app_state.obs_orchestrator:
         raise HTTPException(
             status_code=503,
@@ -78,7 +78,7 @@ def get_obs_orchestrator():
 
 def get_session_manager():
     """Get session manager instance"""
-    from api.server import app_state
+    from hub_api.server import app_state
     if not app_state.session_manager:
         raise HTTPException(
             status_code=503,
@@ -89,7 +89,7 @@ def get_session_manager():
 
 def get_device_registry():
     """Get device registry instance"""
-    from api.server import app_state
+    from hub_api.server import app_state
     if not app_state.device_registry:
         raise HTTPException(
             status_code=503,

@@ -390,7 +390,7 @@ async def periodic_health_broadcast():
     while True:
         try:
             # Import here to avoid circular dependencies
-            from api.server import app_state
+            from hub_api.server import app_state
 
             if (
                 app_state.session_manager and

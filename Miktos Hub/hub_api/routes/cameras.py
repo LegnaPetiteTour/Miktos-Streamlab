@@ -8,7 +8,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 
-from api.models import (
+from hub_api.models import (
     CameraResponse,
     CameraListResponse,
     CameraHealthResponse,
@@ -20,7 +20,7 @@ from api.models import (
     DiscoveryStatusResponse,
     SuccessResponse,
 )
-from api.server import hub_state
+from hub_api.server import hub_state
 
 logger = logging.getLogger(__name__)
 

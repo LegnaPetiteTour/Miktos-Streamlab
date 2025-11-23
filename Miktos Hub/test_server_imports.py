@@ -17,7 +17,7 @@ try:
     print("   ✓ Core services imported")
 
     print("\n3. Testing API import...")
-    from api.server import create_app
+    from hub_api.server import create_app
     print("   ✓ API server module imported")
 
     print("\n4. Creating app...")

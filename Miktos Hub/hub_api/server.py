@@ -149,7 +149,7 @@ async def lifespan(app: FastAPI):
 
         # Setup WebSocket → EventBus integration
         logger.info("Setting up WebSocket integration...")
-        from api import websocket  # type: ignore[import-not-found]
+        from hub_api import websocket  # type: ignore[import-not-found]
         websocket.setup_eventbus_integration(hub_state.event_bus)
         logger.info("✓ WebSocket integration active")
 
@@ -279,7 +279,7 @@ def create_app() -> FastAPI:
         }
 
     # Import and include routers
-    from api.routes import (  # type: ignore[import-not-found]
+    from hub_api.routes import (  # type: ignore[import-not-found]
         sessions_router,
         cameras_router,
         scenes_router,
@@ -287,7 +287,7 @@ def create_app() -> FastAPI:
         health_router
     )
     # type: ignore[import-not-found]
-    from api import websocket  # type: ignore[import-not-found]
+    from hub_api import websocket  # type: ignore[import-not-found]
 
     # Include route modules under /api prefix
     app.include_router(

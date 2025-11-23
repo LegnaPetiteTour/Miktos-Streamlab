@@ -306,10 +306,10 @@ async def test_client():
     if 'api' in sys.modules:
         del sys.modules['api']
 
-    # Now import api.server (will get Hub's version)
-    import api.server
+    # Now import hub_api.server (will get Hub's version)
+    import hub_api.server
 
-    app = api.server.create_app()
+    app = hub_api.server.create_app()
 
     # Use ASGITransport with the app
     transport = ASGITransport(app=app)
