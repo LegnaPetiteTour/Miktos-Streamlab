@@ -111,8 +111,12 @@ class OBSOrchestrator:
         
         config = get_config()
         
-        # OBS engine adapter
-        self._obs = OBSEngineAdapter()
+        # OBS engine adapter with config settings
+        self._obs = OBSEngineAdapter(
+            host=config.obs.host,
+            port=config.obs.port,
+            password=config.obs.password
+        )
         
         # Scene tracking
         self._scenes: Dict[str, Scene] = {}

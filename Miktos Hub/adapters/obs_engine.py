@@ -8,16 +8,14 @@ and the specific OBS WebSocket implementation.
 
 from typing import List, Dict, Any, Optional
 import logging
-import sys
-import os
 
-# Add existing backend to path
-BACKEND_PATH = '/Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend'
-if BACKEND_PATH not in sys.path:
-    sys.path.insert(0, BACKEND_PATH)
-
+# Use the new WebSocket v5 controller
 try:
-    from obs_controller import OBSController, OBSStatus, StreamingStatus
+    from adapters.obs_controller_v5 import (
+        OBSController,
+        OBSStatus,
+        StreamingStatus
+    )
     OBS_AVAILABLE = True
 except ImportError:
     OBSController = None
@@ -123,7 +121,7 @@ class OBSEngineAdapter:
     
     def is_connected(self) -> bool:
         """Check if connected to OBS"""
-        return self._connected and self._controller.status == OBSStatus.CONNECTED
+        return self._connected and self._controller.is_connected()
     
     async def list_scenes(self) -> List[Scene]:
         """
@@ -137,7 +135,7 @@ class OBSEngineAdapter:
             return []
         
         try:
-            obs_scenes = await self._controller.list_scenes()
+            obs_scenes = await self._controller.get_scenes()
             
             # Convert OBS scenes to Hub Scene objects
             scenes = []
