@@ -25,7 +25,17 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'miktos-streamlab-secret-2025'
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+
+# Configure Socket.IO with longer timeouts to prevent disconnections
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode='threading',
+    ping_timeout=60,  # Wait 60s for ping response before disconnecting
+    ping_interval=25,  # Send ping every 25s to keep connection alive
+    engineio_logger=False,  # Reduce debug noise
+    logger=False
+)
 
 # Global state
 camera_statuses: Dict[str, dict] = {}

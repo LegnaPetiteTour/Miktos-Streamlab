@@ -147,6 +147,12 @@ async def lifespan(app: FastAPI):
         await hub_state.camera_manager.start_discovery()
         logger.info("✓ Camera discovery active")
 
+        # Setup WebSocket → EventBus integration
+        logger.info("Setting up WebSocket integration...")
+        from api import websocket  # type: ignore[import-not-found]
+        websocket.setup_eventbus_integration(hub_state.event_bus)
+        logger.info("✓ WebSocket integration active")
+
         hub_state.initialized = True
 
         logger.info("=" * 60)
@@ -284,11 +290,19 @@ def create_app() -> FastAPI:
     from api import websocket  # type: ignore[import-not-found]
 
     # Include route modules under /api prefix
-    app.include_router(sessions_router, prefix="/api")
-    app.include_router(cameras_router, prefix="/api")
-    app.include_router(scenes_router, prefix="/api")
-    app.include_router(streaming_router, prefix="/api")
-    app.include_router(health_router, prefix="/api")
+    app.include_router(
+        sessions_router, prefix="/api/sessions", tags=["sessions"]
+    )
+    app.include_router(
+        cameras_router, prefix="/api/cameras", tags=["cameras"]
+    )
+    app.include_router(
+        scenes_router, prefix="/api/scenes", tags=["scenes"]
+    )
+    app.include_router(
+        streaming_router, prefix="/api/streaming", tags=["streaming"]
+    )
+    app.include_router(health_router, prefix="/api", tags=["health"])
 
     # Include WebSocket handler
     app.include_router(websocket.router)

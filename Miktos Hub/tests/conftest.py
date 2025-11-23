@@ -25,10 +25,6 @@ from services import (  # noqa: E402  # type: ignore[import-not-found]
     RecordingService,
     ExportService
 )
-# Temporarily disabled due to model mismatches
-# Will fix after core tests pass
-# from modules import MultiCameraManager, MultiPlatformStreaming,
-# OBSOrchestrator
 
 
 # ============================================================================
@@ -286,12 +282,42 @@ def mock_obs_client():
 @pytest.fixture
 async def test_client():
     """Provide an HTTP test client for API testing"""
-    from httpx import AsyncClient
-    from api.server import create_app
+    from httpx import AsyncClient, ASGITransport
+    import sys
 
-    app = create_app()
+    # CRITICAL FIX: Remove Backend from sys.path to avoid import conflicts
+    # The adapters add Backend to sys.path, but we need Hub to take precedence
+    backend_paths = [p for p in sys.path if 'Backend' in p]
+    for backend_path in backend_paths:
+        sys.path.remove(backend_path)
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    # Ensure Hub is first in path
+    hub_root = Path(__file__).parent.parent
+    if str(hub_root) in sys.path:
+        sys.path.remove(str(hub_root))
+    sys.path.insert(0, str(hub_root))
+
+    # Re-add Backend paths at the end (so adapters still work)
+    sys.path.extend(backend_paths)
+
+    # Unload any previously imported api.server module
+    if 'api.server' in sys.modules:
+        del sys.modules['api.server']
+    if 'api' in sys.modules:
+        del sys.modules['api']
+
+    # Now import api.server (will get Hub's version)
+    import api.server
+
+    app = api.server.create_app()
+
+    # Use ASGITransport with the app
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://test"
+    ) as client:
         yield client
 
 
@@ -315,7 +341,7 @@ def cleanup_after_test(device_registry, session_manager):
 
     # Clear all registered devices
     for device_id in list(device_registry._devices.keys()):
-        device_registry.remove(device_id)
+        device_registry.unregister(device_id)
 
     # Clear all sessions
     for session_id in list(session_manager._sessions.keys()):

@@ -36,6 +36,14 @@ def get_session_manager():
     return hub_state.session_manager
 
 
+def get_event_bus():
+    """Get event bus from hub state"""
+    if not hub_state.event_bus:
+        raise HTTPException(status_code=503,
+                            detail="Event bus not initialized")
+    return hub_state.event_bus
+
+
 def get_streaming_manager():
     """Get streaming manager from hub state"""
     if not hub_state.streaming_manager:
@@ -60,6 +68,7 @@ def get_recording_service():
 async def create_session(
     request: SessionCreateRequest,
     session_manager=Depends(get_session_manager),
+    event_bus=Depends(get_event_bus),
 ):
     """
     Create a new streaming session.
@@ -82,6 +91,18 @@ async def create_session(
         session = session_manager.create_session(config)
 
         logger.info(f"Session created: {session.id}")
+
+        # Publish event to EventBus
+        await event_bus.publish(
+            event_type="session.created",
+            data={
+                "session_id": session.id,
+                "name": session.name,
+                "description": session.description or "",
+                "state": session.state.value,
+            },
+            source="api.sessions"
+        )
 
         return SessionCreateResponse(
             session_id=session.id,

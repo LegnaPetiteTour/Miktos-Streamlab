@@ -1,12 +1,10 @@
 """
-Miktos Hub Adapters
+Adapters Package
 
-Engine adapters for OBS, Epiphan, vMix, etc.
+Provides adapters to bridge between Hub models and Backend models.
 """
 
-from adapters.obs_engine import OBSEngineAdapter, EngineHealth
+from .model_adapters import ModelAdapter
+from .obs_engine import OBSEngineAdapter
 
-__all__ = [
-    "OBSEngineAdapter",
-    "EngineHealth",
-]
+__all__ = ['ModelAdapter', 'OBSEngineAdapter']

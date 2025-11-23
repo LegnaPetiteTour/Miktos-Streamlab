@@ -399,17 +399,46 @@
             showNotification(`Camera ${data.camera_id.substring(0, 8)} disconnected`, 'error');
         });
         
+        // Debounce timers for each camera to prevent UI flickering
+        const stateDebounceTimers = {};
+        const DEBOUNCE_DELAY = 2000; // 2 seconds to stabilize state
+        
         // Status update
         socket.on('status_update', (data) => {
             console.log('📊 Status update:', data);
+            
             // Merge status update instead of replacing entire object
             if (!cameras[data.camera_id]) {
                 cameras[data.camera_id] = {};
                 Object.assign(cameras[data.camera_id], data.status);
                 renderCameras(); // New camera - full render
             } else {
+                // Get previous stable state
+                const prevStableState = cameras[data.camera_id].stableState || cameras[data.camera_id].state;
+                const newState = data.status.state;
+                
+                // Always update the raw data
                 Object.assign(cameras[data.camera_id], data.status);
-                updateCameraCard(data.camera_id); // Existing camera - update only
+                
+                // If state changed, debounce it
+                if (newState && newState !== prevStableState) {
+                    // Clear existing timer for this camera
+                    if (stateDebounceTimers[data.camera_id]) {
+                        clearTimeout(stateDebounceTimers[data.camera_id]);
+                    }
+                    
+                    // Set new timer to update stable state after delay
+                    stateDebounceTimers[data.camera_id] = setTimeout(() => {
+                        cameras[data.camera_id].stableState = newState;
+                        updateCameraCard(data.camera_id);
+                    }, DEBOUNCE_DELAY);
+                    
+                    // Don't update UI yet - wait for stable state
+                    console.log(`⏳ State change detected for ${data.camera_id}: ${prevStableState} → ${newState} (debouncing...)`);
+                } else {
+                    // No state change, just update other fields (battery, network, etc.)
+                    updateCameraCard(data.camera_id);
+                }
             }
         });
         
@@ -424,7 +453,8 @@
                 return;
             }
             
-            const state = status.state || 'OFFLINE';
+            // Use stable state if available, otherwise use current state
+            const state = status.stableState || status.state || 'OFFLINE';
             const online = status.online !== false;
             const stateClass = state.toLowerCase().replace('_', '-');
             
@@ -524,7 +554,8 @@
                     console.warn('⚠️ Skipping invalid camera:', id);
                     return;
                 }
-                const state = status.state || 'OFFLINE';
+                // Use stable state if available, otherwise use current state
+                const state = status.stableState || status.state || 'OFFLINE';
                 const online = status.online !== false;
                 
                 // Cache last known streaming state to reduce flickering
