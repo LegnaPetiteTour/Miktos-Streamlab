@@ -52,7 +52,7 @@ def main():
     # Run server
     try:
         uvicorn.run(
-            "api.server:create_app",
+            "hub_api.server:create_app",
             host=args.host,
             port=args.port,
             reload=args.reload,
