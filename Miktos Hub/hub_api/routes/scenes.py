@@ -273,6 +273,7 @@ async def switch_scene(
         )
 
         return SuccessResponse(
+            success=True,
             message=f"Switched to scene {request.scene_id}",
             data={"scene_id": request.scene_id}
         )
@@ -319,6 +320,7 @@ async def delete_scene(
         await obs.delete_scene(scene_id)  # type: ignore[attr-defined]
 
         return SuccessResponse(
+            success=True,
             message=f"Scene {scene_id} deleted successfully"
         )
 

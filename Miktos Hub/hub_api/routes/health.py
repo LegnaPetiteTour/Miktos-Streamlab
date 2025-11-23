@@ -79,41 +79,25 @@ class MetricsResponse(BaseModel):
 def get_session_manager():
     """Get session manager instance"""
     from hub_api.server import app_state
-    if not app_state.session_manager:
-        raise HTTPException(
-            status_code=503,
-            detail="Session manager not initialized"
-        )
+    # Return None if not initialized instead of raising exception
     return app_state.session_manager
 
 def get_camera_manager():
     """Get camera manager instance"""
     from hub_api.server import app_state
-    if not app_state.camera_manager:
-        raise HTTPException(
-            status_code=503,
-            detail="Camera manager not initialized"
-        )
+    # Return None if not initialized instead of raising exception
     return app_state.camera_manager
 
 def get_streaming_module():
     """Get streaming module instance"""
     from hub_api.server import app_state
-    if not app_state.streaming_module:
-        raise HTTPException(
-            status_code=503,
-            detail="Streaming module not initialized"
-        )
+    # Return None if not initialized instead of raising exception
     return app_state.streaming_module
 
 def get_obs_orchestrator():
     """Get OBS orchestrator instance"""
     from hub_api.server import app_state
-    if not app_state.obs_orchestrator:
-        raise HTTPException(
-            status_code=503,
-            detail="OBS orchestrator not initialized"
-        )
+    # Return None if not initialized instead of raising exception
     return app_state.obs_orchestrator
 
 # ============================================================================
@@ -135,112 +119,144 @@ async def get_system_health(
     """Get complete system health"""
     try:
         import psutil
-        from datetime import datetime, timedelta
+        from datetime import datetime
         
         # Collect component health
         components = []
         overall_status = HealthStatus.HEALTHY
         
-        # Check OBS connection
-        try:
-            obs_connected = await obs.is_connected()
-            obs_status = HealthStatus.HEALTHY if obs_connected else HealthStatus.FAILED
+        # Check if managers are initialized
+        if not all([session_mgr, camera_mgr, streaming, obs]):
+            overall_status = HealthStatus.DEGRADED
             components.append(ComponentHealth(
-                name="OBS Engine",
-                status=obs_status,
-                message="Connected" if obs_connected else "Disconnected",
+                name="System Initialization",
+                status=HealthStatus.DEGRADED,
+                message="Some managers not initialized",
                 last_check=datetime.utcnow()
             ))
-            if obs_status == HealthStatus.FAILED:
+        
+        # Check OBS connection (if initialized)
+        if obs:
+            try:
+                obs_connected = await obs.is_connected()
+                obs_status = (
+                    HealthStatus.HEALTHY if obs_connected
+                    else HealthStatus.FAILED
+                )
+                components.append(ComponentHealth(
+                    name="OBS Engine",
+                    status=obs_status,
+                    message=(
+                        "Connected" if obs_connected else "Disconnected"
+                    ),
+                    last_check=datetime.utcnow()
+                ))
+                if obs_status == HealthStatus.FAILED:
+                    overall_status = HealthStatus.DEGRADED
+            except Exception as e:
+                components.append(ComponentHealth(
+                    name="OBS Engine",
+                    status=HealthStatus.FAILED,
+                    message=str(e),
+                    last_check=datetime.utcnow()
+                ))
                 overall_status = HealthStatus.DEGRADED
-        except Exception as e:
-            components.append(ComponentHealth(
-                name="OBS Engine",
-                status=HealthStatus.FAILED,
-                message=str(e),
-                last_check=datetime.utcnow()
-            ))
-            overall_status = HealthStatus.DEGRADED
         
-        # Check camera manager
-        try:
-            discovered_cameras = camera_mgr.get_discovered_cameras()
-            camera_status = HealthStatus.HEALTHY
-            components.append(ComponentHealth(
-                name="Camera Manager",
-                status=camera_status,
-                message=f"{len(discovered_cameras)} cameras discovered",
-                metrics={"camera_count": len(discovered_cameras)},
-                last_check=datetime.utcnow()
-            ))
-        except Exception as e:
-            components.append(ComponentHealth(
-                name="Camera Manager",
-                status=HealthStatus.FAILED,
-                message=str(e),
-                last_check=datetime.utcnow()
-            ))
-            overall_status = HealthStatus.DEGRADED
-        
-        # Collect camera health summaries
+        # Check camera manager (if initialized)
         camera_summaries = []
         healthy_cameras = 0
         
-        for camera in camera_mgr.get_discovered_cameras():
+        if camera_mgr:
             try:
-                health = await camera_mgr.get_camera_health(camera.id)
-                
-                # Determine camera status
-                cam_status = HealthStatus.HEALTHY
-                if health.network_quality in ["poor", "critical"]:
-                    cam_status = HealthStatus.DEGRADED
-                if health.battery_percent and health.battery_percent < 20:
-                    cam_status = HealthStatus.DEGRADED
-                if health.temperature_celsius and health.temperature_celsius > 45:
-                    cam_status = HealthStatus.DEGRADED
-                
-                if cam_status == HealthStatus.HEALTHY:
-                    healthy_cameras += 1
-                
-                camera_summaries.append(CameraHealthSummary(
-                    camera_id=camera.id,
-                    label=camera.label,
-                    status=cam_status,
-                    battery_percent=health.battery_percent,
-                    temperature_celsius=health.temperature_celsius,
-                    network_quality=health.network_quality,
-                    bitrate_kbps=health.bitrate_kbps,
-                    fps=health.fps,
-                    last_seen=health.last_seen
+                discovered_cameras = camera_mgr.get_discovered_cameras()
+                camera_status = HealthStatus.HEALTHY
+                components.append(ComponentHealth(
+                    name="Camera Manager",
+                    status=camera_status,
+                    message=(
+                        f"{len(discovered_cameras)} cameras discovered"
+                    ),
+                    metrics={"camera_count": len(discovered_cameras)},
+                    last_check=datetime.utcnow()
                 ))
-            except Exception:
-                camera_summaries.append(CameraHealthSummary(
-                    camera_id=camera.id,
-                    label=camera.label,
-                    status=HealthStatus.UNKNOWN,
-                    battery_percent=None,
-                    temperature_celsius=None,
-                    network_quality=None,
-                    bitrate_kbps=None,
-                    fps=None,
-                    last_seen=datetime.utcnow()
+            except Exception as e:
+                components.append(ComponentHealth(
+                    name="Camera Manager",
+                    status=HealthStatus.FAILED,
+                    message=str(e),
+                    last_check=datetime.utcnow()
                 ))
+                overall_status = HealthStatus.DEGRADED
         
-        # Check streaming health for active sessions
-        active_sessions = session_mgr.list_sessions()
+            # Collect camera health summaries
+            for camera in camera_mgr.get_discovered_cameras():
+                try:
+                    health = await camera_mgr.get_camera_health(
+                        camera.id
+                    )
+                    
+                    # Determine camera status
+                    cam_status = HealthStatus.HEALTHY
+                    if health.network_quality in ["poor", "critical"]:
+                        cam_status = HealthStatus.DEGRADED
+                    if (health.battery_percent and
+                            health.battery_percent < 20):
+                        cam_status = HealthStatus.DEGRADED
+                    if (health.temperature_celsius and
+                            health.temperature_celsius > 45):
+                        cam_status = HealthStatus.DEGRADED
+                    
+                    if cam_status == HealthStatus.HEALTHY:
+                        healthy_cameras += 1
+                    
+                    camera_summaries.append(CameraHealthSummary(
+                        camera_id=camera.id,
+                        label=camera.label,
+                        status=cam_status,
+                        battery_percent=health.battery_percent,
+                        temperature_celsius=health.temperature_celsius,
+                        network_quality=health.network_quality,
+                        bitrate_kbps=health.bitrate_kbps,
+                        fps=health.fps,
+                        last_seen=health.last_seen
+                    ))
+                except Exception:
+                    camera_summaries.append(CameraHealthSummary(
+                        camera_id=camera.id,
+                        label=camera.label,
+                        status=HealthStatus.UNKNOWN,
+                        battery_percent=None,
+                        temperature_celsius=None,
+                        network_quality=None,
+                        bitrate_kbps=None,
+                        fps=None,
+                        last_seen=datetime.utcnow()
+                    ))
+        
+        # Check streaming health (if initialized)
+        active_sessions = []
         streaming_destinations = 0
         healthy_destinations = 0
         
-        for session in active_sessions:
-            try:
-                stream_health = await streaming.get_health(session.id)
-                streaming_destinations += stream_health.total_destinations
-                healthy_destinations += stream_health.healthy_destinations
-                
-                if stream_health.degraded_destinations > 0:
-                    overall_status = HealthStatus.DEGRADED
-            except Exception:
-                pass
+        if session_mgr and streaming:
+            active_sessions = session_mgr.list_sessions()
+            
+            for session in active_sessions:
+                try:
+                    stream_health = await streaming.get_health(
+                        session.id
+                    )
+                    streaming_destinations += (
+                        stream_health.total_destinations
+                    )
+                    healthy_destinations += (
+                        stream_health.healthy_destinations
+                    )
+                    
+                    if stream_health.degraded_destinations > 0:
+                        overall_status = HealthStatus.DEGRADED
+                except Exception:
+                    pass
         
         # Calculate uptime
         uptime = psutil.boot_time()
@@ -264,6 +280,7 @@ async def get_system_health(
             status_code=500,
             detail=f"Failed to get system health: {str(e)}"
         )
+
 
 @router.get(
     "/metrics",
@@ -301,18 +318,25 @@ async def get_system_metrics(
         network_rx_mbps = net_io.bytes_recv / (1024 * 1024)
         network_tx_mbps = net_io.bytes_sent / (1024 * 1024)
         
-        # Application metrics
-        active_sessions = len(session_mgr.list_sessions())
+        # Application metrics (only if managers initialized)
+        active_sessions = 0
         active_streams = 0
-        total_cameras = len(camera_mgr.get_discovered_cameras())
+        total_cameras = 0
         
-        for session in session_mgr.list_sessions():
-            try:
-                health = await streaming.get_health(session.id)
-                if health.is_streaming:
-                    active_streams += 1
-            except Exception:
-                pass
+        if session_mgr:
+            active_sessions = len(session_mgr.list_sessions())
+        
+        if camera_mgr:
+            total_cameras = len(camera_mgr.get_discovered_cameras())
+        
+        if session_mgr and streaming:
+            for session in session_mgr.list_sessions():
+                try:
+                    health = await streaming.get_health(session.id)
+                    if health.is_streaming:
+                        active_streams += 1
+                except Exception:
+                    pass
         
         return MetricsResponse(
             cpu_usage_percent=cpu_percent,
@@ -345,6 +369,7 @@ async def get_system_metrics(
 async def ping():
     """Simple health ping"""
     return SuccessResponse(
+        success=True,
         message="pong",
         data={"timestamp": datetime.utcnow().isoformat()}
     )

@@ -200,6 +200,7 @@ async def configure_destinations(
         )
         
         return SuccessResponse(
+            success=True,
             message=f"Configured {len(destinations)} streaming destinations",
             data={
                 "session_id": request.session_id,
@@ -262,6 +263,7 @@ async def start_streaming(
         )
         
         return SuccessResponse(
+            success=True,
             message=f"Streaming started for session {request.session_id}",
             data={
                 "session_id": request.session_id,
@@ -313,6 +315,7 @@ async def stop_streaming(
         )
         
         return SuccessResponse(
+            success=True,
             message=f"Streaming stopped for session {request.session_id}",
             data={
                 "session_id": request.session_id
@@ -454,6 +457,7 @@ async def force_failover(
         await streaming.force_failover(session_id, destination_id)
         
         return SuccessResponse(
+            success=True,
             message=f"Forced failover for destination {destination_id}",
             data={
                 "destination_id": destination_id,
@@ -485,6 +489,7 @@ async def recover_from_failover(
         await streaming.recover_from_failover(session_id, destination_id)
         
         return SuccessResponse(
+            success=True,
             message=f"Recovered destination {destination_id} to primary stream",
             data={
                 "destination_id": destination_id,
