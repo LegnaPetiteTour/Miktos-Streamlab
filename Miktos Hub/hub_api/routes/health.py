@@ -16,6 +16,7 @@ router = APIRouter(prefix="/health", tags=["health"])
 # RESPONSE MODELS
 # ============================================================================
 
+
 class HealthStatus(str, Enum):
     """Health status levels"""
     HEALTHY = "healthy"
@@ -23,13 +24,19 @@ class HealthStatus(str, Enum):
     FAILED = "failed"
     UNKNOWN = "unknown"
 
+
 class ComponentHealth(BaseModel):
     """Health status of a system component"""
     name: str = Field(..., description="Component name")
-    status: HealthStatus = Field(..., description="Health status")
+    status: HealthStatus = Field(
+        ..., description="Health status"
+    )
     message: Optional[str] = Field(None, description="Status message")
-    metrics: Dict[str, Any] = Field(default={}, description="Component metrics")
+    metrics: Dict[str, Any] = Field(
+        default={}, description="Component metrics"
+    )
     last_check: datetime = Field(..., description="Last health check time")
+
 
 class CameraHealthSummary(BaseModel):
     """Camera health summary"""
@@ -43,6 +50,7 @@ class CameraHealthSummary(BaseModel):
     fps: Optional[float]
     last_seen: datetime
 
+
 class SystemHealthResponse(BaseModel):
     """Complete system health status"""
     overall_status: HealthStatus
@@ -55,6 +63,7 @@ class SystemHealthResponse(BaseModel):
     streaming_destinations: int
     healthy_destinations: int
     uptime_seconds: float
+
 
 class MetricsResponse(BaseModel):
     """System metrics"""
@@ -76,11 +85,13 @@ class MetricsResponse(BaseModel):
 # DEPENDENCY INJECTION
 # ============================================================================
 
+
 def get_session_manager():
     """Get session manager instance"""
     from hub_api.server import app_state
     # Return None if not initialized instead of raising exception
     return app_state.session_manager
+
 
 def get_camera_manager():
     """Get camera manager instance"""
@@ -88,11 +99,13 @@ def get_camera_manager():
     # Return None if not initialized instead of raising exception
     return app_state.camera_manager
 
+
 def get_streaming_module():
     """Get streaming module instance"""
     from hub_api.server import app_state
     # Return None if not initialized instead of raising exception
     return app_state.streaming_module
+
 
 def get_obs_orchestrator():
     """Get OBS orchestrator instance"""
@@ -103,6 +116,7 @@ def get_obs_orchestrator():
 # ============================================================================
 # HEALTH CHECK ROUTES
 # ============================================================================
+
 
 @router.get(
     "",
@@ -118,13 +132,13 @@ async def get_system_health(
 ):
     """Get complete system health"""
     try:
-        import psutil
+        import psutil  # type: ignore[import-untyped]
         from datetime import datetime
-        
+
         # Collect component health
         components = []
         overall_status = HealthStatus.HEALTHY
-        
+
         # Check if managers are initialized
         if not all([session_mgr, camera_mgr, streaming, obs]):
             overall_status = HealthStatus.DEGRADED
@@ -134,7 +148,7 @@ async def get_system_health(
                 message="Some managers not initialized",
                 last_check=datetime.utcnow()
             ))
-        
+
         # Check OBS connection (if initialized)
         if obs:
             try:
@@ -161,11 +175,11 @@ async def get_system_health(
                     last_check=datetime.utcnow()
                 ))
                 overall_status = HealthStatus.DEGRADED
-        
+
         # Check camera manager (if initialized)
         camera_summaries = []
         healthy_cameras = 0
-        
+
         if camera_mgr:
             try:
                 discovered_cameras = camera_mgr.get_discovered_cameras()
@@ -187,14 +201,14 @@ async def get_system_health(
                     last_check=datetime.utcnow()
                 ))
                 overall_status = HealthStatus.DEGRADED
-        
+
             # Collect camera health summaries
             for camera in camera_mgr.get_discovered_cameras():
                 try:
                     health = await camera_mgr.get_camera_health(
                         camera.id
                     )
-                    
+
                     # Determine camera status
                     cam_status = HealthStatus.HEALTHY
                     if health.network_quality in ["poor", "critical"]:
@@ -205,10 +219,10 @@ async def get_system_health(
                     if (health.temperature_celsius and
                             health.temperature_celsius > 45):
                         cam_status = HealthStatus.DEGRADED
-                    
+
                     if cam_status == HealthStatus.HEALTHY:
                         healthy_cameras += 1
-                    
+
                     camera_summaries.append(CameraHealthSummary(
                         camera_id=camera.id,
                         label=camera.label,
@@ -232,15 +246,15 @@ async def get_system_health(
                         fps=None,
                         last_seen=datetime.utcnow()
                     ))
-        
+
         # Check streaming health (if initialized)
         active_sessions = []
         streaming_destinations = 0
         healthy_destinations = 0
-        
+
         if session_mgr and streaming:
             active_sessions = session_mgr.list_sessions()
-            
+
             for session in active_sessions:
                 try:
                     stream_health = await streaming.get_health(
@@ -252,16 +266,16 @@ async def get_system_health(
                     healthy_destinations += (
                         stream_health.healthy_destinations
                     )
-                    
+
                     if stream_health.degraded_destinations > 0:
                         overall_status = HealthStatus.DEGRADED
                 except Exception:
                     pass
-        
+
         # Calculate uptime
         uptime = psutil.boot_time()
         uptime_seconds = (datetime.utcnow().timestamp() - uptime)
-        
+
         return SystemHealthResponse(
             overall_status=overall_status,
             timestamp=datetime.utcnow(),
@@ -274,7 +288,7 @@ async def get_system_health(
             healthy_destinations=healthy_destinations,
             uptime_seconds=uptime_seconds
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -296,39 +310,39 @@ async def get_system_metrics(
     """Get system resource metrics"""
     try:
         import psutil
-        
+
         # CPU usage
         cpu_percent = psutil.cpu_percent(interval=0.1)
-        
+
         # Memory usage
         memory = psutil.virtual_memory()
         memory_percent = memory.percent
         memory_used_mb = memory.used / (1024 * 1024)
         memory_total_mb = memory.total / (1024 * 1024)
-        
+
         # Disk usage
         disk = psutil.disk_usage('/')
         disk_percent = disk.percent
         disk_used_gb = disk.used / (1024 * 1024 * 1024)
         disk_total_gb = disk.total / (1024 * 1024 * 1024)
-        
+
         # Network I/O
         net_io = psutil.net_io_counters()
         # Convert to Mbps (approximate, based on 1-second interval)
         network_rx_mbps = net_io.bytes_recv / (1024 * 1024)
         network_tx_mbps = net_io.bytes_sent / (1024 * 1024)
-        
+
         # Application metrics (only if managers initialized)
         active_sessions = 0
         active_streams = 0
         total_cameras = 0
-        
+
         if session_mgr:
             active_sessions = len(session_mgr.list_sessions())
-        
+
         if camera_mgr:
             total_cameras = len(camera_mgr.get_discovered_cameras())
-        
+
         if session_mgr and streaming:
             for session in session_mgr.list_sessions():
                 try:
@@ -337,7 +351,7 @@ async def get_system_metrics(
                         active_streams += 1
                 except Exception:
                     pass
-        
+
         return MetricsResponse(
             cpu_usage_percent=cpu_percent,
             memory_usage_percent=memory_percent,
@@ -353,12 +367,13 @@ async def get_system_metrics(
             total_cameras=total_cameras,
             timestamp=datetime.utcnow()
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get system metrics: {str(e)}"
         )
+
 
 @router.get(
     "/ping",
@@ -378,6 +393,7 @@ async def ping():
 # DIAGNOSTICS
 # ============================================================================
 
+
 @router.get(
     "/diagnostics",
     response_model=Dict[str, Any],
@@ -388,23 +404,38 @@ async def run_diagnostics(
     include_cameras: bool = True,
     include_network: bool = True,
     include_obs: bool = True,
-    camera_mgr: object = Depends(get_camera_manager),
-    obs: object = Depends(get_obs_orchestrator)
+    camera_mgr: object = Depends(
+        get_camera_manager
+    ),
+    obs: object = Depends(
+        get_obs_orchestrator
+    )
 ):
     """Run system diagnostics"""
     try:
-        import psutil
+        import psutil  # type: ignore[import-untyped]
         diagnostics = {
             "timestamp": datetime.utcnow().isoformat(),
             "system": {
                 "platform": psutil.Process().name(),
                 "cpu_count": psutil.cpu_count(),
-                "cpu_freq_mhz": psutil.cpu_freq().current if psutil.cpu_freq() else None,
-                "memory_total_gb": psutil.virtual_memory().total / (1024 * 1024 * 1024),
-                "boot_time": datetime.fromtimestamp(psutil.boot_time()).isoformat()
+                "cpu_freq_mhz": (
+                    psutil.cpu_freq().current
+                    if psutil.cpu_freq()
+                    else None
+                ),
+                "memory_total_gb": (
+                    psutil.virtual_memory().total
+                    / (1024 * 1024 * 1024)
+                ),
+                "boot_time": (
+                    datetime.fromtimestamp(
+                        psutil.boot_time()
+                    ).isoformat()
+                )
             }
         }
-        
+
         if include_cameras:
             cameras = camera_mgr.get_discovered_cameras()
             diagnostics["cameras"] = {
@@ -413,35 +444,41 @@ async def run_diagnostics(
                     {
                         "id": cam.id,
                         "label": cam.label,
-                        "transport": cam.transport.value,
+                        "transport": (
+                            cam.transport.value
+                        ),
                         "url": cam.url
                     }
                     for cam in cameras
                 ]
             }
-        
+
         if include_obs:
             try:
                 obs_connected = await obs.is_connected()
                 diagnostics["obs"] = {
                     "connected": obs_connected,
-                    "version": await obs.get_version() if obs_connected else None
+                    "version": (
+                        await obs.get_version()
+                        if obs_connected
+                        else None
+                    )
                 }
             except Exception as e:
                 diagnostics["obs"] = {
                     "connected": False,
                     "error": str(e)
                 }
-        
+
         if include_network:
             net_connections = psutil.net_connections(kind='inet')
             diagnostics["network"] = {
                 "active_connections": len(net_connections),
                 "interfaces": list(psutil.net_if_addrs().keys())
             }
-        
+
         return diagnostics
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,

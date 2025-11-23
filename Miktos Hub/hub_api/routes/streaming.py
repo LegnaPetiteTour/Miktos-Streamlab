@@ -2,20 +2,20 @@
 Streaming API Routes
 Handles multi-platform streaming control, monitoring, and failover.
 """
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
-from enum import Enum
 
 from models.destination import StreamDestination, Platform
 from models.session import SessionState
-from hub_api.models import SuccessResponse, ErrorResponse
+from hub_api.models import SuccessResponse
 
 router = APIRouter(prefix="/streaming", tags=["streaming"])
 
 # ============================================================================
 # REQUEST/RESPONSE MODELS
 # ============================================================================
+
 
 class DestinationConfig(BaseModel):
     """Streaming destination configuration"""
@@ -25,6 +25,7 @@ class DestinationConfig(BaseModel):
     label: Optional[str] = Field(None, description="Destination label")
     enabled: bool = Field(True, description="Enable this destination")
 
+
 class ConfigureDestinationsRequest(BaseModel):
     """Request to configure streaming destinations"""
     session_id: str = Field(..., description="Session ID")
@@ -32,6 +33,7 @@ class ConfigureDestinationsRequest(BaseModel):
         ...,
         description="List of streaming destinations"
     )
+
 
 class StartStreamRequest(BaseModel):
     """Request to start streaming"""
@@ -41,6 +43,7 @@ class StartStreamRequest(BaseModel):
         description="Also start ISO recording"
     )
 
+
 class StopStreamRequest(BaseModel):
     """Request to stop streaming"""
     session_id: str = Field(..., description="Session ID")
@@ -48,6 +51,7 @@ class StopStreamRequest(BaseModel):
         True,
         description="Also stop recording if active"
     )
+
 
 class DestinationStatus(BaseModel):
     """Status of a streaming destination"""
@@ -62,6 +66,7 @@ class DestinationStatus(BaseModel):
     uptime_seconds: float
     last_error: Optional[str] = None
     using_backup: bool = False
+
 
 class StreamingHealthResponse(BaseModel):
     """Complete streaming health status"""
@@ -78,6 +83,7 @@ class StreamingHealthResponse(BaseModel):
     total_dropped_frames: int
     uptime_seconds: float
 
+
 class DestinationResponse(BaseModel):
     """Destination configuration response"""
     id: str
@@ -85,6 +91,7 @@ class DestinationResponse(BaseModel):
     label: Optional[str]
     enabled: bool
     status: str
+
 
 class DestinationsListResponse(BaseModel):
     """List of configured destinations"""
@@ -96,6 +103,7 @@ class DestinationsListResponse(BaseModel):
 # DEPENDENCY INJECTION
 # ============================================================================
 
+
 def get_streaming_module():
     """Get multi-platform streaming module instance"""
     from hub_api.server import app_state
@@ -105,6 +113,7 @@ def get_streaming_module():
             detail="Streaming module not initialized"
         )
     return app_state.streaming_module
+
 
 def get_session_manager():
     """Get session manager instance"""
@@ -120,6 +129,7 @@ def get_session_manager():
 # DESTINATION CONFIGURATION
 # ============================================================================
 
+
 @router.get(
     "/destinations",
     response_model=DestinationsListResponse,
@@ -133,24 +143,28 @@ async def list_destinations(
     """List configured streaming destinations"""
     try:
         destinations = await streaming.get_destinations(session_id)
-        
+
         dest_responses = [
             DestinationResponse(
                 id=dest.id,
                 platform=dest.platform,
                 label=dest.label,
                 enabled=dest.enabled,
-                status=dest.status.value if hasattr(dest, 'status') else 'inactive'
+                status=(
+                    dest.status.value
+                    if hasattr(dest, 'status')
+                    else 'inactive'
+                )
             )
             for dest in destinations
         ]
-        
+
         return DestinationsListResponse(
             session_id=session_id,
             destinations=dest_responses,
             total=len(destinations)
         )
-        
+
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -158,6 +172,7 @@ async def list_destinations(
             status_code=500,
             detail=f"Failed to list destinations: {str(e)}"
         )
+
 
 @router.post(
     "/destinations",
@@ -179,12 +194,17 @@ async def configure_destinations(
                 status_code=404,
                 detail=f"Session {request.session_id} not found"
             )
-        
+
         # Convert to StreamDestination objects
         destinations = []
         for dest_config in request.destinations:
+            dest_id = (
+                f"{request.session_id}_"
+                f"{dest_config.platform.value}_"
+                f"{len(destinations)}"
+            )
             dest = StreamDestination(
-                id=f"{request.session_id}_{dest_config.platform.value}_{len(destinations)}",
+                id=dest_id,
                 platform=dest_config.platform,
                 stream_key=dest_config.stream_key,
                 stream_url=dest_config.stream_url,
@@ -192,13 +212,13 @@ async def configure_destinations(
                 enabled=dest_config.enabled
             )
             destinations.append(dest)
-        
+
         # Configure destinations
         await streaming.configure_destinations(
             session_id=request.session_id,
             destinations=[dest.__dict__ for dest in destinations]
         )
-        
+
         return SuccessResponse(
             success=True,
             message=f"Configured {len(destinations)} streaming destinations",
@@ -207,7 +227,7 @@ async def configure_destinations(
                 "destination_count": len(destinations)
             }
         )
-        
+
     except HTTPException:
         raise
     except ValueError as e:
@@ -221,6 +241,7 @@ async def configure_destinations(
 # ============================================================================
 # STREAMING CONTROL
 # ============================================================================
+
 
 @router.post(
     "/start",
@@ -242,26 +263,26 @@ async def start_streaming(
                 status_code=404,
                 detail=f"Session {request.session_id} not found"
             )
-        
+
         # Check if already streaming
         if session.state == SessionState.STREAMING:
             raise HTTPException(
                 status_code=400,
                 detail="Session is already streaming"
             )
-        
+
         # Start streaming
         await streaming.start_stream(
             session_id=request.session_id,
             start_recording=request.start_recording
         )
-        
+
         # Update session state
         session_mgr.update_session_state(
             request.session_id,
             SessionState.STREAMING
         )
-        
+
         return SuccessResponse(
             success=True,
             message=f"Streaming started for session {request.session_id}",
@@ -270,7 +291,7 @@ async def start_streaming(
                 "recording": request.start_recording
             }
         )
-        
+
     except HTTPException:
         raise
     except ValueError as e:
@@ -280,6 +301,7 @@ async def start_streaming(
             status_code=500,
             detail=f"Failed to start streaming: {str(e)}"
         )
+
 
 @router.post(
     "/stop",
@@ -301,19 +323,19 @@ async def stop_streaming(
                 status_code=404,
                 detail=f"Session {request.session_id} not found"
             )
-        
+
         # Stop streaming
         await streaming.stop_stream(
             session_id=request.session_id,
             stop_recording=request.stop_recording
         )
-        
+
         # Update session state
         session_mgr.update_session_state(
             request.session_id,
             SessionState.READY
         )
-        
+
         return SuccessResponse(
             success=True,
             message=f"Streaming stopped for session {request.session_id}",
@@ -321,7 +343,7 @@ async def stop_streaming(
                 "session_id": request.session_id
             }
         )
-        
+
     except HTTPException:
         raise
     except ValueError as e:
@@ -336,6 +358,7 @@ async def stop_streaming(
 # HEALTH & MONITORING
 # ============================================================================
 
+
 @router.get(
     "/health",
     response_model=StreamingHealthResponse,
@@ -349,12 +372,16 @@ async def get_streaming_health(
     """Get streaming health status"""
     try:
         health = await streaming.get_health(session_id)
-        
+
         # Convert to response model
         dest_statuses = [
             DestinationStatus(
                 destination_id=dest.destination_id,
-                platform=Platform[dest.platform.upper()] if isinstance(dest.platform, str) else dest.platform,
+                platform=(
+                    Platform[dest.platform.upper()]
+                    if isinstance(dest.platform, str)
+                    else dest.platform
+                ),
                 label=dest.label,
                 status=dest.status,
                 bitrate_kbps=dest.bitrate_kbps,
@@ -367,7 +394,7 @@ async def get_streaming_health(
             )
             for dest in health.destinations
         ]
-        
+
         return StreamingHealthResponse(
             session_id=session_id,
             overall_status=health.overall_status.value,
@@ -382,7 +409,7 @@ async def get_streaming_health(
             total_dropped_frames=health.total_dropped_frames,
             uptime_seconds=health.uptime_seconds
         )
-        
+
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -390,6 +417,7 @@ async def get_streaming_health(
             status_code=500,
             detail=f"Failed to get streaming health: {str(e)}"
         )
+
 
 @router.get(
     "/destinations/{destination_id}/health",
@@ -408,16 +436,20 @@ async def get_destination_health(
             session_id,
             destination_id
         )
-        
+
         if not dest_health:
             raise HTTPException(
                 status_code=404,
                 detail=f"Destination {destination_id} not found"
             )
-        
+
         return DestinationStatus(
             destination_id=dest_health.destination_id,
-            platform=Platform[dest_health.platform.upper()] if isinstance(dest_health.platform, str) else dest_health.platform,
+            platform=(
+                Platform[dest_health.platform.upper()]
+                if isinstance(dest_health.platform, str)
+                else dest_health.platform
+            ),
             label=dest_health.label,
             status=dest_health.status,
             bitrate_kbps=dest_health.bitrate_kbps,
@@ -428,7 +460,7 @@ async def get_destination_health(
             last_error=dest_health.last_error,
             using_backup=dest_health.using_backup
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -440,6 +472,7 @@ async def get_destination_health(
 # ============================================================================
 # FAILOVER CONTROL
 # ============================================================================
+
 
 @router.post(
     "/destinations/{destination_id}/force-failover",
@@ -455,7 +488,7 @@ async def force_failover(
     """Force failover to backup stream"""
     try:
         await streaming.force_failover(session_id, destination_id)
-        
+
         return SuccessResponse(
             success=True,
             message=f"Forced failover for destination {destination_id}",
@@ -464,7 +497,7 @@ async def force_failover(
                 "using_backup": True
             }
         )
-        
+
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -472,6 +505,7 @@ async def force_failover(
             status_code=500,
             detail=f"Failed to force failover: {str(e)}"
         )
+
 
 @router.post(
     "/destinations/{destination_id}/recover",
@@ -487,16 +521,19 @@ async def recover_from_failover(
     """Recover from backup to primary"""
     try:
         await streaming.recover_from_failover(session_id, destination_id)
-        
+
         return SuccessResponse(
             success=True,
-            message=f"Recovered destination {destination_id} to primary stream",
+            message=(
+                f"Recovered destination {destination_id} "
+                f"to primary stream"
+            ),
             data={
                 "destination_id": destination_id,
                 "using_backup": False
             }
         )
-        
+
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

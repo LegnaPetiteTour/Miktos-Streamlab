@@ -34,21 +34,29 @@ def main():
     """Main entry point"""
     import uvicorn
     import argparse
-    
+
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Miktos Hub API Server')
-    parser.add_argument('--host', default='0.0.0.0', help='Host to bind to')
-    parser.add_argument('--port', type=int, default=8000, help='Port to bind to')
-    parser.add_argument('--reload', action='store_true', help='Enable auto-reload')
+    parser = argparse.ArgumentParser(
+        description='Miktos Hub API Server'
+    )
+    parser.add_argument(
+        '--host', default='0.0.0.0', help='Host to bind to'
+    )
+    parser.add_argument(
+        '--port', type=int, default=8000, help='Port to bind to'
+    )
+    parser.add_argument(
+        '--reload', action='store_true', help='Enable auto-reload'
+    )
     args = parser.parse_args()
-    
+
     logger.info("=" * 60)
     logger.info("MIKTOS HUB")
     logger.info("Professional Live Streaming Orchestration Platform")
     logger.info("=" * 60)
     logger.info(f"Starting server on {args.host}:{args.port}")
     logger.info("=" * 60)
-    
+
     # Run server
     try:
         uvicorn.run(
@@ -64,7 +72,7 @@ def main():
     except Exception as e:
         logger.error(f"Server error: {e}", exc_info=True)
         return 1
-    
+
     return 0
 
 
