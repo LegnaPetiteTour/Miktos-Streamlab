@@ -41,7 +41,7 @@ class SessionManager:
     - Where we're streaming to
     - Current state (preparing, live, ended)
     - All events that occurred
-    
+
     Sessions are persisted to database and recovered on startup.
     """
 
@@ -60,7 +60,7 @@ class SessionManager:
 
         # Current active session (only one can be live at a time)
         self._active_session_id: Optional[str] = None
-        
+
         # Database connection (lazy loaded)
         self._db = None
         self._session_repo = None
@@ -68,19 +68,20 @@ class SessionManager:
         logger.info(
             f"SessionManager initialized (persistence: {enable_persistence})"
         )
-    
+
     def _get_db(self):
         """Get database connection (lazy initialization)"""
         if not self._enable_persistence:
             return None
-        
+
         if self._db is None:
             try:
                 from db import get_database
-                from db.repositories import SessionRepository
-                
+
                 self._db = get_database()
-                logger.info("Database connection established for SessionManager")
+                logger.info(
+                    "Database connection established for SessionManager"
+                )
             except Exception as e:
                 logger.warning(
                     f"Failed to initialize database: {e}. "
@@ -88,25 +89,25 @@ class SessionManager:
                 )
                 self._enable_persistence = False
                 return None
-        
+
         return self._db
-    
+
     def _get_session_repo(self):
         """Get session repository"""
         db = self._get_db()
         if db is None:
             return None
-        
+
         if self._session_repo is None:
             from db.repositories import SessionRepository
             self._session_repo = SessionRepository
-        
+
         return self._session_repo
-    
+
     def recover_sessions(self) -> int:
         """
         Recover sessions from database on startup.
-        
+
         Returns:
             Number of sessions recovered
         """
@@ -114,46 +115,48 @@ class SessionManager:
         if db is None:
             logger.info("Persistence disabled, skipping session recovery")
             return 0
-        
+
         try:
             from db.repositories import SessionRepository
-            
+
             with db.session() as db_session:
                 repo = SessionRepository(db_session)
                 active_sessions = repo.list_active()
-                
+
                 recovered_count = 0
                 for db_session_model in active_sessions:
                     # Convert database model to core session
                     session = self._db_model_to_core_session(db_session_model)
                     self._sessions[session.id] = session
                     recovered_count += 1
-                    
+
                     logger.info(
                         f"Recovered session: {session.id} - "
                         f"{session.name} (state: {session.state.value})"
                     )
-                
-                logger.info(f"Recovered {recovered_count} session(s) from database")
+
+                logger.info(
+                    f"Recovered {recovered_count} session(s) from database"
+                )
                 return recovered_count
-                
+
         except Exception as e:
             logger.error(
                 f"Failed to recover sessions: {e}",
                 exc_info=True
             )
             return 0
-    
+
     def _db_model_to_core_session(self, db_model) -> Session:
         """Convert database session model to core session"""
         from models.session import SessionState as CoreSessionState
-        
+
         # Create session config
         config = SessionConfig(
             name=db_model.name,
             description=db_model.description
         )
-        
+
         # Create session
         session = Session(
             id=db_model.id,
@@ -164,47 +167,47 @@ class SessionManager:
             created_at=db_model.created_at,
             updated_at=db_model.updated_at,
         )
-        
+
         # Set timestamps
         if db_model.started_at:
             session.started_at = db_model.started_at
         if db_model.ended_at:
             session.ended_at = db_model.ended_at
-        
+
         return session
-    
+
     def _persist_session(self, session: Session) -> bool:
         """
         Persist session to database.
-        
+
         Args:
             session: Session to persist
-            
+
         Returns:
             True if persisted successfully
         """
         db = self._get_db()
         if db is None:
             return False
-        
+
         try:
             from db.repositories import SessionRepository
-            
+
             with db.session() as db_session:
                 repo = SessionRepository(db_session)
-                
+
                 # Check if session exists
                 existing = repo.get(session.id)
-                
+
                 if existing:
                     # Update existing
                     repo.update(session)
                 else:
                     # Create new
                     repo.create(session)
-                
+
                 return True
-                
+
         except Exception as e:
             logger.error(
                 f"Failed to persist session {session.id}: {e}",
@@ -231,7 +234,7 @@ class SessionManager:
 
         self._sessions[session.id] = session
         self._log_event(session, "session_created", {"config": config.name})
-        
+
         # Persist to database
         self._persist_session(session)
 
