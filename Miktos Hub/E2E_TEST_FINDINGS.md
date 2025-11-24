@@ -233,10 +233,10 @@ Blocked: 6 (camera requirement)
 ## 💡 Recommendations
 
 1. **Development Mode**: Add flag to allow sessions without cameras for testing
-2. **Mock Services**: Create mock camera/streaming services for CI/CD
-3. **Integration Tests**: Add automated tests for full workflows
-4. **Documentation**: Update API docs with example workflows
-5. **Monitoring**: Add detailed logging for camera discovery and state transitions
+1. **Mock Services**: Create mock camera/streaming services for CI/CD
+1. **Integration Tests**: Add automated tests for full workflows
+1. **Documentation**: Update API docs with example workflows
+1. **Monitoring**: Add detailed logging for camera discovery and state transitions
 
 ## 📝 Server Log Excerpts
 
