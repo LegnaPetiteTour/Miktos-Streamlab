@@ -147,7 +147,10 @@ class TestSessionEndpoints:
         session_id = create_response.json()["session_id"]
 
         # Start session
-        response = await test_client.post(f"/api/sessions/{session_id}/start")
+        response = await test_client.post(
+            f"/api/sessions/{session_id}/start",
+            json={}
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -161,7 +164,10 @@ class TestSessionEndpoints:
             "name": "Stop Test"
         })
         session_id = create_response.json()["session_id"]
-        await test_client.post(f"/api/sessions/{session_id}/start")
+        await test_client.post(
+            f"/api/sessions/{session_id}/start",
+            json={}
+        )
 
         # Stop session
         response = await test_client.post(f"/api/sessions/{session_id}/stop")

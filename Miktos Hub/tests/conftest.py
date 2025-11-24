@@ -311,14 +311,17 @@ async def test_client():
 
     app = hub_api.server.create_app()
 
-    # Use ASGITransport with the app
-    transport = ASGITransport(app=app)
+    # CRITICAL: Manually trigger lifespan startup
+    # AsyncClient with ASGITransport does NOT trigger lifespan events
+    async with hub_api.server.lifespan(app):
+        # Use ASGITransport with the app
+        transport = ASGITransport(app=app)
 
-    async with AsyncClient(
-        transport=transport,
-        base_url="http://test"
-    ) as client:
-        yield client
+        async with AsyncClient(
+            transport=transport,
+            base_url="http://test"
+        ) as client:
+            yield client
 
 
 @pytest.fixture

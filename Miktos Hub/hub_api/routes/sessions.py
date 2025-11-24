@@ -212,8 +212,8 @@ async def start_session(
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        # Start session
-        success = await session_manager.start_session(session_id)
+        # Start session (not async)
+        success = session_manager.start_session(session_id)
         if not success:
             raise HTTPException(
                 status_code=500,
