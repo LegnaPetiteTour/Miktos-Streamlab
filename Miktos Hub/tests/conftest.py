@@ -279,14 +279,14 @@ def mock_obs_client():
 # API TEST FIXTURES
 # ============================================================================
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 async def test_client():
-    """Provide an HTTP test client for API testing"""
+    """Provide an HTTP test client for API testing (class-scoped)"""
     from httpx import AsyncClient, ASGITransport
     import sys
 
-    # CRITICAL FIX: Remove Backend from sys.path to avoid import conflicts
-    # The adapters add Backend to sys.path, but we need Hub to take precedence
+    # CRITICAL FIX: Remove Backend from sys.path to avoid conflicts
+    # The adapters add Backend to sys.path, need Hub to take precedence
     backend_paths = [p for p in sys.path if 'Backend' in p]
     for backend_path in backend_paths:
         sys.path.remove(backend_path)
@@ -325,11 +325,59 @@ async def test_client():
 
 
 @pytest.fixture
+async def api_camera(test_client):
+    """Create a test camera via API and return its ID"""
+    # Register a camera
+    response = await test_client.post("/api/cameras/register", json={
+        "camera_id": "api-test-camera-1",
+        "label": "API Test Camera",
+        "transport": "srt",
+        "url": "srt://192.168.1.100:9000"
+    })
+    if response.status_code == 200:
+        return response.json()["camera_id"]
+    return None
+
+
+@pytest.fixture
+async def api_cameras(test_client):
+    """Create multiple test cameras via API and return their IDs"""
+    camera_ids = []
+    for i in range(1, 4):
+        response = await test_client.post("/api/cameras/register", json={
+            "camera_id": f"api-test-camera-{i}",
+            "label": f"API Test Camera {i}",
+            "transport": "srt",
+            "url": f"srt://192.168.1.{100+i}:9000"
+        })
+        if response.status_code == 200:
+            camera_ids.append(response.json()["camera_id"])
+    return camera_ids
+
+
+@pytest.fixture
+async def api_session_with_cameras(test_client, api_cameras):
+    """Create a test session with cameras and return session data"""
+    # Create session
+    response = await test_client.post("/api/sessions/", json={
+        "name": "Test Session with Cameras",
+        "description": "Session for testing"
+    })
+    session_data = response.json()
+    
+    # Add cameras to session (if endpoint exists)
+    # For now, return session with camera IDs
+    session_data["camera_ids"] = api_cameras
+    
+    return session_data
+
+
+@pytest.fixture
 def api_headers():
-    """Provide common API headers"""
+    """Provide standard API headers"""
     return {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json",
     }
 
 
