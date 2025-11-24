@@ -152,7 +152,7 @@ async def get_system_health(
         # Check OBS connection (if initialized)
         if obs:
             try:
-                obs_connected = await obs.is_connected()
+                obs_connected = obs.is_connected
                 obs_status = (
                     HealthStatus.HEALTHY if obs_connected
                     else HealthStatus.FAILED
@@ -455,7 +455,7 @@ async def run_diagnostics(
 
         if include_obs:
             try:
-                obs_connected = await obs.is_connected()
+                obs_connected = obs.is_connected
                 diagnostics["obs"] = {
                     "connected": obs_connected,
                     "version": (

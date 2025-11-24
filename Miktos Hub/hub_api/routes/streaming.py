@@ -10,7 +10,7 @@ from models.destination import StreamDestination, Platform
 from models.session import SessionState
 from hub_api.models import SuccessResponse
 
-router = APIRouter(prefix="/streaming", tags=["streaming"])
+router = APIRouter(tags=["streaming"])
 
 # ============================================================================
 # REQUEST/RESPONSE MODELS

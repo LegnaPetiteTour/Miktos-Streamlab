@@ -174,6 +174,11 @@ class OBSOrchestrator:
             ),
         }
 
+    @property
+    def is_connected(self) -> bool:
+        """Check if connected to OBS."""
+        return self._obs.is_connected()
+
     async def connect(self) -> bool:
         """
         Connect to OBS.

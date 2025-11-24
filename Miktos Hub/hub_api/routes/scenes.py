@@ -10,7 +10,7 @@ from models.scene import (  # type: ignore[import-not-found]
     SceneLayout, TransitionType)
 from hub_api.models import SuccessResponse  # type: ignore[import-not-found]
 
-router = APIRouter(prefix="/scenes", tags=["scenes"])
+router = APIRouter(tags=["scenes"])
 
 # ============================================================================
 # REQUEST/RESPONSE MODELS
