@@ -130,7 +130,7 @@ async def list_sessions(
 
         session_responses = [
             SessionResponse(
-                session_id=s.id,
+                id=s.id,
                 name=s.name,
                 description=s.description,
                 state=SessionStateAPI(s.state.value),
@@ -169,7 +169,7 @@ async def get_session(
             raise HTTPException(status_code=404, detail="Session not found")
 
         return SessionResponse(
-            session_id=session.id,
+            id=session.id,
             name=session.name,
             description=session.description,
             state=SessionStateAPI(session.state.value),
@@ -341,6 +341,163 @@ async def stop_session(
         raise
     except Exception as e:
         logger.error(f"Failed to stop session: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{session_id}/pause", response_model=SessionStartResponse)
+async def pause_session(
+    session_id: str,
+    session_manager=Depends(get_session_manager),
+    streaming_manager=Depends(get_streaming_manager),
+):
+    """
+    Pause a session (pause streaming).
+    """
+    try:
+        logger.info(f"Pausing session: {session_id}")
+
+        # Get session
+        session = session_manager.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        # Pause session
+        success = session_manager.pause_session(session_id)
+        if not success:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to pause session")
+
+        logger.info(f"Session paused: {session_id}")
+
+        # Get updated session
+        session = session_manager.get_session(session_id)
+
+        return SessionStartResponse(
+            session_id=session_id,
+            state=SessionStateAPI(session.state.value),
+            streaming_started=False,
+            recording_started=False,
+            message="Session paused successfully",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to pause session: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{session_id}/resume", response_model=SessionStartResponse)
+async def resume_session(
+    session_id: str,
+    session_manager=Depends(get_session_manager),
+    streaming_manager=Depends(get_streaming_manager),
+):
+    """
+    Resume a paused session.
+    """
+    try:
+        logger.info(f"Resuming session: {session_id}")
+
+        # Get session
+        session = session_manager.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        # Resume session
+        success = session_manager.resume_session(session_id)
+        if not success:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to resume session")
+
+        logger.info(f"Session resumed: {session_id}")
+
+        # Get updated session
+        session = session_manager.get_session(session_id)
+
+        return SessionStartResponse(
+            session_id=session_id,
+            state=SessionStateAPI(session.state.value),
+            streaming_started=True,
+            recording_started=False,
+            message="Session resumed successfully",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to resume session: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{session_id}/end", response_model=SessionStartResponse)
+async def end_session(
+    session_id: str,
+    session_manager=Depends(get_session_manager),
+    streaming_manager=Depends(get_streaming_manager),
+    recording_service=Depends(get_recording_service),
+):
+    """
+    End a session (stop streaming/recording and mark as completed).
+    """
+    try:
+        logger.info(f"Ending session: {session_id}")
+
+        # Get session
+        session = session_manager.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        messages = []
+
+        # Stop streaming if active
+        if streaming_manager.is_streaming(session_id):
+            try:
+                await streaming_manager.stop_stream(session_id)
+                messages.append("Streaming stopped")
+            except Exception as e:
+                logger.error(f"Failed to stop streaming: {e}")
+                messages.append(f"Streaming stop error: {str(e)}")
+
+        # Stop recording if active
+        if recording_service.is_recording(session_id):
+            try:
+                await recording_service.stop_recording(session_id)
+                messages.append("Recording stopped")
+            except Exception as e:
+                logger.error(f"Failed to stop recording: {e}")
+                messages.append(f"Recording stop error: {str(e)}")
+
+        # End session
+        success = session_manager.end_session(session_id)
+        if not success:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to end session")
+
+        logger.info(f"Session ended: {session_id}")
+
+        # Get updated session
+        session = session_manager.get_session(session_id)
+
+        return SessionStartResponse(
+            session_id=session_id,
+            state=SessionStateAPI(session.state.value),
+            streaming_started=False,
+            recording_started=False,
+            message=(
+                "; ".join(messages)
+                if messages
+                else "Session ended successfully"
+            ),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to end session: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

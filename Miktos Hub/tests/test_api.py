@@ -164,7 +164,7 @@ class TestSessionEndpoints:
             "name": "Stop Test"
         })
         session_id = create_response.json()["session_id"]
-        
+
         # Try to start (will fail without cameras/destinations)
         start_response = await test_client.post(
             f"/api/sessions/{session_id}/start",
@@ -217,7 +217,7 @@ class TestCameraEndpoints:
         # May return 503 if camera_manager not yet initialized
         # This is a timing issue with class-scoped fixture
         assert response.status_code in [200, 503]
-        
+
         if response.status_code == 200:
             data = response.json()
             assert "cameras" in data
@@ -402,7 +402,7 @@ class TestCORS:
         # Just verify the endpoint is accessible
         response = await test_client.get("/api/health")
         assert response.status_code == 200
-        
+
         # In production, CORS headers would be added by middleware
         # Test client doesn't simulate full browser CORS flow
 

@@ -52,7 +52,9 @@ class StreamingStatusAPI(str, Enum):
 class SessionCreateRequest(BaseModel):
     """Request to create a new session"""
     name: str = Field(..., description="Session name")
-    description: Optional[str] = Field(None, description="Optional description")
+    description: Optional[str] = Field(
+        None, description="Optional description"
+    )
 
 
 class SessionCreateResponse(BaseModel):
@@ -65,7 +67,7 @@ class SessionCreateResponse(BaseModel):
 
 class SessionResponse(BaseModel):
     """Complete session information"""
-    session_id: str
+    id: str
     name: str
     description: Optional[str]
     state: SessionStateAPI
@@ -76,6 +78,9 @@ class SessionResponse(BaseModel):
     scene_ids: List[str]
     destination_ids: List[str]
 
+    class Config:
+        populate_by_name = True
+
 
 class SessionListResponse(BaseModel):
     """List of sessions"""
@@ -85,8 +90,12 @@ class SessionListResponse(BaseModel):
 
 class SessionStartRequest(BaseModel):
     """Request to start a session"""
-    start_streaming: bool = Field(True, description="Whether to start streaming")
-    start_recording: bool = Field(False, description="Whether to start recording")
+    start_streaming: bool = Field(
+        True, description="Whether to start streaming"
+    )
+    start_recording: bool = Field(
+        False, description="Whether to start recording"
+    )
 
 
 class SessionStartResponse(BaseModel):
@@ -110,13 +119,13 @@ class CameraResponse(BaseModel):
     transport: str
     connection_url: str
     capabilities: List[str]
-    
+
     # Health information
     is_connected: bool
     battery_percent: Optional[int]
     temperature_celsius: Optional[float]
     network_quality: Optional[str]
-    
+
     metadata: Dict[str, Any]
 
 
@@ -132,12 +141,12 @@ class CameraHealthResponse(BaseModel):
     """Camera health details"""
     camera_id: str
     overall_status: str
-    
+
     is_connected: bool
     battery_percent: int
     temperature_celsius: float
     network_quality: str
-    
+
     last_seen: datetime
     uptime_seconds: float
 
@@ -176,9 +185,13 @@ class SceneListResponse(BaseModel):
 
 class SceneCreateRequest(BaseModel):
     """Request to create a scene"""
-    name: Optional[str] = Field(None, description="Scene name (auto-generated if None)")
+    name: Optional[str] = Field(
+        None, description="Scene name (auto-generated if None)"
+    )
     camera_ids: List[str] = Field(..., description="Cameras to include")
-    layout: Optional[str] = Field(None, description="Layout type (auto-selected if None)")
+    layout: Optional[str] = Field(
+        None, description="Layout type (auto-selected if None)"
+    )
 
 
 class SceneCreateResponse(BaseModel):
@@ -193,7 +206,9 @@ class SceneSwitchRequest(BaseModel):
     """Request to switch scenes"""
     scene_id: str = Field(..., description="Scene to switch to")
     transition: Optional[str] = Field("fade", description="Transition type")
-    duration_ms: int = Field(300, description="Transition duration in milliseconds")
+    duration_ms: int = Field(
+        300, description="Transition duration in milliseconds"
+    )
 
 
 class SceneSwitchResponse(BaseModel):
@@ -204,22 +219,29 @@ class SceneSwitchResponse(BaseModel):
     success: bool
 
 
-# ============================================================================
+# ===================================================================
 # STREAMING MODELS
-# ============================================================================
+# ===================================================================
 
 class StreamDestinationRequest(BaseModel):
     """Streaming destination configuration"""
-    platform: str = Field(..., description="Platform: youtube, facebook, twitter, twitch, rtmp")
+    platform: str = Field(
+        ...,
+        description="Platform: youtube, facebook, twitter, twitch, rtmp"
+    )
     stream_key: str = Field(..., description="Platform stream key")
     label: Optional[str] = Field(None, description="Friendly name")
-    backup_enabled: bool = Field(True, description="Enable SRT backup failover")
+    backup_enabled: bool = Field(
+        True, description="Enable SRT backup failover"
+    )
 
 
 class StreamConfigureRequest(BaseModel):
     """Request to configure streaming"""
     session_id: str = Field(..., description="Session to configure")
-    destinations: List[StreamDestinationRequest] = Field(..., description="Streaming destinations")
+    destinations: List[StreamDestinationRequest] = Field(
+        ..., description="Streaming destinations"
+    )
 
 
 class StreamConfigureResponse(BaseModel):
@@ -247,45 +269,45 @@ class StreamHealthResponse(BaseModel):
     """Streaming health information"""
     session_id: str
     overall_status: StreamingStatusAPI
-    
+
     total_destinations: int
     healthy_destinations: int
     failed_destinations: int
-    
+
     avg_bitrate_kbps: float
     avg_fps: float
     total_dropped_frames: int
-    
+
     using_backup: bool
     backup_destinations: List[str]
-    
+
     destinations: Dict[str, Any]
     timestamp: datetime
 
 
-# ============================================================================
+# ===================================================================
 # HEALTH MODELS
-# ============================================================================
+# ===================================================================
 
 class SystemHealthResponse(BaseModel):
     """Overall system health"""
     status: str  # "healthy", "degraded", "critical"
-    
+
     # Component health
     obs_connected: bool
     cameras_registered: int
     cameras_healthy: int
     active_sessions: int
     streaming_sessions: int
-    
+
     # Resource usage
     cpu_percent: Optional[float]
     memory_percent: Optional[float]
     disk_usage_percent: Optional[float]
-    
+
     # Network
     network_quality: str
-    
+
     timestamp: datetime
 
 
@@ -327,8 +349,13 @@ class DiscoveryStatusResponse(BaseModel):
 class RecordingStartRequest(BaseModel):
     """Request to start recording"""
     session_id: str
-    mode: str = Field("program_and_iso", description="program_only, iso_only, or program_and_iso")
-    enable_replay_buffer: bool = Field(True, description="Enable instant replay")
+    mode: str = Field(
+        "program_and_iso",
+        description="program_only, iso_only, or program_and_iso"
+    )
+    enable_replay_buffer: bool = Field(
+        True, description="Enable instant replay"
+    )
 
 
 class RecordingStartResponse(BaseModel):
@@ -358,7 +385,9 @@ class ExportClipRequest(BaseModel):
     input_file: str = Field(..., description="Source video file path")
     start_time: float = Field(..., description="Start time in seconds")
     end_time: float = Field(..., description="End time in seconds")
-    output_file: Optional[str] = Field(None, description="Output path (auto-generated if None)")
+    output_file: Optional[str] = Field(
+        None, description="Output path (auto-generated if None)"
+    )
 
 
 class ExportClipResponse(BaseModel):
@@ -371,8 +400,13 @@ class ExportClipResponse(BaseModel):
 class ExportResizeRequest(BaseModel):
     """Request to resize video"""
     input_file: str = Field(..., description="Source video file path")
-    platform: str = Field(..., description="Platform: tiktok, youtube, instagram, facebook")
-    output_file: Optional[str] = Field(None, description="Output path (auto-generated if None)")
+    platform: str = Field(
+        ...,
+        description="Platform: tiktok, youtube, instagram, facebook"
+    )
+    output_file: Optional[str] = Field(
+        None, description="Output path (auto-generated if None)"
+    )
 
 
 class ExportResizeResponse(BaseModel):

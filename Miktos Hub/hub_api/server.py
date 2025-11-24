@@ -98,6 +98,12 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
 
     try:
+        # Initialize database
+        logger.info("Initializing database...")
+        from db import init_database
+        init_database()
+        logger.info("✓ Database initialized")
+
         # Initialize core services
         logger.info("Initializing core services...")
         hub_state.device_registry = DeviceRegistry()
@@ -105,8 +111,14 @@ async def lifespan(app: FastAPI):
         hub_state.event_bus = EventBus()
         hub_state.session_manager = SessionManager(
             hub_state.device_registry,
-            hub_state.stream_router
+            hub_state.stream_router,
+            enable_persistence=True
         )
+
+        # Recover sessions from database
+        logger.info("Recovering sessions from database...")
+        recovered = hub_state.session_manager.recover_sessions()
+        logger.info(f"✓ Recovered {recovered} session(s)")
 
         # Initialize service wrappers
         logger.info("Initializing service wrappers...")
@@ -189,6 +201,12 @@ async def lifespan(app: FastAPI):
             if hub_state.obs_orchestrator:
                 logger.info("Disconnecting from OBS...")
                 await hub_state.obs_orchestrator.shutdown()
+
+            # Close database connection
+            logger.info("Closing database...")
+            from db import close_database
+            close_database()
+            logger.info("✓ Database closed")
 
             logger.info("=" * 60)
             logger.info("MIKTOS HUB API STOPPED")

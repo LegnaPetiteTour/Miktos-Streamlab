@@ -6,6 +6,7 @@ A Session represents a complete streaming show:
 - State management (preparing → live → ended)
 - Event tracking
 - Recording management
+- Persistence (survives server restarts)
 """
 
 from typing import Dict, List, Optional
@@ -40,23 +41,176 @@ class SessionManager:
     - Where we're streaming to
     - Current state (preparing, live, ended)
     - All events that occurred
+    
+    Sessions are persisted to database and recovered on startup.
     """
 
     def __init__(
         self,
         device_registry: DeviceRegistry,
-        stream_router: StreamRouter
+        stream_router: StreamRouter,
+        enable_persistence: bool = True
     ):
         self._device_registry = device_registry
         self._stream_router = stream_router
+        self._enable_persistence = enable_persistence
 
         # Active sessions indexed by ID
         self._sessions: Dict[str, Session] = {}
 
         # Current active session (only one can be live at a time)
         self._active_session_id: Optional[str] = None
+        
+        # Database connection (lazy loaded)
+        self._db = None
+        self._session_repo = None
 
-        logger.info("SessionManager initialized")
+        logger.info(
+            f"SessionManager initialized (persistence: {enable_persistence})"
+        )
+    
+    def _get_db(self):
+        """Get database connection (lazy initialization)"""
+        if not self._enable_persistence:
+            return None
+        
+        if self._db is None:
+            try:
+                from db import get_database
+                from db.repositories import SessionRepository
+                
+                self._db = get_database()
+                logger.info("Database connection established for SessionManager")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to initialize database: {e}. "
+                    "Running without persistence."
+                )
+                self._enable_persistence = False
+                return None
+        
+        return self._db
+    
+    def _get_session_repo(self):
+        """Get session repository"""
+        db = self._get_db()
+        if db is None:
+            return None
+        
+        if self._session_repo is None:
+            from db.repositories import SessionRepository
+            self._session_repo = SessionRepository
+        
+        return self._session_repo
+    
+    def recover_sessions(self) -> int:
+        """
+        Recover sessions from database on startup.
+        
+        Returns:
+            Number of sessions recovered
+        """
+        db = self._get_db()
+        if db is None:
+            logger.info("Persistence disabled, skipping session recovery")
+            return 0
+        
+        try:
+            from db.repositories import SessionRepository
+            
+            with db.session() as db_session:
+                repo = SessionRepository(db_session)
+                active_sessions = repo.list_active()
+                
+                recovered_count = 0
+                for db_session_model in active_sessions:
+                    # Convert database model to core session
+                    session = self._db_model_to_core_session(db_session_model)
+                    self._sessions[session.id] = session
+                    recovered_count += 1
+                    
+                    logger.info(
+                        f"Recovered session: {session.id} - "
+                        f"{session.name} (state: {session.state.value})"
+                    )
+                
+                logger.info(f"Recovered {recovered_count} session(s) from database")
+                return recovered_count
+                
+        except Exception as e:
+            logger.error(
+                f"Failed to recover sessions: {e}",
+                exc_info=True
+            )
+            return 0
+    
+    def _db_model_to_core_session(self, db_model) -> Session:
+        """Convert database session model to core session"""
+        from models.session import SessionState as CoreSessionState
+        
+        # Create session config
+        config = SessionConfig(
+            name=db_model.name,
+            description=db_model.description
+        )
+        
+        # Create session
+        session = Session(
+            id=db_model.id,
+            name=db_model.name,
+            description=db_model.description,
+            config=config,
+            state=CoreSessionState(db_model.state.value),
+            created_at=db_model.created_at,
+            updated_at=db_model.updated_at,
+        )
+        
+        # Set timestamps
+        if db_model.started_at:
+            session.started_at = db_model.started_at
+        if db_model.ended_at:
+            session.ended_at = db_model.ended_at
+        
+        return session
+    
+    def _persist_session(self, session: Session) -> bool:
+        """
+        Persist session to database.
+        
+        Args:
+            session: Session to persist
+            
+        Returns:
+            True if persisted successfully
+        """
+        db = self._get_db()
+        if db is None:
+            return False
+        
+        try:
+            from db.repositories import SessionRepository
+            
+            with db.session() as db_session:
+                repo = SessionRepository(db_session)
+                
+                # Check if session exists
+                existing = repo.get(session.id)
+                
+                if existing:
+                    # Update existing
+                    repo.update(session)
+                else:
+                    # Create new
+                    repo.create(session)
+                
+                return True
+                
+        except Exception as e:
+            logger.error(
+                f"Failed to persist session {session.id}: {e}",
+                exc_info=True
+            )
+            return False
 
     def create_session(self, config: SessionConfig) -> Session:
         """
@@ -77,6 +231,9 @@ class SessionManager:
 
         self._sessions[session.id] = session
         self._log_event(session, "session_created", {"config": config.name})
+        
+        # Persist to database
+        self._persist_session(session)
 
         logger.info(f"Created session: {session.id} - {config.name}")
         return session
@@ -112,6 +269,17 @@ class SessionManager:
         # Clear routing if session was active
         if session.state in [SessionState.PAUSED, SessionState.ENDING]:
             self._clear_session_routes(session)
+
+        # Remove from database
+        db = self._get_db()
+        if db is not None:
+            try:
+                from db.repositories import SessionRepository
+                with db.session() as db_session:
+                    repo = SessionRepository(db_session)
+                    repo.delete(session_id)
+            except Exception as e:
+                logger.error(f"Failed to delete session from DB: {e}")
 
         # Remove session
         del self._sessions[session_id]
@@ -167,7 +335,11 @@ class SessionManager:
         # Update state
         session.state = SessionState.LIVE
         session.updated_at = datetime.now()
+        session.started_at = datetime.now()
         self._active_session_id = session_id
+
+        # Persist state change
+        self._persist_session(session)
 
         self._log_event(session, "session_started", {
             "cameras": len(session.cameras),
@@ -205,6 +377,9 @@ class SessionManager:
         session.state = SessionState.PAUSED
         session.updated_at = datetime.now()
 
+        # Persist state change
+        self._persist_session(session)
+
         self._log_event(session, "session_paused", {})
         logger.info(f"Paused session: {session_id}")
         return True
@@ -236,6 +411,9 @@ class SessionManager:
         session.state = SessionState.LIVE
         session.updated_at = datetime.now()
 
+        # Persist state change
+        self._persist_session(session)
+
         self._log_event(session, "session_resumed", {})
         logger.info(f"Resumed session: {session_id}")
         return True
@@ -263,9 +441,13 @@ class SessionManager:
 
         session.state = SessionState.ENDED
         session.updated_at = datetime.now()
+        session.ended_at = datetime.now()
 
         if self._active_session_id == session_id:
             self._active_session_id = None
+
+        # Persist state change
+        self._persist_session(session)
 
         self._log_event(
             session, "session_ended", {

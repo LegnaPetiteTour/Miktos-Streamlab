@@ -17,16 +17,18 @@ python main.py --host 0.0.0.0 --port 8000 > /tmp/miktos.log 2>&1 &
 ```
 
 The server will:
+
 - Connect to OBS (must be running on localhost:4455)
 - Start camera discovery (mDNS)
 - Initialize all services
-- Expose API on http://localhost:8000
+- Expose API on <http://localhost:8000>
 
 ## API Documentation
 
 Interactive API docs available at:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+
+- **Swagger UI**: <http://localhost:8000/docs>
+- **ReDoc**: <http://localhost:8000/redoc>
 
 ## Key API Endpoints
 
@@ -149,10 +151,12 @@ echo "Created session: $SESSION_ID"
 ### 4. Register Cameras
 
 If using Miktos Camera app on phones:
+
 - Cameras will auto-discover via mDNS
 - Check discovery status: `curl http://localhost:8000/api/cameras/discovery/status`
 
 Or manually register:
+
 ```bash
 curl -X POST http://localhost:8000/api/cameras/register \
   -H "Content-Type: application/json" \
@@ -222,6 +226,7 @@ ws.onmessage = (event) => {
 ```
 
 Event types:
+
 - `camera.discovered` - New camera found
 - `camera.connected` - Camera connected
 - `camera.disconnected` - Camera lost
@@ -271,14 +276,16 @@ curl http://localhost:8000/api/cameras/discovery/status
 
 ## Current Limitations
 
-**Available Features:**
+### Available Features
+
 - ✅ Session management
 - ✅ Camera discovery & registration
 - ✅ OBS scene creation & switching
 - ✅ Health monitoring
 - ✅ WebSocket events
 
-**Not Yet Implemented:**
+### Not Yet Implemented
+
 - ❌ Multi-platform streaming (requires egress_v2 module)
 - ❌ AI transcription (requires transcription module)
 - ❌ Video enhancement (requires enhancement module)
@@ -289,12 +296,14 @@ curl http://localhost:8000/api/cameras/discovery/status
 
 Choose your priority:
 
-**Option B: Make It Stick**
+### Option B: Make It Stick
+
 - Implement session persistence
 - Database integration
 - Session recovery
 
-**Option C: Capture the Magic**
+### Option C: Capture the Magic
+
 - ISO recording
 - Export management
 - Playback features

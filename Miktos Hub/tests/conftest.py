@@ -364,11 +364,11 @@ async def api_session_with_cameras(test_client, api_cameras):
         "description": "Session for testing"
     })
     session_data = response.json()
-    
+
     # Add cameras to session (if endpoint exists)
     # For now, return session with camera IDs
     session_data["camera_ids"] = api_cameras
-    
+
     return session_data
 
 

@@ -29,6 +29,10 @@ class PathConfig:
     backend_dir: Path = Path(
         "/Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend")
 
+    # Data directory for database and persistent storage
+    data_dir: Path = Path(
+        "/Users/atorrella/Desktop/Miktos Streamlab/data")
+
     # Output directories
     recordings_dir: Path = Path(
         "/Users/atorrella/Desktop/Miktos Streamlab/recordings")
@@ -43,6 +47,7 @@ class PathConfig:
     def __post_init__(self):
         """Ensure all directories exist"""
         for dir_attr in [
+            "data_dir",
             "recordings_dir",
             "transcripts_dir",
             "exports_dir",
