@@ -36,6 +36,7 @@ Validate the complete Miktos Hub workflow with real cameras, OBS scenes, and str
 **Test Commands**:
 
 ```bash
+
 # Start server
 python main.py --host 0.0.0.0 --port 8000
 
@@ -47,6 +48,7 @@ curl http://localhost:8000/api/cameras/ | jq
 
 # Check specific camera details
 curl http://localhost:8000/api/cameras/{camera_id} | jq
+
 ```
 
 ---
@@ -65,6 +67,7 @@ curl http://localhost:8000/api/cameras/{camera_id} | jq
 **Test Commands**:
 
 ```bash
+
 # Create session
 SESSION_ID=$(curl -s -X POST http://localhost:8000/api/sessions/ \
   -H "Content-Type: application/json" \
@@ -89,6 +92,7 @@ curl "http://localhost:8000/api/sessions/$SESSION_ID" | jq
 # Check database persistence
 sqlite3 ~/Desktop/Miktos\ Streamlab/data/miktos_hub.db \
   "SELECT id, name, state, created_at FROM sessions WHERE id='$SESSION_ID';"
+
 ```
 
 ---
@@ -108,6 +112,7 @@ sqlite3 ~/Desktop/Miktos\ Streamlab/data/miktos_hub.db \
 **Test Commands**:
 
 ```bash
+
 # List OBS scenes
 curl http://localhost:8000/api/obs/scenes | jq
 
@@ -139,6 +144,7 @@ curl -X POST http://localhost:8000/api/obs/scenes/current \
 
 # Verify current scene
 curl http://localhost:8000/api/obs/scenes/current | jq
+
 ```
 
 ---
@@ -158,6 +164,7 @@ curl http://localhost:8000/api/obs/scenes/current | jq
 **Test Commands**:
 
 ```bash
+
 # Configure YouTube streaming destination
 curl -X POST "http://localhost:8000/api/sessions/$SESSION_ID/destinations" \
   -H "Content-Type: application/json" \
@@ -193,6 +200,7 @@ done
 
 # Stop streaming
 curl -X POST "http://localhost:8000/api/sessions/$SESSION_ID/pause" | jq
+
 ```
 
 ---
@@ -236,6 +244,7 @@ curl -X POST "http://localhost:8000/api/sessions/$SESSION_ID/pause" | jq
 **Test Commands**:
 
 ```bash
+
 # Create and start session (use commands from Scenario 4)
 
 # Note the session ID
@@ -262,6 +271,7 @@ curl "http://localhost:8000/api/sessions/$SESSION_ID" | jq
 
 # Verify can continue streaming
 curl -X POST "http://localhost:8000/api/sessions/$SESSION_ID/start" | jq
+
 ```
 
 ---
@@ -271,18 +281,23 @@ curl -X POST "http://localhost:8000/api/sessions/$SESSION_ID/start" | jq
 ### Issues Found During Testing
 
 | Issue # | Scenario | Description | Severity | Status |
+
 |---------|----------|-------------|----------|--------|
 | E2E-001 | Camera Discovery | ... | ... | ... |
+
 | E2E-002 | Scene Switching | ... | ... | ... |
 | E2E-003 | Streaming Health | ... | ... | ... |
 
 ### Performance Metrics
 
 | Metric | Target | Actual | Pass/Fail |
+
 |--------|--------|--------|-----------|
 | Camera discovery time | < 30s | ... | ... |
+
 | Scene switch latency | < 500ms | ... | ... |
 | Stream startup time | < 5s | ... | ... |
+
 | Dropped frames | < 0.1% | ... | ... |
 | Session recovery time | < 10s | ... | ... |
 
@@ -313,6 +328,7 @@ Based on test results:
 ## Quick Start Commands
 
 ```bash
+
 # Terminal 1: Start server with logging
 python main.py --host 0.0.0.0 --port 8000 2>&1 | tee /tmp/e2e_test.log
 
@@ -321,6 +337,7 @@ watch -n 5 'curl -s http://localhost:8000/api/health | jq'
 
 # Terminal 3: Run test commands
 # (Use commands from scenarios above)
+
 ```
 
 ---

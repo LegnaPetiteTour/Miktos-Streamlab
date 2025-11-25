@@ -7,7 +7,7 @@ Test Organization:
     - test_core.py: Core service tests (DeviceRegistry, SessionManager, etc.)
     - test_api.py: API endpoint tests
     - test_integration.py: Integration tests for complete workflows
-    
+
 Markers:
     - @pytest.mark.unit: Unit tests (fast, isolated)
     - @pytest.mark.integration: Integration tests (slower, component interaction)
@@ -19,15 +19,15 @@ Markers:
 Running Tests:
     # All tests
     pytest
-    
+
     # Specific test type
     pytest -m unit
     pytest -m integration
     pytest -m api
-    
+
     # With coverage
     pytest --cov=. --cov-report=html
-    
+
     # Using the runner script
     python run_tests.py unit
     python run_tests.py coverage

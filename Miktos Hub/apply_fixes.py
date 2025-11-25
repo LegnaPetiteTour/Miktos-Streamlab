@@ -92,14 +92,14 @@ print("\nStep 4: Verifying imports...")
 try:
     import sys
     sys.path.insert(0, str(HUB_DIR))
-    
+
     from modules import MultiPlatformStreaming, OBSOrchestrator, MultiCameraManager
-    
+
     print("✅ All module imports successful!")
     print(f"   - MultiPlatformStreaming: {MultiPlatformStreaming}")
     print(f"   - OBSOrchestrator: {OBSOrchestrator}")
     print(f"   - MultiCameraManager: {MultiCameraManager}")
-    
+
 except Exception as e:
     print(f"❌ Import verification failed: {e}")
     print("\nThis is expected if dependencies aren't installed yet.")

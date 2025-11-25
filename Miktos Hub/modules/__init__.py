@@ -20,15 +20,15 @@ __all__ = [
     "MultiCameraManager",
     "MultiPlatformStreaming",
     "OBSOrchestrator",
-    
+
     # Data models - Camera Manager
     "DiscoveryMethod",
     "DiscoveryEvent",
-    
+
     # Data models - Streaming
     "StreamStatus",
     "StreamHealth",
-    
+
     # Data models - OBS
     "TransitionType",
     "SceneTemplate",

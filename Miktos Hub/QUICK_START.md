@@ -5,6 +5,7 @@ This guide shows how to start using Miktos Hub now that validation is complete.
 ## Starting the Server
 
 ```bash
+
 # Activate virtual environment
 cd "/Users/atorrella/Desktop/Miktos Streamlab/Miktos Hub"
 source venv/bin/activate
@@ -14,6 +15,7 @@ python main.py --host 0.0.0.0 --port 8000
 
 # Or start in background
 python main.py --host 0.0.0.0 --port 8000 > /tmp/miktos.log 2>&1 &
+
 ```
 
 The server will:
@@ -35,16 +37,19 @@ Interactive API docs available at:
 ### Health & Status
 
 ```bash
+
 # System health
 curl http://localhost:8000/api/health
 
 # Check OBS connection
 curl http://localhost:8000/api/health | jq '.components[] | select(.name=="OBS Engine")'
+
 ```
 
 ### Session Management
 
 ```bash
+
 # Create a session
 curl -X POST http://localhost:8000/api/sessions/ \
   -H "Content-Type: application/json" \
@@ -58,11 +63,13 @@ curl http://localhost:8000/api/sessions/{session_id}
 
 # Delete session
 curl -X DELETE http://localhost:8000/api/sessions/{session_id}
+
 ```
 
 ### Camera Discovery
 
 ```bash
+
 # Check discovery status
 curl http://localhost:8000/api/cameras/discovery/status
 
@@ -81,11 +88,13 @@ curl -X POST http://localhost:8000/api/cameras/register \
       "max_fps": 60
     }
   }'
+
 ```
 
 ### OBS Scene Management
 
 ```bash
+
 # List scenes for a session
 curl "http://localhost:8000/api/scenes/?session_id={session_id}"
 
@@ -105,11 +114,13 @@ curl -X POST http://localhost:8000/api/scenes/switch \
     "session_id": "{session_id}",
     "scene_id": "{scene_id}"
   }'
+
 ```
 
 ## Running Tests
 
 ```bash
+
 # Run all tests
 pytest
 
@@ -121,6 +132,7 @@ pytest tests/test_api.py
 
 # Run specific test
 pytest tests/test_api.py::TestHealthEndpoints::test_health_endpoint
+
 ```
 
 ## Typical Workflow
@@ -128,14 +140,17 @@ pytest tests/test_api.py::TestHealthEndpoints::test_health_endpoint
 ### 1. Start Prerequisites
 
 ```bash
+
 # Make sure OBS is running
 # OBS should have WebSocket server enabled on port 4455
+
 ```
 
 ### 2. Start Miktos Hub
 
 ```bash
 python main.py
+
 ```
 
 ### 3. Create a Session
@@ -146,6 +161,7 @@ SESSION_ID=$(curl -s -X POST http://localhost:8000/api/sessions/ \
   -d '{"name": "My Session"}' | jq -r '.session_id')
 
 echo "Created session: $SESSION_ID"
+
 ```
 
 ### 4. Register Cameras
@@ -165,11 +181,13 @@ curl -X POST http://localhost:8000/api/cameras/register \
     "name": "iPhone",
     "stream_url": "rtsp://192.168.1.100:8554/stream"
   }'
+
 ```
 
 ### 5. Create OBS Scenes
 
 ```bash
+
 # Create scene for single camera
 curl -X POST http://localhost:8000/api/scenes/ \
   -H "Content-Type: application/json" \
@@ -187,12 +205,14 @@ curl -X POST http://localhost:8000/api/scenes/multi \
     \"camera_ids\": [\"phone-001\", \"phone-002\"],
     \"layout\": \"split_horizontal\"
   }"
+
 ```
 
 ### 6. Start Session
 
 ```bash
 curl -X POST "http://localhost:8000/api/sessions/$SESSION_ID/start"
+
 ```
 
 ### 7. Switch Scenes
@@ -204,12 +224,14 @@ curl -X POST http://localhost:8000/api/scenes/switch \
     \"session_id\": \"$SESSION_ID\",
     \"scene_id\": \"{scene_id}\"
   }"
+
 ```
 
 ### 8. Stop Session
 
 ```bash
 curl -X POST "http://localhost:8000/api/sessions/$SESSION_ID/stop"
+
 ```
 
 ## WebSocket Events
@@ -223,6 +245,7 @@ ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
   console.log('Event:', data.event_type, data.payload);
 };
+
 ```
 
 Event types:
@@ -242,16 +265,19 @@ Event types:
 ### Server won't start
 
 ```bash
+
 # Check if port 8000 is in use
 lsof -i :8000
 
 # Check if OBS is running and WebSocket enabled
 # OBS → Tools → WebSocket Server Settings
+
 ```
 
 ### OBS connection fails
 
 ```bash
+
 # Check OBS WebSocket settings
 # Default: localhost:4455 with password
 
@@ -260,11 +286,13 @@ lsof -i :8000
 export OBS_HOST=localhost
 export OBS_PORT=4455
 export OBS_PASSWORD=your_password
+
 ```
 
 ### Cameras not discovering
 
 ```bash
+
 # Check discovery status
 curl http://localhost:8000/api/cameras/discovery/status
 
@@ -272,6 +300,7 @@ curl http://localhost:8000/api/cameras/discovery/status
 # Check firewall isn't blocking mDNS (port 5353)
 
 # Try manual registration as fallback
+
 ```
 
 ## Current Limitations

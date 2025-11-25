@@ -7,11 +7,13 @@ from .cameras import router as cameras_router
 from .scenes import router as scenes_router
 from .streaming import router as streaming_router
 from .health import router as health_router
+from .obs import router as obs_router
 
 __all__ = [
     "sessions_router",
     "cameras_router",
     "scenes_router",
     "streaming_router",
-    "health_router"
+    "health_router",
+    "obs_router",
 ]

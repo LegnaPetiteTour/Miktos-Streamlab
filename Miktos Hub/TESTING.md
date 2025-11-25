@@ -16,12 +16,14 @@ Comprehensive test suite for Miktos Hub with 100+ tests covering all layers:
 
 ```bash
 pip install -r requirements-test.txt
+
 ```
 
 ### Run All Tests
 
 ```bash
 pytest
+
 ```
 
 ### Run with Coverage Report
@@ -29,6 +31,7 @@ pytest
 ```bash
 pytest --cov=. --cov-report=html
 open htmlcov/index.html  # View coverage report
+
 ```
 
 ---
@@ -40,9 +43,11 @@ Test individual components in isolation:
 
 ```bash
 pytest -m unit
+
 ```
 
 **What's tested**:
+
 - DeviceRegistry operations
 - SessionManager CRUD
 - StreamRouter routing logic
@@ -57,9 +62,11 @@ Test component interactions and workflows:
 
 ```bash
 pytest -m integration
+
 ```
 
 **What's tested**:
+
 - Complete camera discovery → streaming workflow
 - Multi-camera scene creation
 - Event-driven component communication
@@ -75,9 +82,11 @@ Test all HTTP endpoints:
 
 ```bash
 pytest -m api
+
 ```
 
 **What's tested**:
+
 - All REST endpoints (/sessions, /cameras, /scenes, /streaming, /health)
 - Request validation
 - Error handling
@@ -93,6 +102,7 @@ pytest -m api
 We provide a convenient test runner script:
 
 ```bash
+
 # Run specific test types
 python run_tests.py unit          # Unit tests only
 python run_tests.py integration   # Integration tests only
@@ -110,6 +120,7 @@ python run_tests.py failed        # Re-run only failed tests
 # Performance
 python run_tests.py parallel      # Run in parallel (faster)
 python run_tests.py quick         # Quick smoke test
+
 ```
 
 ---
@@ -119,12 +130,16 @@ python run_tests.py quick         # Quick smoke test
 Tests are marked for easy filtering:
 
 | Marker | Description | Usage |
+
 |--------|-------------|-------|
 | `unit` | Fast unit tests | `pytest -m unit` |
+
 | `integration` | Integration tests | `pytest -m integration` |
 | `api` | API endpoint tests | `pytest -m api` |
+
 | `slow` | Slow tests (>1s) | `pytest -m slow` |
 | `requires_obs` | Needs OBS connection | `pytest -m "not requires_obs"` |
+
 | `requires_hardware` | Needs real hardware | `pytest -m "not requires_hardware"` |
 
 ---
@@ -134,11 +149,13 @@ Tests are marked for easy filtering:
 ### Current Coverage (Week 4 Start)
 
 ```
+
 Core Services:    90%+ target
 Services Layer:   80%+ target
 Modules:          75%+ target
 API Layer:        85%+ target
 Overall:          80%+ target
+
 ```
 
 ### View Coverage Report
@@ -146,6 +163,7 @@ Overall:          80%+ target
 ```bash
 pytest --cov=. --cov-report=html
 open htmlcov/index.html
+
 ```
 
 ---
@@ -158,6 +176,7 @@ open htmlcov/index.html
 pytest tests/test_core.py
 pytest tests/test_api.py
 pytest tests/test_integration.py
+
 ```
 
 ### Run Single Test Class
@@ -165,6 +184,7 @@ pytest tests/test_integration.py
 ```bash
 pytest tests/test_core.py::TestDeviceRegistry
 pytest tests/test_api.py::TestSessionEndpoints
+
 ```
 
 ### Run Single Test Function
@@ -172,6 +192,7 @@ pytest tests/test_api.py::TestSessionEndpoints
 ```bash
 pytest tests/test_core.py::TestDeviceRegistry::test_register_device
 pytest tests/test_api.py::TestSessionEndpoints::test_create_session
+
 ```
 
 ### Run Tests Matching Pattern
@@ -179,6 +200,7 @@ pytest tests/test_api.py::TestSessionEndpoints::test_create_session
 ```bash
 pytest -k "device"           # All tests with 'device' in name
 pytest -k "session and not delete"  # Session tests except delete
+
 ```
 
 ---
@@ -189,30 +211,35 @@ pytest -k "session and not delete"  # Session tests except delete
 
 ```bash
 pytest -vv
+
 ```
 
 ### Show Print Statements
 
 ```bash
 pytest -s
+
 ```
 
 ### Stop on First Failure
 
 ```bash
 pytest -x
+
 ```
 
 ### Drop into Debugger on Failure
 
 ```bash
 pytest --pdb
+
 ```
 
 ### Show Locals on Failure
 
 ```bash
 pytest -l
+
 ```
 
 ---
@@ -223,16 +250,19 @@ pytest -l
 
 ```bash
 pytest -m slow
+
 ```
 
 ### Parallel Test Execution
 
 ```bash
+
 # Install pytest-xdist first
 pip install pytest-xdist
 
 # Run in parallel
 pytest -n auto
+
 ```
 
 ---
@@ -240,6 +270,7 @@ pytest -n auto
 ## 📝 Test Structure
 
 ```
+
 tests/
 ├── __init__.py              # Package init
 ├── conftest.py              # Shared fixtures & config
@@ -247,6 +278,7 @@ tests/
 ├── test_api.py              # API endpoint tests
 ├── test_integration.py      # Integration tests
 └── test_modules.py          # (Future) Module tests
+
 ```
 
 ---
@@ -271,6 +303,7 @@ def test_my_feature(device_registry, mock_camera):
     
     # Assert
     assert result.id == mock_camera.id
+
 ```
 
 ### Example Integration Test
@@ -293,6 +326,7 @@ async def test_workflow(session_manager, device_registry):
     
     # Verify
     assert session.state == SessionState.READY
+
 ```
 
 ### Example API Test
@@ -311,6 +345,7 @@ async def test_endpoint(test_client):
     assert response.status_code == 201
     data = response.json()
     assert data["name"] == "Test Session"
+
 ```
 
 ---
@@ -344,18 +379,21 @@ Shared fixtures:
 
 ```bash
 pytest --cov=. --cov-report=html
+
 ```
 
 ### Generate Terminal Report
 
 ```bash
 pytest --cov=. --cov-report=term-missing
+
 ```
 
 ### Generate XML Report (for CI)
 
 ```bash
 pytest --cov=. --cov-report=xml
+
 ```
 
 ---
@@ -365,16 +403,20 @@ pytest --cov=. --cov-report=xml
 ### Tests Hanging
 
 ```bash
+
 # Add timeout
 pytest --timeout=30
+
 ```
 
 ### Import Errors
 
 ```bash
+
 # Ensure project root in PYTHONPATH
 export PYTHONPATH="${PYTHONPATH}:${PWD}"
 pytest
+
 ```
 
 ### AsyncIO Warnings
@@ -387,6 +429,7 @@ Skip tests requiring OBS:
 
 ```bash
 pytest -m "not requires_obs"
+
 ```
 
 ---
@@ -396,11 +439,13 @@ pytest -m "not requires_obs"
 Before committing code, run:
 
 ```bash
+
 # Quick smoke test
 python run_tests.py quick
 
 # Full test suite
 python run_tests.py coverage
+
 ```
 
 ---
@@ -408,16 +453,19 @@ python run_tests.py coverage
 ## 🎯 Test Maintenance
 
 ### Keep Tests Fast
+
 - Unit tests should be <0.1s each
 - Use mocks for external dependencies
 - Mark slow tests with `@pytest.mark.slow`
 
 ### Keep Tests Isolated
+
 - Tests should not depend on each other
 - Use fixtures for setup/teardown
 - Clean up resources in fixtures
 
 ### Keep Tests Readable
+
 - Clear test names describing what's tested
 - Arrange-Act-Assert structure
 - Good docstrings
@@ -453,6 +501,7 @@ Coverage:
     Modules:  78%
     API:      88%
     Overall:  86%
+
 ```
 
 ---

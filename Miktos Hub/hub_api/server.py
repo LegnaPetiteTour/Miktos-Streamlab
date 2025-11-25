@@ -302,7 +302,8 @@ def create_app() -> FastAPI:
         cameras_router,
         scenes_router,
         streaming_router,
-        health_router
+        health_router,
+        obs_router
     )
     # type: ignore[import-not-found]
     from hub_api import websocket  # type: ignore[import-not-found]
@@ -321,6 +322,7 @@ def create_app() -> FastAPI:
         streaming_router, prefix="/api/streaming", tags=["streaming"]
     )
     app.include_router(health_router, prefix="/api", tags=["health"])
+    app.include_router(obs_router, prefix="/api/obs", tags=["obs"])
 
     # Include WebSocket handler
     app.include_router(websocket.router)

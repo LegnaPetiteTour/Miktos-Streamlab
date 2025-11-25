@@ -127,6 +127,7 @@ Response: {
     {"name": "Camera Manager", "status": "healthy"}
   ]
 }
+
 ```
 
 ### Session Management ✅
@@ -139,6 +140,7 @@ Response: {
   "name": "Validation Session",
   "state": "preparing"
 }
+
 ```
 
 ```bash
@@ -148,6 +150,7 @@ Response: {
   "sessions": [...],
   "total": 1
 }
+
 ```
 
 ### Camera Discovery ✅
@@ -161,6 +164,7 @@ Response: {
   "cameras_registered": 0,
   "discovery_method": "mdns"
 }
+
 ```
 
 ---

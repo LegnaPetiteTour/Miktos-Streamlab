@@ -45,14 +45,14 @@ class CameraHealth:
     bitrate_kbps: float
     fps: float
     dropped_frames: int
-    
+
     # Optional metrics (may not be available for all cameras)
     battery_level: Optional[float] = None  # 0.0 - 1.0
     is_charging: Optional[bool] = None
     temperature_celsius: Optional[float] = None
     network_quality: Optional[str] = None  # "excellent", "good", "fair", "poor"
     signal_strength_dbm: Optional[int] = None  # WiFi/LTE signal
-    
+
     def is_healthy(self) -> bool:
         """Quick health check"""
         return (
@@ -79,10 +79,10 @@ class CameraMetadata:
 class CameraDevice:
     """
     Universal camera device representation.
-    
+
     Whether it's a phone, webcam, or professional camera, they all
     look the same to the Hub through this abstraction.
-    
+
     Example:
         ```python
         phone = CameraDevice(
@@ -101,29 +101,29 @@ class CameraDevice:
         )
         ```
     """
-    
+
     id: str  # Unique identifier
     label: str  # Human-readable name
     transport: TransportType  # How video is delivered
     url: str  # Connection URL/address
     capabilities: List[CameraCapability] = field(default_factory=list)
-    
+
     # Runtime state
     is_registered: bool = False
     health: Optional[CameraHealth] = None
     metadata: CameraMetadata = field(default_factory=CameraMetadata)
-    
+
     # Control endpoint (if camera supports remote control)
     control_url: Optional[str] = None  # WebSocket URL for remote control
-    
+
     def has_capability(self, capability: CameraCapability) -> bool:
         """Check if camera supports a specific capability"""
         return capability in self.capabilities
-    
+
     def is_healthy(self) -> bool:
         """Check if camera is currently healthy"""
         return self.health is not None and self.health.is_healthy()
-    
+
     def supports_remote_control(self) -> bool:
         """Check if camera can be controlled remotely"""
         return self.has_capability(CameraCapability.REMOTE_CONTROL)

@@ -56,24 +56,24 @@ async def list_cameras(
 ):
     """
     List all cameras (discovered and registered).
-    
+
     Returns both discovered cameras (not yet registered) and
     registered cameras (active in the system).
     """
     try:
         # Get discovered cameras
         discovered = camera_manager.get_discovered_cameras()
-        
+
         # Get registered cameras
         registered = device_registry.list_all()
-        
+
         # Build response
         cameras = []
-        
+
         # Add all discovered cameras
         for camera in discovered:
             is_registered = device_registry.get(camera.id) is not None
-            
+
             cameras.append(CameraResponse(
                 camera_id=camera.id,
                 label=camera.label,
@@ -87,14 +87,14 @@ async def list_cameras(
                 network_quality=camera.metadata.get("network_quality"),
                 metadata=camera.metadata,
             ))
-        
+
         return CameraListResponse(
             cameras=cameras,
             total=len(cameras),
             discovered_count=len(discovered),
             registered_count=len(registered),
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to list cameras: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -110,10 +110,10 @@ async def get_camera(
     """
     try:
         camera = device_registry.get(camera_id)
-        
+
         if not camera:
             raise HTTPException(status_code=404, detail="Camera not found")
-        
+
         return CameraResponse(
             camera_id=camera.id,
             label=camera.label,
@@ -127,7 +127,7 @@ async def get_camera(
             network_quality=camera.metadata.get("network_quality"),
             metadata=camera.metadata,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -142,15 +142,15 @@ async def get_camera_health(
 ):
     """
     Get detailed health information for a camera.
-    
+
     Includes battery, temperature, network quality, and connection status.
     """
     try:
         health = await camera_manager.get_camera_health(camera_id)
-        
+
         if not health:
             raise HTTPException(status_code=404, detail="Camera not found or not registered")
-        
+
         return CameraHealthResponse(
             camera_id=camera_id,
             overall_status=health.overall_status,
@@ -161,7 +161,7 @@ async def get_camera_health(
             last_seen=health.last_seen,
             uptime_seconds=health.uptime_seconds,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -176,23 +176,23 @@ async def register_camera(
 ):
     """
     Register a discovered camera.
-    
+
     This makes the camera available for use in sessions.
     """
     try:
         logger.info(f"Registering camera: {request.camera_id}")
-        
+
         success = await camera_manager.register_camera(request.camera_id)
-        
+
         if not success:
             raise HTTPException(status_code=400, detail="Failed to register camera")
-        
+
         return CameraRegisterResponse(
             camera_id=request.camera_id,
             registered=True,
             message="Camera registered successfully",
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -207,22 +207,22 @@ async def unregister_camera(
 ):
     """
     Unregister a camera.
-    
+
     This removes the camera from the system.
     """
     try:
         logger.info(f"Unregistering camera: {camera_id}")
-        
+
         success = await camera_manager.unregister_camera(camera_id)
-        
+
         if not success:
             raise HTTPException(status_code=400, detail="Failed to unregister camera")
-        
+
         return SuccessResponse(
             success=True,
             message="Camera unregistered successfully",
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -237,19 +237,19 @@ async def start_discovery(
 ):
     """
     Start camera discovery.
-    
+
     Begins scanning the network for cameras via mDNS/Bonjour.
     """
     try:
         logger.info("Starting camera discovery")
-        
+
         await camera_manager.start_discovery()
-        
+
         return DiscoveryStartResponse(
             discovery_active=True,
             message="Discovery started",
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to start discovery: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -264,14 +264,14 @@ async def stop_discovery(
     """
     try:
         logger.info("Stopping camera discovery")
-        
+
         await camera_manager.stop_discovery()
-        
+
         return SuccessResponse(
             success=True,
             message="Discovery stopped",
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to stop discovery: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -287,14 +287,14 @@ async def get_discovery_status(
     try:
         discovered = camera_manager.get_discovered_cameras()
         registered = camera_manager.get_registered_cameras()
-        
+
         return DiscoveryStatusResponse(
             active=camera_manager._discovery_active,
             cameras_discovered=len(discovered),
             cameras_registered=len(registered),
             discovery_method="mdns",
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to get discovery status: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

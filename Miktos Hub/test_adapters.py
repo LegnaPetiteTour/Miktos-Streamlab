@@ -36,7 +36,7 @@ else:
 print("\n3. Creating Hub StreamDestination...")
 try:
     from models import StreamDestination, DestinationType, DestinationStatus
-    
+
     hub_dest = StreamDestination(
         id="youtube-en",
         name="YouTube EN",
@@ -69,7 +69,7 @@ if ModelAdapter.is_available():
             print(f"      Key: {backend_dest.key}")
             print(f"      Status: {backend_dest.status.value}")
             print(f"      Enabled: {backend_dest.enabled}")
-            
+
             # Verify field mapping
             assert backend_dest.key == hub_dest.stream_key, "stream_key → key mapping failed"
             assert backend_dest.name == hub_dest.name, "name mapping failed"
@@ -94,7 +94,7 @@ if ModelAdapter.is_available() and backend_dest:
             print(f"      Name: {hub_dest_2.name}")
             print(f"      Stream Key: {hub_dest_2.stream_key}")
             print(f"      Type: {hub_dest_2.type.value}")
-            
+
             # Verify round-trip
             assert hub_dest_2.stream_key == hub_dest.stream_key, "Round-trip stream_key failed"
             assert hub_dest_2.name == hub_dest.name, "Round-trip name failed"
@@ -119,7 +119,7 @@ if ModelAdapter.is_available():
             (DestinationStatus.ERROR, "FAILED"),
             (DestinationStatus.DISCONNECTED, "DISCONNECTED"),
         ]
-        
+
         all_passed = True
         for hub_status, expected_backend_name in test_mappings:
             backend_status = ModelAdapter._hub_to_backend_status(hub_status)
@@ -128,7 +128,7 @@ if ModelAdapter.is_available():
             else:
                 print(f"   ❌ {hub_status.value} → {backend_status.value} (expected {expected_backend_name})")
                 all_passed = False
-        
+
         if all_passed:
             print("   ✅ All status mappings correct")
     except Exception as e:
@@ -140,7 +140,7 @@ else:
 print("\n7. Testing batch conversion...")
 try:
     from adapters.model_adapters import convert_hub_destinations_to_backend
-    
+
     hub_destinations = [
         StreamDestination(
             id="youtube-en",
@@ -167,7 +167,7 @@ try:
             enabled=True,
         ),
     ]
-    
+
     if ModelAdapter.is_available():
         backend_destinations = convert_hub_destinations_to_backend(hub_destinations)
         print(f"   ✅ Converted {len(backend_destinations)} destinations")

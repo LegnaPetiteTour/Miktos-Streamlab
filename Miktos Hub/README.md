@@ -246,6 +246,7 @@ event_bus.emit(Event(
 ### Basic Workflow
 
 ```python
+
 # 1. Initialize core services
 registry = DeviceRegistry()
 router = StreamRouter()

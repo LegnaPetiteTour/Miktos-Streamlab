@@ -8,33 +8,43 @@ Update modules to use ModelAdapter instead of direct backend imports.
 ### 1. multi_platform_streaming.py - FIXED ✅
 
 **Problems Found**:
+
 ```python
+
 # OLD - BROKEN IMPORTS
 from core.egress_v2 import StreamDestination as BackendStreamDest  # ❌ Doesn't exist
 from core.multi_destination_manager import DestinationHealth  # ❌ Doesn't exist
-```
+
+```text
 
 **Fixed Imports**:
+
 ```python
+
 # NEW - USE ADAPTER
 from adapters.model_adapters import ModelAdapter
 from core.egress_v2 import EgressManagerV2  # ✅ Correct class name
-```
+
+```text
 
 **Key Changes**:
+
 1. Import `ModelAdapter` instead of backend models directly
 2. Use `EgressManagerV2` instead of `MultiDestinationManager`
 3. Convert Hub destinations → Backend destinations using adapter:
    ```python
    backend_dest = ModelAdapter.hub_to_backend_rtmp(hub_destination)
-   ```
+```text
+
 4. Extract health using adapter:
    ```python
    health = ModelAdapter.backend_health_to_hub(backend_dest)
-   ```
+```text
+
 5. Store both Hub and Backend destinations for easy access
 
 **Files**:
+
 - Original: `/modules/multi_platform_streaming.py`
 - Fixed: `/modules/multi_platform_streaming_FIXED.py` (review then replace)
 
@@ -57,6 +67,7 @@ from core.egress_v2 import EgressManagerV2  # ✅ Correct class name
 ## 🔧 TESTING CHECKLIST
 
 After fixing all modules:
+
 ```bash
 cd "/Users/atorrella/Desktop/Miktos Streamlab/Miktos Hub"
 
@@ -68,7 +79,8 @@ pytest tests/test_modules.py -v
 
 # Test 3: Run full test suite
 pytest tests/ -v
-```
+
+```text
 
 Expected: All imports should work without errors.
 

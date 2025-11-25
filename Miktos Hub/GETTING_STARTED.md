@@ -5,21 +5,28 @@
 ### Prerequisites
 
 **Python 3.10+** required. Your existing Miktos Streamlab backend should be at:
-```
+
+```text
+
 /Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend
-```
+
+```text
 
 ### Installation
 
 1. **Navigate to Hub directory**:
+
 ```bash
 cd "/Users/atorrella/Desktop/Miktos Streamlab/Miktos Hub"
-```
+
+```text
 
 2. **Install dependencies** (if needed):
+
 ```bash
 pip install -r requirements.txt  # Create this file with your backend dependencies
-```
+
+```text
 
 ### Basic Usage
 
@@ -52,7 +59,8 @@ registry.register(phone)
 camera = registry.get("phone-001")
 print(f"Registered: {camera.label}")
 print(f"Connected: {camera.is_healthy()}")
-```
+
+```text
 
 #### Example 2: Create a Session
 
@@ -75,7 +83,8 @@ config = SessionConfig(
 session = session_manager.create_session(config)
 print(f"Created session: {session.id}")
 print(f"State: {session.state}")
-```
+
+```text
 
 #### Example 3: Route a Camera to a Scene
 
@@ -105,7 +114,8 @@ scene = Scene(
 route = router.attach_camera_to_scene(camera, scene)
 print(f"Created route: {route.id}")
 print(f"State: {route.state}")
-```
+
+```text
 
 #### Example 4: Use Event Bus
 
@@ -128,7 +138,8 @@ event_bus.emit_sync(Event(
     data={"camera_id": "phone-001"},
     source="device_registry",
 ))
-```
+
+```text
 
 #### Example 5: Use Transcription Service
 
@@ -155,13 +166,15 @@ srt_path = await transcription.export_transcript(
 )
 
 print(f"Exported SRT: {srt_path}")
-```
+
+```text
 
 ### Configuration
 
 Create a `.env` file in the Hub directory:
 
 ```bash
+
 # OBS Settings
 OBS_HOST=localhost
 OBS_PORT=4455
@@ -174,7 +187,8 @@ API_PORT=8000
 # General
 HUB_LOG_LEVEL=INFO
 HUB_DEBUG=false
-```
+
+```text
 
 Load configuration:
 
@@ -184,13 +198,15 @@ from config import get_config
 config = get_config()
 print(f"OBS Host: {config.obs.host}")
 print(f"API Port: {config.api.port}")
-```
+
+```text
 
 ### Testing Your Setup
 
 Create a test script `test_hub.py`:
 
 ```python
+
 #!/usr/bin/env python3
 """
 Test Miktos Hub Foundation
@@ -199,7 +215,6 @@ Test Miktos Hub Foundation
 import asyncio
 from core import DeviceRegistry, StreamRouter, SessionManager
 from models import CameraDevice, TransportType, SessionConfig
-
 
 async def test_foundation():
     print("Testing Miktos Hub Foundation...")
@@ -261,16 +276,17 @@ async def test_foundation():
     
     print("\n🎉 All foundation tests passed!")
 
-
 if __name__ == "__main__":
     asyncio.run(test_foundation())
-```
+
+```text
 
 Run it:
 
 ```bash
 python test_hub.py
-```
+
+```text
 
 ### Next Steps
 
@@ -280,7 +296,8 @@ python test_hub.py
 
 ### Directory Structure
 
-```
+```text
+
 Miktos Hub/
 ├── models/           # ✅ Data structures
 ├── core/             # ✅ Foundation services
@@ -293,19 +310,23 @@ Miktos Hub/
 ├── README.md         # Architecture overview
 ├── STATUS.md         # Current progress & roadmap
 └── GETTING_STARTED.md # This file
-```
+
+```text
 
 ### Troubleshooting
 
 **Import errors?**
+
 - Make sure you're in the Hub directory
 - Check that Python can find the modules: `python -c "from core import DeviceRegistry"`
 
 **Backend not found?**
+
 - Verify path in `config/settings.py`
 - Should point to: `/Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend`
 
 **Can't import transcription?**
+
 - Check that backend has `core/transcription.py`
 - May need to install Whisper dependencies
 

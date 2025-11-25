@@ -3,10 +3,13 @@
 ## 📅 TIMELINE OVERVIEW
 
 | Week | Focus | Deliverable | Status |
+
 |------|-------|-------------|--------|
 | 1 | Services Layer | All backend wrappers complete | 🚧 10% |
+
 | 2 | Modules Layer | Camera manager + OBS orchestrator | ❌ 0% |
 | 3 | API Layer | REST + WebSocket interface | ❌ 0% |
+
 | 4 | Integration & Testing | End-to-end workflow | ❌ 0% |
 
 ---
@@ -21,12 +24,14 @@
 **File**: `services/quality_service.py`
 
 **Requirements**:
+
 - Wrap `Desktop/Backend/core/quality_analyzer.py`
 - Analyze video quality (exposure, focus, noise, color)
 - Provide recommendations for improvement
 - Support batch analysis of multiple cameras
 
 **Implementation Checklist**:
+
 ```python
 class QualityService:
     ✓ __init__() - Initialize with config
@@ -34,27 +39,33 @@ class QualityService:
     ✓ analyze_stream(camera_id, duration=5) -> QualityReport
     ✓ get_recommendations(analysis) -> List[Recommendation]
     ✓ compare_cameras(camera_ids) -> ComparisonReport
-```
+
+```text
 
 **Test**:
+
 ```python
+
 # Test with sample frame
 service = QualityService()
 analysis = await service.analyze_frame(test_frame)
 assert analysis.overall_score > 0
 assert len(analysis.issues) >= 0
-```
+
+```text
 
 #### Afternoon: EnhancementService (4 hours)
 **File**: `services/enhancement_service.py`
 
 **Requirements**:
+
 - Wrap `Desktop/Backend/core/enhancement_engine.py`
 - Apply audio/video enhancement presets
 - Create custom enhancement profiles
 - Real-time processing pipeline integration
 
 **Implementation Checklist**:
+
 ```python
 class EnhancementService:
     ✓ __init__() - Initialize with config
@@ -63,14 +74,17 @@ class EnhancementService:
     ✓ create_profile(name, config) -> Profile
     ✓ enable_enhancement(camera_id, profile_id) -> bool
     ✓ disable_enhancement(camera_id) -> bool
-```
+
+```text
 
 **Test**:
+
 ```python
 service = EnhancementService()
 presets = service.list_presets()
 assert "broadcast" in [p.name for p in presets]
-```
+
+```text
 
 ---
 
@@ -80,12 +94,14 @@ assert "broadcast" in [p.name for p in presets]
 **File**: `services/network_service.py`
 
 **Requirements**:
+
 - Wrap `Desktop/Backend/core/network.py`
 - Pre-flight bandwidth testing
 - Real-time network monitoring
 - Jitter, packet loss, RTT measurement
 
 **Implementation Checklist**:
+
 ```python
 class NetworkService:
     ✓ __init__() - Initialize with config
@@ -94,26 +110,31 @@ class NetworkService:
     ✓ stop_monitoring(camera_id) -> None
     ✓ get_metrics(camera_id) -> NetworkMetrics
     ✓ predict_stability(metrics) -> PredictionResult
-```
+
+```text
 
 **Test**:
+
 ```python
 service = NetworkService()
 result = await service.test_bandwidth(6000)  # 6 Mbps
 assert result.achieved_bitrate_kbps > 0
 assert result.is_sufficient == True
-```
+
+```text
 
 #### Afternoon: RecordingService (4 hours)
 **File**: `services/recording_service.py`
 
 **Requirements**:
+
 - Wrap `Desktop/Backend/core/iso_recording.py`
 - Start/stop session recording
 - ISO recording (each camera separately)
 - Recording status and file management
 
 **Implementation Checklist**:
+
 ```python
 class RecordingService:
     ✓ __init__() - Initialize with config
@@ -122,15 +143,18 @@ class RecordingService:
     ✓ start_iso_recording(camera_ids) -> List[RecordingHandle]
     ✓ get_recording_status(recording_id) -> RecordingStatus
     ✓ list_recordings(session_id) -> List[RecordingInfo]
-```
+
+```text
 
 **Test**:
+
 ```python
 service = RecordingService()
 handle = await service.start_recording(session_id, config)
 assert handle.recording_id is not None
 assert handle.output_path.exists()
-```
+
+```text
 
 ---
 
@@ -139,6 +163,7 @@ assert handle.output_path.exists()
 **File**: `services/export_service.py`
 
 **Requirements**:
+
 - FFmpeg-based video editing
 - Cut clips from recordings
 - Resize to multiple aspect ratios (16:9, 9:16, 1:1, 4:5)
@@ -146,6 +171,7 @@ assert handle.output_path.exists()
 - Render queue management
 
 **Implementation Checklist**:
+
 ```python
 class ExportService:
     ✓ __init__() - Initialize with FFmpeg
@@ -155,7 +181,8 @@ class ExportService:
     ✓ render(config: RenderConfig) -> RenderJob
     ✓ get_render_status(job_id) -> RenderStatus
     ✓ list_render_queue() -> List[RenderJob]
-```
+
+```text
 
 **Detailed Tasks**:
 
@@ -181,6 +208,7 @@ class ExportService:
 - Instagram Story preset (9:16)
 
 **Test**:
+
 ```python
 service = ExportService()
 
@@ -202,13 +230,15 @@ captioned = await service.add_captions(
     transcript="transcript.srt",
 )
 assert Path(captioned).exists()
-```
+
+```text
 
 ---
 
 ### Day 5 (Friday): Integration & Package
 
 **Morning**: Create `services/__init__.py` (2 hours)
+
 ```python
 """
 Miktos Hub Services
@@ -231,7 +261,8 @@ __all__ = [
     "RecordingService",
     "ExportService",
 ]
-```
+
+```text
 
 **Afternoon**: Test all services together (6 hours)
 - Integration test script
@@ -240,6 +271,7 @@ __all__ = [
 - Fix bugs
 
 **Integration Test**:
+
 ```python
 async def test_services_integration():
     # Initialize all services
@@ -275,7 +307,8 @@ async def test_services_integration():
     vertical = await export.resize_video(clip, "9:16")
     
     print("✅ All services working!")
-```
+
+```text
 
 **Week 1 Deliverable**: All services implemented and tested.
 
@@ -290,6 +323,7 @@ async def test_services_integration():
 **File**: `modules/multi_camera_manager.py`
 
 **Requirements**:
+
 - Auto-discover phones via mDNS
 - Manual camera registration via QR code
 - Health monitoring for all cameras
@@ -297,6 +331,7 @@ async def test_services_integration():
 - Battery/thermal alerts
 
 **Implementation Checklist**:
+
 ```python
 class MultiCameraManager:
     ✓ __init__(device_registry, event_bus)
@@ -307,15 +342,18 @@ class MultiCameraManager:
     ✓ send_remote_command(camera_id, command) -> bool
     ✓ set_camera_mode(camera_id, mode) -> bool  # STUDIO, NORMAL
     ✓ get_all_cameras() -> List[CameraDevice]
-```
+
+```text
 
 **Key Features**:
+
 - mDNS service discovery (`_miktos-camera._tcp.local.`)
 - WebSocket control to phone apps
 - Real-time health monitoring
 - Event emission for camera events
 
 **Test**:
+
 ```python
 manager = MultiCameraManager(registry, event_bus)
 await manager.start_discovery()
@@ -332,7 +370,8 @@ success = await manager.send_remote_command(
     {"action": "set_mode", "mode": "STUDIO"}
 )
 assert success
-```
+
+```text
 
 ---
 
@@ -341,6 +380,7 @@ assert success
 **File**: `modules/multi_platform_streaming.py`
 
 **Requirements**:
+
 - Wrap `Desktop/Backend/core/egress_v2.py`
 - Unified streaming to multiple platforms
 - YouTube EN + FR dual streaming
@@ -348,6 +388,7 @@ assert success
 - Health monitoring per destination
 
 **Implementation Checklist**:
+
 ```python
 class MultiPlatformStreaming:
     ✓ __init__(config)
@@ -357,15 +398,18 @@ class MultiPlatformStreaming:
     ✓ stop_streaming(session_id) -> bool
     ✓ get_destination_health(dest_id) -> DestinationHealth
     ✓ trigger_failover(dest_id) -> bool
-```
+
+```text
 
 **Key Features**:
+
 - Simultaneous multi-destination streaming
 - Per-destination health checks
 - Automatic RTMP→SRT failover
 - Metrics aggregation
 
 **Test**:
+
 ```python
 streaming = MultiPlatformStreaming(config)
 
@@ -381,7 +425,8 @@ assert success
 # Check health
 health = streaming.get_destination_health(youtube_en.id)
 assert health.is_streaming
-```
+
+```text
 
 ---
 
@@ -390,12 +435,14 @@ assert health.is_streaming
 **File**: `modules/obs_orchestrator.py`
 
 **Requirements**:
+
 - Auto-create scenes when cameras connect
 - Scene switching with transitions
 - Source management (positioning, cropping)
 - Filter application
 
 **Implementation Checklist**:
+
 ```python
 class OBSOrchestrator:
     ✓ __init__(obs_adapter, device_registry, stream_router)
@@ -404,15 +451,18 @@ class OBSOrchestrator:
     ✓ update_source_position(source_id, x, y, w, h) -> bool
     ✓ apply_filter(source_id, filter_config) -> bool
     ✓ get_current_scene() -> Scene
-```
+
+```text
 
 **Key Features**:
+
 - Automatic scene generation based on camera count
 - Smart layout selection (1 cam = full, 2 = split, 3+ = grid)
 - Transition effects
 - Real-time source updates
 
 **Test**:
+
 ```python
 orchestrator = OBSOrchestrator(obs_adapter, registry, router)
 
@@ -429,7 +479,8 @@ success = await orchestrator.switch_scene(
     transition="fade"
 )
 assert success
-```
+
+```text
 
 **Week 2 Deliverable**: All modules implemented and tested.
 
@@ -442,16 +493,19 @@ assert success
 ### Day 1-2 (Mon-Tue): FastAPI Server + Session Routes
 
 **Files**:
+
 - `api/server.py`
 - `api/routes/sessions.py`
 
 **Requirements**:
+
 - FastAPI application setup
 - CORS configuration
 - Session CRUD endpoints
 - Session lifecycle control
 
 **Endpoints**:
+
 ```python
 POST   /api/sessions          # Create session
 GET    /api/sessions          # List sessions
@@ -461,10 +515,13 @@ POST   /api/sessions/{id}/start   # Start streaming
 POST   /api/sessions/{id}/pause   # Pause streaming
 POST   /api/sessions/{id}/resume  # Resume streaming
 POST   /api/sessions/{id}/stop    # Stop streaming
-```
+
+```text
 
 **Test**:
+
 ```bash
+
 # Create session
 curl -X POST http://localhost:8000/api/sessions \
   -H "Content-Type: application/json" \
@@ -472,22 +529,26 @@ curl -X POST http://localhost:8000/api/sessions \
 
 # Start streaming
 curl -X POST http://localhost:8000/api/sessions/{id}/start
-```
+
+```text
 
 ---
 
 ### Day 3 (Wednesday): Camera & Scene Routes
 
 **Files**:
+
 - `api/routes/cameras.py`
 - `api/routes/scenes.py`
 
 **Requirements**:
+
 - Camera discovery and registration
 - Camera health monitoring
 - Scene creation and switching
 
 **Endpoints**:
+
 ```python
 GET    /api/cameras           # List cameras
 POST   /api/cameras           # Register camera
@@ -498,22 +559,26 @@ GET    /api/cameras/{id}/health   # Get camera health
 POST   /api/scenes            # Create scene
 GET    /api/scenes            # List scenes
 POST   /api/scenes/{id}/activate  # Switch to scene
-```
+
+```text
 
 ---
 
 ### Day 4 (Thursday): Streaming & Health Routes
 
 **Files**:
+
 - `api/routes/streaming.py`
 - `api/routes/health.py`
 
 **Requirements**:
+
 - Streaming control
 - Destination management
 - System health monitoring
 
 **Endpoints**:
+
 ```python
 POST   /api/streaming/destinations  # Add destination
 GET    /api/streaming/status        # Get streaming status
@@ -522,7 +587,8 @@ POST   /api/streaming/failover/{id} # Trigger failover
 GET    /api/health                  # System health
 GET    /api/health/cameras          # All camera health
 GET    /api/health/destinations     # All destination health
-```
+
+```text
 
 ---
 
@@ -531,12 +597,14 @@ GET    /api/health/destinations     # All destination health
 **File**: `api/websocket/handlers.py`
 
 **Requirements**:
+
 - Real-time health updates
 - Event streaming
 - Camera status updates
 - Session state changes
 
 **WebSocket Events**:
+
 ```json
 // Camera health update
 {
@@ -566,9 +634,11 @@ GET    /api/health/destinations     # All destination health
     "bitrate_kbps": 6000
   }
 }
-```
+
+```text
 
 **Test**:
+
 ```javascript
 // JavaScript WebSocket client
 const ws = new WebSocket('ws://localhost:8000/ws');
@@ -577,7 +647,8 @@ ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
   console.log('Received:', data.type, data);
 };
-```
+
+```text
 
 **Week 3 Deliverable**: Complete API with documentation.
 
@@ -592,6 +663,7 @@ ws.onmessage = (event) => {
 **Test Scenarios**:
 
 1. **Complete Streaming Workflow**:
+
    - Start Hub
    - Phone connects (auto-discovered)
    - OBS scene created automatically
@@ -602,17 +674,20 @@ ws.onmessage = (event) => {
    - Stop streaming
 
 2. **Multi-Camera Switching**:
+
    - Connect 3 phones
    - Auto-create scenes
    - Switch between scenes via API
    - Verify transitions work
 
 3. **Quality & Enhancement**:
+
    - Analyze camera quality
    - Apply enhancement preset
    - Verify improvement in metrics
 
 4. **Transcription & Export**:
+
    - Record session
    - Transcribe recording
    - Cut clip
@@ -621,6 +696,7 @@ ws.onmessage = (event) => {
    - Export for social media
 
 5. **Failover Testing**:
+
    - Start streaming to YouTube
    - Simulate RTMP failure
    - Verify automatic SRT failover
@@ -640,12 +716,14 @@ ws.onmessage = (event) => {
 ### Day 4 (Thursday): Documentation & Demo
 
 **Documentation**:
+
 - API documentation (OpenAPI/Swagger)
 - Architecture diagrams (updated)
 - User guide for control panel
 - Deployment instructions
 
 **Demo Video**:
+
 1. System overview
 2. Phone discovery
 3. OBS scene creation
@@ -669,21 +747,25 @@ ws.onmessage = (event) => {
 ## 📊 SUCCESS METRICS
 
 ### Week 1 (Services)
+
 - [ ] All 6 services implemented
 - [ ] All services tested independently
 - [ ] Integration test passes
 
 ### Week 2 (Modules)
+
 - [ ] Camera discovery works
 - [ ] OBS auto-scene creation works
 - [ ] Multi-platform streaming works
 
 ### Week 3 (API)
+
 - [ ] All endpoints functional
 - [ ] WebSocket real-time updates work
 - [ ] API documentation complete
 
 ### Week 4 (Integration)
+
 - [ ] End-to-end workflow works
 - [ ] Can stream for 5+ hours stable
 - [ ] Demo video complete
@@ -693,11 +775,13 @@ ws.onmessage = (event) => {
 ## 🔥 DAILY ROUTINE
 
 ### Morning (4 hours)
+
 1. Review previous day's work (30 min)
 2. Implement new feature (3 hours)
 3. Write unit tests (30 min)
 
 ### Afternoon (4 hours)
+
 1. Continue implementation (2 hours)
 2. Integration testing (1 hour)
 3. Documentation (1 hour)
@@ -711,18 +795,22 @@ ws.onmessage = (event) => {
 ### Potential Blockers
 
 1. **OBS Integration Issues**
+
    - Mitigation: Test OBS adapter early
    - Fallback: Document manual OBS setup
 
 2. **Phone Discovery Not Working**
+
    - Mitigation: Implement QR code fallback
    - Test mDNS on local network early
 
 3. **Transcription Performance**
+
    - Mitigation: Test with actual files
    - Consider smaller model if too slow
 
 4. **FFmpeg Complexity**
+
    - Mitigation: Start with simple cuts
    - Gradually add complex features
 

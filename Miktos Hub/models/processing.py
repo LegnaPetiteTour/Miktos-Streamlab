@@ -20,7 +20,7 @@ class ProcessorType(Enum):
     EQ = "eq"
     GATE = "gate"
     REVERB = "reverb"
-    
+
     # Video processors
     COLOR_CORRECTION = "color_correction"
     EXPOSURE_ADJUST = "exposure_adjust"
@@ -36,25 +36,25 @@ class ProcessorType(Enum):
 class MediaProcessor:
     """
     Base class for all media processors.
-    
+
     Processors are stackable - they can be chained in a pipeline.
     """
-    
+
     # Identity
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
     type: ProcessorType = ProcessorType.NOISE_REDUCTION
-    
+
     # State
     enabled: bool = True
-    
+
     # Configuration (processor-specific)
     config: Dict[str, Any] = field(default_factory=dict)
-    
+
     # Processing stats
     frames_processed: int = 0
     processing_time_ms: float = 0.0
-    
+
     def reset_stats(self):
         """Reset processing statistics"""
         self.frames_processed = 0
@@ -65,9 +65,9 @@ class MediaProcessor:
 class AudioProcessor(MediaProcessor):
     """
     Audio-specific processor.
-    
+
     Example configurations:
-        
+
         # Noise reduction
         AudioProcessor(
             name="Remove Background Noise",
@@ -77,7 +77,7 @@ class AudioProcessor(MediaProcessor):
                 "model": "rnnoise",  # "rnnoise", "nvidia_broadcast"
             }
         )
-        
+
         # Normalize/Loudness
         AudioProcessor(
             name="Normalize Audio",
@@ -87,7 +87,7 @@ class AudioProcessor(MediaProcessor):
                 "true_peak_limit": -1.0,  # dBTP
             }
         )
-        
+
         # Compressor
         AudioProcessor(
             name="Compress Dynamic Range",
@@ -100,11 +100,11 @@ class AudioProcessor(MediaProcessor):
             }
         )
     """
-    
+
     # Audio-specific settings
     sample_rate: int = 48000
     channels: int = 2  # Stereo
-    
+
     def supports_mono(self) -> bool:
         """Check if processor supports mono audio"""
         return self.type in [
@@ -118,9 +118,9 @@ class AudioProcessor(MediaProcessor):
 class VideoProcessor(MediaProcessor):
     """
     Video-specific processor.
-    
+
     Example configurations:
-        
+
         # Color correction
         VideoProcessor(
             name="Auto Color Balance",
@@ -132,7 +132,7 @@ class VideoProcessor(MediaProcessor):
                 "auto_white_balance": True,
             }
         )
-        
+
         # Sharpening
         VideoProcessor(
             name="Sharpen Image",
@@ -142,7 +142,7 @@ class VideoProcessor(MediaProcessor):
                 "radius": 1.0,  # pixels
             }
         )
-        
+
         # Face detection + auto-framing
         VideoProcessor(
             name="Auto-Frame on Faces",
@@ -155,15 +155,15 @@ class VideoProcessor(MediaProcessor):
             }
         )
     """
-    
+
     # Video-specific settings
     resolution: str = "1920x1080"
     fps: int = 30
-    
+
     # GPU acceleration (if supported)
     use_gpu: bool = True
     gpu_device_id: int = 0
-    
+
     def requires_gpu(self) -> bool:
         """Check if processor requires GPU"""
         return self.type in [

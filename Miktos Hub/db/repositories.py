@@ -124,13 +124,21 @@ class SessionRepository:
             if not db_session:
                 raise ValueError(f"Session not found: {session.id}")
 
-            # Update fields
-            db_session.name = session.name
-            db_session.description = session.description
-            db_session.state = SessionState(session.state.value)
-            db_session.started_at = session.started_at
-            db_session.ended_at = session.ended_at
-            db_session.extra_data = {}
+            # Update fields (type: ignore for SQLAlchemy ORM assignments)
+            db_session.name = session.name  # type: ignore[assignment]
+            db_session.description = (
+                session.description  # type: ignore[assignment]
+            )
+            db_session.state = (
+                SessionState(session.state.value)  # type: ignore[assignment]
+            )
+            db_session.started_at = (
+                session.started_at  # type: ignore[assignment]
+            )
+            db_session.ended_at = (
+                session.ended_at  # type: ignore[assignment]
+            )
+            db_session.extra_data = {}  # type: ignore[assignment]
             db_session.updated_at = datetime.utcnow()
 
             self._db.commit()

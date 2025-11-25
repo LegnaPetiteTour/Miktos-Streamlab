@@ -44,9 +44,12 @@
 **Expected Behavior**:
 
 ```bash
+
 # Should discover cameras via mDNS
 GET /api/cameras/
+
 # Expected: List of discovered cameras with status
+
 ```text
 
 ### 2. Complete Session Lifecycle
@@ -64,6 +67,7 @@ GET /api/cameras/
 **Test Script** (once cameras are connected):
 
 ```bash
+
 # Create session with camera
 SESSION_ID=$(curl -s -X POST http://localhost:8000/api/sessions/ \
   -H "Content-Type: application/json" \
@@ -87,6 +91,7 @@ curl -X POST http://localhost:8000/api/sessions/$SESSION_ID/resume
 
 # End
 curl -X POST http://localhost:8000/api/sessions/$SESSION_ID/end
+
 ```text
 
 ### 3. OBS Scene Management
@@ -134,16 +139,19 @@ curl -X POST http://localhost:8000/api/sessions/$SESSION_ID/end
 ### Architecture Validation
 
 1. **State Machine Works Correctly**
+
    - Session states are enforced properly
    - Cannot perform invalid state transitions
    - Clear error messages when operations fail
 
 2. **Database Layer is Solid**
+
    - SQLAlchemy models working
    - Session persistence operational
    - Recovery on startup functional
 
 3. **API Design is Sound**
+
    - RESTful endpoints following conventions
    - Proper HTTP status codes
    - Clear request/response models
@@ -151,15 +159,18 @@ curl -X POST http://localhost:8000/api/sessions/$SESSION_ID/end
 ### Blockers for Full E2E Test
 
 1. **No Real Cameras Connected**
+
    - Cannot test camera discovery
    - Cannot start sessions (requires cameras)
    - Cannot test full workflow
 
 2. **Missing Camera Discovery Endpoint**
+
    - Need GET /api/cameras/ to list discovered cameras
    - Need way to check camera status
 
 3. **Scene Management Not Exposed**
+
    - Need endpoints to list/switch OBS scenes
    - Need integration with session workflow
 
@@ -172,6 +183,7 @@ Total Tests Run: 10
 Passed: 4 (40%)
 Failed: 6 (60%)
 Blocked: 6 (camera requirement)
+
 ```text
 
 **Passed**:
@@ -201,31 +213,35 @@ Blocked: 6 (camera requirement)
    # Returns list of discovered cameras
    ```
 
-2. **Add OBS Scene Endpoints**
+1. **Add OBS Scene Endpoints**
 
    ```python
    GET /api/obs/scenes/
    POST /api/obs/scenes/{scene_name}/activate
    ```
 
-3. **Create Mock Camera for Testing**
+2. **Create Mock Camera for Testing**
+
    - Allow starting sessions without real cameras
    - Enable full workflow testing in development
 
 ### With Real Hardware
 
 1. **Connect Physical Cameras**
+
    - Blackmagic cameras
    - ATEM switchers
    - Test mDNS discovery
 
 2. **Full Production Workflow Test**
+
    - Multi-camera session
    - Scene switching
    - Streaming to YouTube/Twitch
    - Recording simultaneously
 
 3. **Performance Testing**
+
    - Multiple concurrent sessions
    - Network bandwidth monitoring
    - CPU/memory usage under load
@@ -247,6 +263,7 @@ Blocked: 6 (camera requirement)
 2025-11-24 01:59:49 - INFO - API Docs: http://localhost:8000/docs
 2025-11-24 01:59:49 - INFO - Connected to OBS 32.0.2
 2025-11-24 01:59:49 - INFO - Recovered 5 session(s) from database
+
 ```text
 
 ### State Machine Validation
@@ -256,6 +273,7 @@ Blocked: 6 (camera requirement)
 2025-11-24 02:01:40 - ERROR - Cannot pause session in state: SessionState.PREPARING
 2025-11-24 02:01:41 - ERROR - Cannot resume session in state: SessionState.PREPARING
 2025-11-24 02:01:42 - ERROR - Cannot end session in state: SessionState.PREPARING
+
 ```text
 
 ## ✅ Conclusion

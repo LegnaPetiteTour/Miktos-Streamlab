@@ -39,18 +39,21 @@ Fix the service initialization in test_api.py
 
 ```bash
 pytest tests/test_core.py -v
+
 ```
 
 ### Step 3: Run Integration Tests
 
 ```bash
 pytest tests/test_integration.py -v
+
 ```
 
 ### Step 4: Full Test Suite
 
 ```bash
 pytest tests/ -v
+
 ```
 
 ## Expected Timeline

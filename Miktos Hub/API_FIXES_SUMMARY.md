@@ -47,6 +47,7 @@ $ curl -s "http://localhost:8000/api/sessions/{id}" | jq '{id, name, state}'
   "name": "E2E Test",
   "state": "preparing"
 }
+
 ```
 
 ---
@@ -80,10 +81,12 @@ $ curl -s "http://localhost:8000/api/sessions/{id}" | jq '{id, name, state}'
 **Verification**:
 
 ```bash
+
 # Endpoints now exist and respond (though may fail due to business logic)
 $ curl -X POST "http://localhost:8000/api/sessions/{id}/pause"
 $ curl -X POST "http://localhost:8000/api/sessions/{id}/resume"
 $ curl -X POST "http://localhost:8000/api/sessions/{id}/end"
+
 ```
 
 ---
@@ -113,11 +116,13 @@ $ curl -X POST ".../start" -d '{...}'
 {
   "state": null  # ← Field doesn't exist in error response
 }
+
 ```
 
 **Status**:
 
 - API endpoints are **working correctly**
+
 - They return proper error messages when business rules aren't met
 - Test script needs cameras to be attached for full workflow testing
 - This is expected behavior - will be resolved in Option B (Interactive Testing)
@@ -184,8 +189,10 @@ The API is now structurally complete. To fully validate:
 ## Summary
 
 | Issue | Status | Fix |
+
 |-------|--------|-----|
 | E2E-003: Session ID null | ✅ Fixed | Changed model field to `id` |
+
 | Missing pause/resume/end | ✅ Fixed | Added 3 new endpoints |
 | E2E-001: State null | ℹ️ Expected | Requires cameras for testing |
 

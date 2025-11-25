@@ -27,7 +27,7 @@ class SessionState(Enum):
 @dataclass
 class SessionConfig:
     """Configuration for creating a new session"""
-    name: str
+    name: str = ""
     description: Optional[str] = None
 
     # What cameras to use
@@ -88,7 +88,7 @@ class Session:
     description: Optional[str] = None
 
     # Configuration
-    config: SessionConfig = field(default_factory=SessionConfig)
+    config: SessionConfig = field(default_factory=lambda: SessionConfig())
 
     # State
     state: SessionState = SessionState.PREPARING

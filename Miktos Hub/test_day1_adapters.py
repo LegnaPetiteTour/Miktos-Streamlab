@@ -134,7 +134,7 @@ try:
     backend_dest.dropped_frames = 10
     backend_dest.total_frames = 1000
     backend_dest.drop_percentage = 1.0
-    
+
     health = ModelAdapter.backend_health_to_hub(backend_dest)
     print("✅ Health extracted successfully")
     print(f"   - Connected: {health.is_connected}")
@@ -154,12 +154,12 @@ try:
     # Hub → Backend → Hub
     backend_dest2 = ModelAdapter.hub_to_backend_rtmp(hub_dest)
     hub_dest2 = ModelAdapter.backend_rtmp_to_hub(backend_dest2)
-    
+
     # Verify key fields match
     assert hub_dest.name == hub_dest2.name, "Name mismatch"
     assert hub_dest.url == hub_dest2.url, "URL mismatch"
     assert hub_dest.stream_key == hub_dest2.stream_key, "Stream key mismatch"
-    
+
     print("✅ Round-trip conversion successful")
     print("   - All key fields preserved")
 except Exception as e:
@@ -172,7 +172,7 @@ except Exception as e:
 print("\nTest 10: Batch conversion test...")
 try:
     from adapters.model_adapters import convert_hub_destinations_to_backend
-    
+
     hub_destinations = [
         StreamDestination(
             id="youtube-en",
@@ -191,9 +191,9 @@ try:
             enabled=True
         ),
     ]
-    
+
     backend_destinations = convert_hub_destinations_to_backend(hub_destinations)
-    
+
     assert len(backend_destinations) == 2, "Should convert both destinations"
     print("✅ Batch conversion successful")
     print(f"   - Converted {len(backend_destinations)} destinations")

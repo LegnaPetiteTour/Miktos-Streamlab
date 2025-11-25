@@ -639,4 +639,9 @@ class SessionManager:
             details=details,
             severity=severity
         )
-        session.events.append(event)
+        session.events.append({
+            "timestamp": event.timestamp.isoformat(),
+            "type": event.type,
+            "details": event.details,
+            "severity": event.severity
+        })

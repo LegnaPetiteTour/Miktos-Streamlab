@@ -14,7 +14,7 @@ from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.ext.declarative import declared_attr
 import enum
 
-Base = declarative_base()
+Base = declarative_base()  # type: ignore[misc]
 
 
 class TimestampMixin:
@@ -44,7 +44,7 @@ class SessionState(str, enum.Enum):
     COMPLETED = "completed"
 
 
-class SessionModel(Base, TimestampMixin):
+class SessionModel(Base, TimestampMixin):  # type: ignore[misc,valid-type]
     """
     Persistent session model.
 
@@ -55,7 +55,7 @@ class SessionModel(Base, TimestampMixin):
     id = Column(String(36), primary_key=True)  # UUID
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    state = Column(
+    state: Column[SessionState] = Column(
         Enum(SessionState), default=SessionState.PREPARING, nullable=False
     )
 
@@ -113,7 +113,7 @@ class SessionModel(Base, TimestampMixin):
         }
 
 
-class CameraModel(Base, TimestampMixin):
+class CameraModel(Base, TimestampMixin):  # type: ignore[misc,valid-type]
     """
     Persistent camera registration.
 
@@ -164,7 +164,7 @@ class CameraModel(Base, TimestampMixin):
         }
 
 
-class SessionCameraModel(Base):
+class SessionCameraModel(Base):  # type: ignore[misc,valid-type]
     """
     Association between sessions and cameras.
 
@@ -185,7 +185,7 @@ class SessionCameraModel(Base):
     camera = relationship("CameraModel", back_populates="session_cameras")
 
 
-class SceneModel(Base, TimestampMixin):
+class SceneModel(Base, TimestampMixin):  # type: ignore[misc,valid-type]
     """
     Persistent OBS scene configuration.
 
@@ -235,7 +235,9 @@ class SceneModel(Base, TimestampMixin):
         }
 
 
-class StreamDestinationModel(Base, TimestampMixin):
+class StreamDestinationModel(
+    Base, TimestampMixin  # type: ignore[misc,valid-type]
+):
     """
     Persistent streaming destination.
 
@@ -292,7 +294,7 @@ class StreamDestinationModel(Base, TimestampMixin):
         }
 
 
-class SystemStateModel(Base, TimestampMixin):
+class SystemStateModel(Base, TimestampMixin):  # type: ignore[misc,valid-type]
     """
     System-wide state and configuration.
 
