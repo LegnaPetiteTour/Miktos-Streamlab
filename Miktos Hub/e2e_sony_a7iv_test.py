@@ -37,27 +37,27 @@ class Colors:
     BOLD = '\033[1m'
 
 
-def print_step(step: str, message: str):
+def print_step(step: str, message: str) -> None:
     """Print formatted step message"""
     print(f"\n{Colors.BOLD}{Colors.CYAN}[{step}]{Colors.END} {message}")
 
 
-def print_success(message: str):
+def print_success(message: str) -> None:
     """Print success message"""
     print(f"{Colors.GREEN}✅ {message}{Colors.END}")
 
 
-def print_error(message: str):
+def print_error(message: str) -> None:
     """Print error message"""
     print(f"{Colors.RED}❌ {message}{Colors.END}")
 
 
-def print_warning(message: str):
+def print_warning(message: str) -> None:
     """Print warning message"""
     print(f"{Colors.YELLOW}⚠️  {message}{Colors.END}")
 
 
-def print_info(message: str):
+def print_info(message: str) -> None:
     """Print info message"""
     print(f"{Colors.BLUE}ℹ️  {message}{Colors.END}")
 
@@ -65,11 +65,11 @@ def print_info(message: str):
 class E2ETest:
     """End-to-End workflow test"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.session_id: Optional[str] = None
         self.camera_id: Optional[str] = None
-        self.scene_ids: list = []
-        self.destination_ids: list = []
+        self.scene_ids: list[str] = []
+        self.destination_ids: list[str] = []
 
     def check_server_health(self) -> bool:
         """Check if the API server is running"""
