@@ -203,7 +203,7 @@ class TestEndToEndWorkflow:
         assert camera.id in recovered_session.camera_ids
 
         # Step 6: Verify camera is still in registry
-        
+
         recovered_cam = new_registry.get(camera.id)
         assert recovered_cam is not None
 
