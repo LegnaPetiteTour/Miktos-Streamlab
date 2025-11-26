@@ -128,11 +128,22 @@ Miktos Hub/
 │   ├── __init__.py
 │   └── settings.py
 │
+├── db/                  # Database & persistence
+│   ├── __init__.py
+│   ├── database.py      # SQLAlchemy connection manager
+│   ├── models.py        # Database models
+│   ├── repositories.py  # Data access layer
+│   ├── migration_manager.py  # Alembic integration
+│   └── migrations/      # Database migrations
+│       ├── env.py
+│       └── versions/    # Migration scripts
+│
 └── tests/               # Test suite
     ├── __init__.py
     ├── test_device_registry.py
     ├── test_stream_router.py
     ├── test_session_manager.py
+    ├── test_persistence.py
     └── test_integration.py
 
 ```
@@ -212,20 +223,44 @@ event_bus.emit(Event(
     data={"camera_id": "phone-001"},
     source="device_registry"
 ))
-
 ```
+
+### 6. Database Persistence
+
+**What**: SQLite database with automatic recovery  
+**Why**: Sessions, cameras, and scenes survive server restarts  
+**Features**:
+
+- Automatic migrations (Alembic)
+- Type-safe repositories
+- Session/camera/scene persistence
+- Recovery on startup
+
+**Example**:
+
+```python
+# Register a camera - automatically saved
+device_registry.register(camera)
+
+# Restart server - camera is restored
+# Startup log: "✓ Restored 3 camera(s)"
+```
+
+See [Persistence Documentation](docs/PERSISTENCE.md) for details.
 
 ## 🚀 Current Status
 
 ### ✅ Completed (Foundation)
 
 - ✅ Models (camera, destination, scene, session, processing)
-- ✅ Device Registry
+- ✅ Device Registry with persistence
 - ✅ Stream Router
-- ✅ Session Manager
+- ✅ Session Manager with persistence
 - ✅ Processing Pipeline
 - ✅ Event Bus
-- ✅ OBS Engine Adapter (started)
+- ✅ OBS Engine Adapter
+- ✅ Database persistence layer (SQLite + Alembic migrations)
+- ✅ Automatic session/camera recovery
 
 ### 🚧 In Progress
 
@@ -309,6 +344,7 @@ Add new cameras, engines, or platforms without modifying core code.
 
 ## 📚 Documentation
 
+- [Persistence & Database Management](docs/PERSISTENCE.md) - **NEW!**
 - [Models Reference](docs/models.md)
 - [Core Services Reference](docs/core.md)
 - [API Reference](docs/api.md)

@@ -224,13 +224,15 @@ async def create_scene(
         if len(request.camera_ids) == 1:
             scene = await obs.create_scene_for_camera(  # type: ignore[attr-defined]  # noqa: E501
                 request.camera_ids[0],
-                name=request.name
+                scene_name=request.name,
+                session_id=request.session_id
             )
         else:
             scene = await obs.create_multi_camera_scene(  # type: ignore[attr-defined]  # noqa: E501
                 camera_ids=request.camera_ids,
                 layout=request.layout,
-                name=request.name
+                scene_name=request.name,
+                session_id=request.session_id
             )
 
         return SceneResponse(

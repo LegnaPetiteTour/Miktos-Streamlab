@@ -104,10 +104,12 @@ class OBSOrchestrator:
         device_registry: DeviceRegistry,
         stream_router: StreamRouter,
         event_bus: Optional[EventBus] = None,
+        enable_persistence: bool = True,
     ):
         self._registry = device_registry
         self._router = stream_router
         self._event_bus = event_bus or EventBus()
+        self._enable_persistence = enable_persistence
 
         config = get_config()
 
@@ -122,6 +124,10 @@ class OBSOrchestrator:
         self._scenes: Dict[str, Scene] = {}
         self._current_scene_id: Optional[str] = None
 
+        # Database connection (lazy loaded)
+        self._db = None
+        self._scene_repo = None
+
         # Scene templates
         self._templates = self._load_templates()
 
@@ -132,7 +138,10 @@ class OBSOrchestrator:
         # Auto-creation settings
         self._auto_create_enabled = config.obs.auto_create_scenes or True
 
-        logger.info("OBS orchestrator initialized")
+        logger.info(
+            f"OBS orchestrator initialized "
+            f"(persistence: {enable_persistence})"
+        )
 
     def _load_templates(self) -> Dict[str, SceneTemplate]:
         """Load scene templates."""
@@ -218,6 +227,7 @@ class OBSOrchestrator:
         self,
         camera_id: str,
         scene_name: Optional[str] = None,
+        session_id: Optional[str] = None,
     ) -> Optional[Scene]:
         """
         Create an OBS scene for a single camera.
@@ -225,6 +235,7 @@ class OBSOrchestrator:
         Args:
             camera_id: Camera to create scene for
             scene_name: Optional scene name (auto-generated if None)
+            session_id: Optional session ID for persistence
 
         Returns:
             Created scene or None if failed
@@ -268,6 +279,10 @@ class OBSOrchestrator:
 
             self._scenes[scene.id] = scene
 
+            # Persist scene to database if session_id provided
+            if session_id:
+                self._persist_scene(scene, session_id)
+
             logger.info(f"Scene created: {scene_name}")
 
             # Emit event
@@ -293,6 +308,7 @@ class OBSOrchestrator:
         camera_ids: List[str],
         layout: Optional[SceneLayout] = None,
         scene_name: Optional[str] = None,
+        session_id: Optional[str] = None,
     ) -> Optional[Scene]:
         """
         Create an OBS scene with multiple cameras.
@@ -301,6 +317,7 @@ class OBSOrchestrator:
             camera_ids: List of cameras to include
             layout: Layout to use (auto-selected if None)
             scene_name: Optional scene name
+            session_id: Optional session ID for persistence
 
         Returns:
             Created scene or None if failed
@@ -367,6 +384,10 @@ class OBSOrchestrator:
             )
 
             self._scenes[scene.id] = scene
+
+            # Persist scene to database if session_id provided
+            if session_id:
+                self._persist_scene(scene, session_id)
 
             logger.info(f"Multi-camera scene created: {scene_name}")
 
@@ -631,6 +652,9 @@ class OBSOrchestrator:
             # Remove from tracking
             del self._scenes[scene_id]
 
+            # Delete from database
+            self._delete_scene_from_db(scene_id)
+
             # If this was current scene, clear it
             if self._current_scene_id == scene_id:
                 self._current_scene_id = None
@@ -667,6 +691,86 @@ class OBSOrchestrator:
     def get_templates(self) -> List[SceneTemplate]:
         """Get available scene templates."""
         return list(self._templates.values())
+
+    # ========================================================================
+    # PERSISTENCE METHODS
+    # ========================================================================
+
+    def _get_db(self):
+        """Get database connection (lazy initialization)"""
+        if not self._enable_persistence:
+            return None
+
+        if self._db is None:
+            try:
+                from db import get_database
+                self._db = get_database()
+                logger.info(
+                    "Database connection established for OBS Orchestrator"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to initialize database: {e}. "
+                    "Running without persistence."
+                )
+                self._enable_persistence = False
+                return None
+
+        return self._db
+
+    def _persist_scene(self, scene: Scene, session_id: str) -> None:
+        """Persist scene to database"""
+        db = self._get_db()
+        if db is None:
+            return
+
+        try:
+            from db.repositories import SceneRepository
+
+            # Store OBS scene name in scene extra data
+            scene.extra["obs_scene_name"] = scene.name
+
+            with db.session() as db_session:
+                repo = SceneRepository(db_session)
+
+                # Check if scene exists
+                existing = repo.get(scene.id)
+
+                if existing:
+                    # Update existing
+                    repo.update(scene)
+                else:
+                    # Create new
+                    repo.create(scene, session_id)
+
+                logger.debug(f"Persisted scene: {scene.id}")
+
+        except Exception as e:
+            logger.error(
+                f"Failed to persist scene {scene.id}: {e}",
+                exc_info=True
+            )
+
+    def _delete_scene_from_db(self, scene_id: str) -> None:
+        """Delete scene from database"""
+        db = self._get_db()
+        if db is None:
+            return
+
+        try:
+            from db.repositories import SceneRepository
+
+            with db.session() as db_session:
+                repo = SceneRepository(db_session)
+                repo.delete(scene_id)
+
+                logger.debug(f"Deleted scene from database: {scene_id}")
+
+        except Exception as e:
+            logger.error(
+                f"Failed to delete scene {scene_id} from database: {e}",
+                exc_info=True
+            )
 
     async def shutdown(self) -> None:
         """Shutdown and clean up resources."""

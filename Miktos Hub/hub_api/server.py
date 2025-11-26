@@ -98,6 +98,15 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
 
     try:
+        # Run database migrations
+        logger.info("Checking for database migrations...")
+        from db.migration_manager import get_migration_manager
+        migration_mgr = get_migration_manager()
+
+        if not migration_mgr.auto_upgrade_on_startup():
+            logger.error("Database migration failed!")
+            raise RuntimeError("Failed to upgrade database schema")
+
         # Initialize database
         logger.info("Initializing database...")
         from db import init_database
@@ -106,7 +115,7 @@ async def lifespan(app: FastAPI):
 
         # Initialize core services
         logger.info("Initializing core services...")
-        hub_state.device_registry = DeviceRegistry()
+        hub_state.device_registry = DeviceRegistry(enable_persistence=True)
         hub_state.stream_router = StreamRouter()
         hub_state.event_bus = EventBus()
         hub_state.session_manager = SessionManager(
@@ -114,6 +123,11 @@ async def lifespan(app: FastAPI):
             hub_state.stream_router,
             enable_persistence=True
         )
+
+        # Recover cameras from database
+        logger.info("Recovering cameras from database...")
+        restored_cameras = hub_state.device_registry.restore_from_database()
+        logger.info(f"✓ Restored {restored_cameras} camera(s)")
 
         # Recover sessions from database
         logger.info("Recovering sessions from database...")
