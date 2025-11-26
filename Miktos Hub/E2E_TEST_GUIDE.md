@@ -41,453 +41,317 @@ Choose one of these connection methods:
    4. Use RTSP stream URL
 
 ### OBS Studio
+# Sony a7 IV End-to-End Testing Guide
 
-1. **Install OBS Studio**:
+This guide walks you through testing the complete Miktos Hub workflow with your Sony a7 IV camera. It focuses on manual and automated steps to validate camera discovery, session management, OBS integration, and basic streaming.
+
+## Prerequisites
+
+### Camera connection options
+
+Choose one of the following connection methods for your Sony a7 IV:
+
+- HDMI capture card (recommended)
+- USB tethering (Imaging Edge / Webcam Utility)
+- Network streaming (Imaging Edge Mobile / RTSP)
+
+#### HDMI capture card (recommended)
+
+- Hardware: HDMI capture card (Elgato Cam Link, Blackmagic, etc.)
+- Connection: Camera HDMI → Capture card → USB to Mac
+- Advantages: Best quality, lowest latency
+- Quick setup:
+   1. Connect HDMI → capture card → Mac
+   2. Confirm the device appears as a video device
+
+#### USB tethering (Imaging Edge / Webcam utility)
+
+- Hardware: USB-C cable
+- Software: Sony Imaging Edge Webcam or official webcam driver
+- Quick setup:
+   1. Install Imaging Edge Webcam
+   2. Connect camera via USB-C
+   3. Enable USB streaming on the camera
+
+#### Network streaming (Imaging Edge Mobile / RTSP)
+
+- Software: Imaging Edge Mobile or a RTSP-capable app
+- Quick setup:
+   1. Enable WiFi on the camera
+   2. Connect camera to the same network (or camera hotspot)
+   3. Use RTSP stream URL for the camera
+
+### OBS (detailed)
+
+1. Install OBS Studio
 
 ```bash
 brew install --cask obs
 ```
 
-1. **Enable WebSocket Server**:
+2. Install or enable the OBS WebSocket plugin (obs-websocket v5+)
 
-- Open OBS Studio
-- Go to **Tools → WebSocket Server Settings**
-- Enable WebSocket server
-- Default port: 4455
-- No password required (for testing)
+- Download from: https://github.com/obsproject/obs-websocket/releases
+- Install the matching plugin for your OBS version and restart OBS
 
-1. **Verify OBS is Running**:
+3. Configure WebSocket server
+# Sony a7 IV End-to-End Testing Guide
 
-- OBS should be open before running tests
-- Create a basic scene if needed
+This guide walks you through testing the complete Miktos Hub workflow with your Sony a7 IV camera. It includes steps for camera connection, OBS integration, running the E2E script, and troubleshooting.
 
-### Miktos Hub Server
+## Prerequisites
 
-1. **Start the API server**:
+### Connection options
+
+Choose one of the following connection methods for your Sony a7 IV:
+
+- HDMI capture card (recommended)
+- USB tethering (Imaging Edge / Webcam Utility)
+- Network streaming (Imaging Edge Mobile / RTSP)
+
+#### HDMI capture card (recommended)
+
+- Hardware: HDMI capture card (Elgato Cam Link, Blackmagic, etc.)
+- Connection: Camera HDMI → Capture card → USB to Mac
+- Advantages: Best quality, lowest latency
+- Quick setup:
+   1. Connect HDMI → capture card → Mac
+   1. Confirm the device appears as a video device
+
+#### USB tethering (Imaging Edge / Webcam utility)
+
+- Hardware: USB-C cable
+- Software: Sony Imaging Edge Webcam or official webcam driver
+- Quick setup:
+   1. Install Imaging Edge Webcam
+   1. Connect camera via USB-C
+   1. Enable USB streaming on the camera
+
+#### Network streaming (Imaging Edge Mobile / RTSP)
+
+- Software: Imaging Edge Mobile or a RTSP-capable app
+- Quick setup:
+   1. Enable WiFi on the camera
+   1. Connect camera to the same network (or camera hotspot)
+   1. Use RTSP stream URL for the camera
+
+## OBS (detailed)
+
+1. Install OBS Studio
+
+```bash
+brew install --cask obs
+```
+
+1. Install or enable the OBS WebSocket plugin (obs-websocket v5+)
+
+- Download the plugin: [obs-websocket releases](https://github.com/obsproject/obs-websocket/releases)
+- Install the matching plugin for your OBS version and restart OBS
+
+1. Configure WebSocket server
+
+- Open OBS → Tools → obs-websocket Settings
+- Recommended: Port `4455`, enable authentication (use a strong password for shared systems)
+
+1. Verify connectivity
+
+```bash
+# Sony a7 IV End-to-End Testing Guide
+
+This guide describes how to run end-to-end tests for Miktos Hub with a Sony a7 IV camera. It covers camera connection options, OBS integration (obs-websocket), running the E2E script, and troubleshooting steps.
+
+## Prerequisites
+
+### Connection options
+
+Choose one of the following methods to provide a video source to OBS / Miktos Hub:
+
+- HDMI capture card (recommended)
+- USB tethering (Imaging Edge / Webcam Utility)
+- Network streaming (Imaging Edge Mobile / RTSP)
+
+#### HDMI capture card (recommended)
+
+- Hardware: HDMI capture card (Elgato Cam Link, Blackmagic, etc.)
+- Connection: Camera HDMI → Capture card → USB to Mac
+- Quick setup:
+  1. Connect HDMI → capture card → Mac
+  1. Confirm the device appears as a video device in OBS or macOS
+
+#### USB tethering (Imaging Edge / Webcam Utility)
+
+- Hardware: USB-C cable
+- Software: Sony Imaging Edge Webcam or official webcam driver
+- Quick setup:
+  1. Install Imaging Edge Webcam
+  1. Connect camera via USB-C
+  1. Enable USB streaming on the camera
+
+#### Network streaming (Imaging Edge Mobile / RTSP)
+
+- Software: Imaging Edge Mobile or a RTSP-capable app
+- Quick setup:
+  1. Enable WiFi on the camera
+  1. Connect camera to your network (or camera hotspot)
+  1. Use the camera's RTSP stream URL as the source
+
+## OBS (obs-websocket) configuration
+
+1. Install OBS Studio
+
+```bash
+brew install --cask obs
+```
+
+1. Install the obs-websocket plugin (v5+)
+
+- Download: [obs-websocket releases](https://github.com/obsproject/obs-websocket/releases)
+- Install the matching plugin for your OBS version and restart OBS
+
+1. Configure obs-websocket
+
+- Open OBS → Tools → obs-websocket Settings
+- Recommended: Port `4455`; enable authentication for shared systems
+
+1. Verify connectivity
+
+```bash
+# quick check: websocket endpoint may return small JSON or 404
+curl -sS http://localhost:4455 || true
+```
+
+Add a screenshot to `docs/images/obs-websocket-settings.png` showing obs-websocket settings.
+
+## Start the Miktos Hub server
+
+1. Start the API server
 
 ```bash
 python main.py
 ```
 
-1. **Verify server is running**:
+1. Verify the server
 
-- Open [http://localhost:8000/docs](http://localhost:8000/docs)
-- You should see the FastAPI documentation
+- Open the API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-## Running the E2E Test
-
-### Basic Usage
+## Run the E2E script
 
 ```bash
-python e2e_sony_a7iv_test.py
+### Streaming Destinations
 ```
 
-The script will guide you through the following steps:
+What the script validates
 
 1. Server health check
 1. Camera discovery / registration
-1. Session creation
-1. OBS configuration (scenes/sources)
-1. Streaming destination setup (optional)
-1. End-to-end workflow test
+1. Session creation and persistence
+1. OBS scene creation and scene switching
+1. Optional streaming destination setup (RTMP)
+1. Full end-to-end workflow validation
 
-### Interactive Prompts (examples)
-
-```text
-Select connection type (1/2/3):
-   1. USB Tethering (recommended for local use)
-   2. Network via Imaging Edge Mobile
-   3. RTSP stream URL
-```
-
-```text
-Configure streaming destinations:
-   1. YouTube
-   2. Twitch
-   3. Facebook Live
-   4. Custom RTMP
-   5. Skip this step
-```
-
-### Sample Test Output (abbreviated)
-
-```text
-[STEP 1] Checking server health... ✅
-[STEP 2] Discovering Sony a7 IV camera... ✅
-[STEP 3] Creating streaming session... ✅
-[STEP 4] Configuring OBS scenes... ✅
-[STEP 5] Setting up streaming destinations... ✅
-[STEP 6] Testing workflow... ✅
-
-TEST SUMMARY: Session created, 1 camera, 2 scenes
-```
-
-## Troubleshooting (quick)
-
-### Camera not detected
-
-```bash
-# List connected camera devices
-system_profiler SPCameraDataType
-```
-
-```bash
-# Ping camera (network streaming)
-ping <camera-ip-address>
-# Check RTSP port
-nc -zv <camera-ip> 554
-```
-
-### OBS not connecting
-
-```bash
-ps aux | grep obs
-```
-
-Verify OBS → Tools → WebSocket Server Settings (port 4455) and ensure the WebSocket server is running.
-
-### API server issues
-
-```bash
-curl http://localhost:8000/api/health
-```
-
-Restart server if necessary:
-
-```bash
-# Stop server (Ctrl+C) then:
-python main.py
-```
-
-## Advanced (short)
-
-Get session details:
-
-```bash
-SESSION_ID="<your-session-id>"
-curl http://localhost:8000/api/sessions/$SESSION_ID
-```
-
-List cameras:
-
-```bash
-curl http://localhost:8000/api/cameras/
-```
-
-## Related Documentation
-
-- [Sony a7 IV Manual](https://www.sony.com/electronics/support/e-mount-body-ilce-7-series/ilce-7m4/manuals)
-- [OBS Studio Docs](https://obsproject.com/wiki/)
-- [Miktos Hub API Docs](http://localhost:8000/docs)
-   ps aux | grep obs
-   ```
-
-   Verify OBS → Tools → WebSocket Server Settings (port 4455) and ensure the WebSocket server is running.
-
-   ### API server issues
-
-   ```bash
-   curl http://localhost:8000/api/health
-   ```
-
-   Restart server if necessary:
-
-   ```bash
-   # Stop server (Ctrl+C) then:
-   python main.py
-   ```
-
-   ## Advanced (short)
-
-   Get session details:
-
-   ```bash
-   SESSION_ID="<your-session-id>"
-   curl http://localhost:8000/api/sessions/$SESSION_ID
-   ```
-
-   List cameras:
-
-   ```bash
-   curl http://localhost:8000/api/cameras/
-   ```
-
-   ## Related Documentation
-
-   - [Sony a7 IV Manual](https://www.sony.com/electronics/support/e-mount-body-ilce-7-series/ilce-7m4/manuals)
-   - [OBS Studio Docs](https://obsproject.com/wiki/)
-   - [Miktos Hub API Docs](http://localhost:8000/docs)
-- **Setup**:
-  1. Install Imaging Edge Mobile on iPhone/iPad
-  2. Enable WiFi on camera
-  3. Connect to camera's network
-  4. Use RTSP stream URL
-
-### 2. OBS Studio
-
-1. **Install OBS Studio**:
-
-```bash
-brew install --cask obs
-```
-
-2. **Enable WebSocket Server**:
-
-- Open OBS Studio
-- Go to **Tools → WebSocket Server Settings**
-- Enable WebSocket server
-- Default port: 4455
-- No password required (for testing)
-
-3. **Verify OBS is Running**:
-
-- OBS should be open before running tests
-- Create a basic scene if needed
-
-### 3. Miktos Hub Server
-
-1. **Start the API server**:
-
-```bash
-python main.py
-```
-
-2. **Verify server is running**:
-
-- Open [http://localhost:8000/docs](http://localhost:8000/docs)
-- You should see the FastAPI documentation
-
-## Running the E2E Test
-
-### Basic Usage
-
-```bash
-python e2e_sony_a7iv_test.py
-```
-
-The script will guide you through:
-
-1. **Server Health Check** - Verifies API is running
-2. **Camera Discovery** - Detects or registers your Sony a7 IV
-3. **Session Creation** - Creates a streaming session
-4. **OBS Configuration** - Sets up scenes with your camera
-5. **Streaming Setup** - Configures destinations (optional)
-6. **Workflow Test** - Tests the complete pipeline
-
-### Interactive Prompts
-
-#### Camera Connection Type
-
-When prompted, select your connection method:
+### Example interactive prompts
 
 ```text
 Select connection type (1/2/3):
-  1. USB Tethering (recommended for local use)
-  2. Network via Imaging Edge Mobile
-  3. RTSP stream URL
+  1. USB / capture card
+  1. Network / RTSP
+  1. Skip (manual)
 ```
-
-**For HDMI Capture Card**: Choose option 1 (USB)
-**For Sony Webcam Utility**: Choose option 1 (USB)
-**For Network Streaming**: Choose option 2 or 3
-
-#### Streaming Destinations
 
 ```text
 Configure streaming destinations:
   1. YouTube
-  2. Twitch
-  3. Facebook Live
-  4. Custom RTMP
-  5. Skip this step
+  1. Twitch
+  1. Custom RTMP
+  1. Skip
 ```
 
-For testing, you can skip (option 5) or use a test RTMP server.
-
-### Sample Test Run
+### Minimal sample output
 
 ```text
-============================================================
-Sony a7 IV End-to-End Workflow Test
-============================================================
-
-[STEP 1] Checking server health...
-✅ Server is running: healthy
-ℹ️  Server version: 1.0.0
-
-[STEP 2] Discovering Sony a7 IV camera...
-ℹ️  Found 0 registered camera(s)
-ℹ️  No Sony camera found. Let's register it manually.
-
-Sony a7 IV Connection Options:
-  1. USB Tethering (recommended for local use)
-  2. Network via Imaging Edge Mobile
-  3. RTSP stream URL
-
-Select connection type (1/2/3): 1
-ℹ️  USB connection - camera will be detected automatically
-✅ Camera registered: Sony a7 IV
-ℹ️  Camera ID: abc123def456...
-
-[STEP 3] Creating streaming session...
-✅ Session created: Sony a7 IV Test Session
-ℹ️  Session ID: xyz789uvw012...
-ℹ️  State: idle
-
-[STEP 4] Configuring OBS scenes...
-✅ OBS connected: 30.0.0
-✅ Created scene: Full Frame
-✅ Created scene: Picture in Picture
-
-[STEP 5] Setting up streaming destinations...
-Configure streaming destinations:
-  1. YouTube
-  2. Twitch
-  3. Facebook Live
-  4. Custom RTMP
-  5. Skip this step
-
-Select destination (1-5): 5
-ℹ️  Skipping destination setup
-
-[STEP 6] Testing workflow...
-✅ Session retrieved successfully
-ℹ️  Session: Sony a7 IV Test Session
-ℹ️  State: idle
-ℹ️  Cameras: 1
-ℹ️  Scenes: 2
-ℹ️  Destinations: 0
-
-Testing scene switching...
-✅ Activated scene: 1a2b3c4d...
-✅ Activated scene: 5e6f7g8h...
-
-============================================================
-TEST SUMMARY
-============================================================
-
-✅ Session ID: xyz789uvw012345678901234567890
-✅ Camera ID: abc123def456789012345678901234
-✅ Scenes created: 2
-
-Next steps:
-  1. View session in browser: [http://localhost:8000/sessions/xyz789...](http://localhost:8000/sessions/xyz789...)
-  2. API documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
-  3. Start streaming via API or OBS
-
-Cleanup:
-  Delete session: `curl -X DELETE http://localhost:8000/api/sessions/xyz789...`
-
-✅ E2E Test Complete!
+[STEP] Server health: OK
+[STEP] Camera discovery: 1 camera found
+[STEP] Session created: session-id-abc
+[STEP] OBS scenes created: 2
+[STEP] Workflow test: PASSED
 ```
 
 ## Troubleshooting
 
-### Camera Not Detected
-
-**USB Connection Issues**:
+### Camera not detected
 
 ```bash
-# Check if camera appears as USB video device
+# List camera devices on macOS
 system_profiler SPCameraDataType
-
-# Look for "Sony" or capture card name
 ```
 
-**Network Connection Issues**:
+Network checks
 
 ```bash
-# Verify camera is on network
-ping <camera-ip-address>
-
-# Check if RTSP port is accessible
+ping <camera-ip>
 nc -zv <camera-ip> 554
 ```
 
-### OBS Not Connecting
+### OBS connection problems
 
-1. **Check OBS is running**:
+- Confirm obs-websocket is installed and running
+- Confirm port and password are correct
+- Check OBS logs: Help → Log Files → View Current Log
+
+### API server issues
 
 ```bash
-ps aux | grep obs
+curl -f http://localhost:8000/api/health || echo "server down"
 ```
 
-2. **Verify WebSocket server**:
-
-- OBS → Tools → WebSocket Server Settings
-- Should show "Server is running on port 4455"
-
-3. **Test WebSocket manually**:
+Restart server
 
 ```bash
-curl http://localhost:4455
-```
-
-### API Server Issues
-
-1. **Check server is running**:
-
-```bash
-curl http://localhost:8000/api/health
-```
-
-2. **View server logs**:
-
-- Check terminal where `python main.py` is running
-- Look for error messages
-
-3. **Restart server**:
-
-```bash
-# Stop server (Ctrl+C)
-# Start again
+# Stop server (Ctrl+C) and start again
 python main.py
 ```
 
-### Scene Creation Fails
+## Advanced — API quick commands
 
-- **Ensure camera is connected** before creating scenes
-- **Check OBS has at least one scene** in the default profile
-- **Verify camera source** is accessible in OBS
-
-## Advanced Usage
-
-### Manual API Testing
-
-After running the E2E test, you can test individual endpoints:
-
-#### Get Session Details
+Get session details
 
 ```bash
 SESSION_ID="<your-session-id>"
 curl http://localhost:8000/api/sessions/$SESSION_ID
 ```
 
-#### List All Cameras
+List cameras
 
 ```bash
 curl http://localhost:8000/api/cameras/
 ```
 
-#### Activate a Scene
+Create a scene (example JSON)
 
-```bash
-SCENE_ID="<your-scene-id>"
-curl -X POST http://localhost:8000/api/scenes/$SCENE_ID/activate
+```json
+{
+  "name": "Full Frame",
+  "sources": [
+    { "type": "camera", "camera_id": "<camera-id>" }
+  ]
+}
 ```
 
-#### Start Streaming
+## Screenshots and assets
 
-```bash
-SESSION_ID="<your-session-id>"
-curl -X POST http://localhost:8000/api/sessions/$SESSION_ID/start
-```
+- Add `docs/images/obs-websocket-settings.png` for the WebSocket settings
+- Add `docs/images/obs-scene-example.png` for an example scene layout
 
-### Custom Test Scenarios
+## Related documentation
 
-You can modify `e2e_sony_a7iv_test.py` to test specific scenarios:
+- [Sony a7 IV Manual](https://www.sony.com/electronics/support/e-mount-body-ilce-7-series/ilce-7m4/manuals)
+- [OBS Studio docs](https://obsproject.com/wiki/)
+- [Miktos Hub API docs](http://localhost:8000/docs)
 
-#### Test Multiple Cameras
+## Notes
+
+- Use a dedicated OBS profile for testing to avoid disrupting production scenes.
+- If you want, add screenshots to the `docs/images` folder and update the image paths above.
 
 ```python
 # Register second camera
