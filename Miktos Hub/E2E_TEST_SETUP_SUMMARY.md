@@ -376,7 +376,7 @@ Production: ⏳ Needs validation
 4. **Test incrementally** - Validate each step before proceeding
 5. **Check logs** - Server output shows detailed errors
 
-## 🎉 You're Ready!
+## 🎉 You're Ready
 
 Everything is set up for end-to-end testing with your Sony a7 IV. Start with the quick start guide and work through the test script. The detailed documentation is there when you need it.
 
