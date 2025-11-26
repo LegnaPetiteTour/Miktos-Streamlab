@@ -6,7 +6,6 @@ Endpoints for camera discovery, registration, and health monitoring.
 
 import logging
 from fastapi import APIRouter, HTTPException, Depends, Body
-from typing import List
 
 from hub_api.models import (
     CameraResponse,
@@ -34,14 +33,20 @@ router = APIRouter()
 def get_camera_manager():
     """Get camera manager from hub state"""
     if not hub_state.camera_manager:
-        raise HTTPException(status_code=503, detail="Camera manager not initialized")
+        raise HTTPException(
+            status_code=503,
+            detail="Camera manager not initialized",
+        )
     return hub_state.camera_manager
 
 
 def get_device_registry():
     """Get device registry from hub state"""
     if not hub_state.device_registry:
-        raise HTTPException(status_code=503, detail="Device registry not initialized")
+        raise HTTPException(
+            status_code=503,
+            detail="Device registry not initialized",
+        )
     return hub_state.device_registry
 
 
@@ -77,13 +82,23 @@ async def list_cameras(
             cameras.append(CameraResponse(
                 camera_id=camera.id,
                 label=camera.label,
-                status=CameraStatusAPI.REGISTERED if is_registered else CameraStatusAPI.DISCOVERED,
+                status=(
+                    CameraStatusAPI.REGISTERED
+                    if is_registered
+                    else CameraStatusAPI.DISCOVERED
+                ),
                 transport=camera.transport.value,
                 connection_url=camera.connection_url,
                 capabilities=camera.capabilities,
-                is_connected=camera.health.is_connected if hasattr(camera, 'health') else False,
+                is_connected=(
+                    camera.health.is_connected
+                    if hasattr(camera, 'health')
+                    else False
+                ),
                 battery_percent=camera.metadata.get("battery_percent"),
-                temperature_celsius=camera.metadata.get("temperature_celsius"),
+                temperature_celsius=(
+                    camera.metadata.get("temperature_celsius")
+                ),
                 network_quality=camera.metadata.get("network_quality"),
                 metadata=camera.metadata,
             ))
@@ -121,9 +136,15 @@ async def get_camera(
             transport=camera.transport.value,
             connection_url=camera.connection_url,
             capabilities=camera.capabilities,
-            is_connected=camera.health.is_connected if hasattr(camera, 'health') else False,
+            is_connected=(
+                camera.health.is_connected
+                if hasattr(camera, 'health')
+                else False
+            ),
             battery_percent=camera.metadata.get("battery_percent"),
-            temperature_celsius=camera.metadata.get("temperature_celsius"),
+            temperature_celsius=(
+                camera.metadata.get("temperature_celsius")
+            ),
             network_quality=camera.metadata.get("network_quality"),
             metadata=camera.metadata,
         )
@@ -149,7 +170,10 @@ async def get_camera_health(
         health = await camera_manager.get_camera_health(camera_id)
 
         if not health:
-            raise HTTPException(status_code=404, detail="Camera not found or not registered")
+            raise HTTPException(
+                status_code=404,
+                detail="Camera not found or not registered",
+            )
 
         return CameraHealthResponse(
             camera_id=camera_id,
