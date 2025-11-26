@@ -3,7 +3,7 @@ Streaming API Routes
 Handles multi-platform streaming control, monitoring, and failover.
 """
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 from pydantic import BaseModel, Field
 
 from models.destination import StreamDestination, Platform
@@ -178,10 +178,44 @@ async def list_destinations(
     "/destinations",
     response_model=SuccessResponse,
     summary="Configure streaming destinations",
-    description="Set up streaming destinations for a session"
+    description="Set up streaming destinations for a session",
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "example": {
+                        "session_id": "sess_012345",
+                        "destinations": [
+                            {
+                                "platform": "youtube",
+                                "stream_key": "abcd-efgh-ijkl",
+                                "label": "YouTube - Test",
+                                "stream_url": None,
+                                "enabled": True,
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+    },
 )
 async def configure_destinations(
-    request: ConfigureDestinationsRequest,
+    request: ConfigureDestinationsRequest = Body(
+        ...,
+        example={
+            "session_id": "sess_012345",
+            "destinations": [
+                {
+                    "platform": "youtube",
+                    "stream_key": "abcd-efgh-ijkl",
+                    "label": "YouTube - Test",
+                    "stream_url": None,
+                    "enabled": True,
+                }
+            ],
+        },
+    ),
     streaming: object = Depends(get_streaming_module),
     session_mgr: object = Depends(get_session_manager)
 ):
@@ -247,10 +281,25 @@ async def configure_destinations(
     "/start",
     response_model=SuccessResponse,
     summary="Start streaming",
-    description="Start streaming to all configured destinations"
+    description="Start streaming to all configured destinations",
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "example": {
+                        "session_id": "sess_012345",
+                        "start_recording": False,
+                    }
+                }
+            }
+        }
+    },
 )
 async def start_streaming(
-    request: StartStreamRequest,
+    request: StartStreamRequest = Body(
+        ...,
+        example={"session_id": "sess_012345", "start_recording": False},
+    ),
     streaming: object = Depends(get_streaming_module),
     session_mgr: object = Depends(get_session_manager)
 ):

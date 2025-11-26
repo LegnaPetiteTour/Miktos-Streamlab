@@ -51,10 +51,17 @@ class StreamingStatusAPI(str, Enum):
 
 class SessionCreateRequest(BaseModel):
     """Request to create a new session"""
-    name: str = Field(..., description="Session name")
-    description: Optional[str] = Field(
-        None, description="Optional description"
-    )
+    name: str = Field(...)
+    description: Optional[str] = None
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "name": "Sunday Morning Show",
+                "description": "Test stream for camera integration",
+            }
+        }
+    }
 
 
 class SessionCreateResponse(BaseModel):
@@ -63,6 +70,17 @@ class SessionCreateResponse(BaseModel):
     name: str
     state: SessionStateAPI
     created_at: datetime
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "session_id": "sess_012345",
+                "name": "Sunday Morning Show",
+                "state": "preparing",
+                "created_at": "2025-11-26T12:00:00Z",
+            }
+        }
+    }
 
 
 class SessionResponse(BaseModel):
@@ -90,12 +108,14 @@ class SessionListResponse(BaseModel):
 
 class SessionStartRequest(BaseModel):
     """Request to start a session"""
-    start_streaming: bool = Field(
-        True, description="Whether to start streaming"
-    )
-    start_recording: bool = Field(
-        False, description="Whether to start recording"
-    )
+    start_streaming: bool = Field(True)
+    start_recording: bool = Field(False)
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {"start_streaming": True, "start_recording": False}
+        }
+    }
 
 
 class SessionStartResponse(BaseModel):
@@ -105,6 +125,18 @@ class SessionStartResponse(BaseModel):
     streaming_started: bool
     recording_started: bool
     message: str
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "session_id": "sess_012345",
+                "state": "live",
+                "streaming_started": True,
+                "recording_started": False,
+                "message": "Streaming started to 1 destinations",
+            }
+        }
+    }
 
 
 # ============================================================================
@@ -153,7 +185,11 @@ class CameraHealthResponse(BaseModel):
 
 class CameraRegisterRequest(BaseModel):
     """Request to manually register a camera"""
-    camera_id: str = Field(..., description="Camera ID to register")
+    camera_id: str = Field(...)
+
+    model_config = {
+        "json_schema_extra": {"example": {"camera_id": "cam_abcd1234"}}
+    }
 
 
 class CameraRegisterResponse(BaseModel):
@@ -161,6 +197,16 @@ class CameraRegisterResponse(BaseModel):
     camera_id: str
     registered: bool
     message: str
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "camera_id": "cam_abcd1234",
+                "registered": True,
+                "message": "Camera registered successfully",
+            }
+        }
+    }
 
 
 # ============================================================================
@@ -235,6 +281,17 @@ class StreamDestinationRequest(BaseModel):
         True, description="Enable SRT backup failover"
     )
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "platform": "youtube",
+                "stream_key": "abcd-efgh-ijkl",
+                "label": "YouTube - Test",
+                "backup_enabled": True,
+            }
+        }
+    }
+
 
 class StreamConfigureRequest(BaseModel):
     """Request to configure streaming"""
@@ -242,6 +299,22 @@ class StreamConfigureRequest(BaseModel):
     destinations: List[StreamDestinationRequest] = Field(
         ..., description="Streaming destinations"
     )
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "session_id": "sess_012345",
+                "destinations": [
+                    {
+                        "platform": "youtube",
+                        "stream_key": "abcd-efgh-ijkl",
+                        "label": "YouTube - Test",
+                        "backup_enabled": True,
+                    }
+                ],
+            }
+        }
+    }
 
 
 class StreamConfigureResponse(BaseModel):
@@ -254,6 +327,10 @@ class StreamConfigureResponse(BaseModel):
 class StreamStartRequest(BaseModel):
     """Request to start streaming"""
     session_id: str = Field(..., description="Session to start streaming")
+
+    model_config = {
+        "json_schema_extra": {"example": {"session_id": "sess_012345"}}
+    }
 
 
 class StreamStartResponse(BaseModel):

@@ -5,7 +5,7 @@ Endpoints for camera discovery, registration, and health monitoring.
 """
 
 import logging
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 from typing import List
 
 from hub_api.models import (
@@ -169,9 +169,24 @@ async def get_camera_health(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/register", response_model=CameraRegisterResponse)
+@router.post(
+    "/register",
+    response_model=CameraRegisterResponse,
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "example": {"camera_id": "cam_abcd1234"}
+                }
+            }
+        }
+    },
+)
 async def register_camera(
-    request: CameraRegisterRequest,
+    request: CameraRegisterRequest = Body(
+        ...,
+        example={"camera_id": "cam_abcd1234"},
+    ),
     camera_manager=Depends(get_camera_manager),
 ):
     """
@@ -185,7 +200,10 @@ async def register_camera(
         success = await camera_manager.register_camera(request.camera_id)
 
         if not success:
-            raise HTTPException(status_code=400, detail="Failed to register camera")
+            raise HTTPException(
+                status_code=400,
+                detail="Failed to register camera",
+            )
 
         return CameraRegisterResponse(
             camera_id=request.camera_id,
@@ -216,7 +234,10 @@ async def unregister_camera(
         success = await camera_manager.unregister_camera(camera_id)
 
         if not success:
-            raise HTTPException(status_code=400, detail="Failed to unregister camera")
+            raise HTTPException(
+                status_code=400,
+                detail="Failed to unregister camera",
+            )
 
         return SuccessResponse(
             success=True,

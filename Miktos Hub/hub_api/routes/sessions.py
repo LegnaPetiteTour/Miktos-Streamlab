@@ -5,7 +5,7 @@ Endpoints for creating, managing, and controlling streaming sessions.
 """
 
 import logging
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 
 from hub_api.models import (
     SessionCreateRequest,
@@ -64,9 +64,30 @@ def get_recording_service():
 # ENDPOINTS
 # ============================================================================
 
-@router.post("/", response_model=SessionCreateResponse)
+@router.post(
+    "/",
+    response_model=SessionCreateResponse,
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "example": {
+                        "name": "Sunday Morning Show",
+                        "description": "Test stream for camera integration"
+                    }
+                }
+            }
+        }
+    },
+)
 async def create_session(
-    request: SessionCreateRequest,
+    request: SessionCreateRequest = Body(
+        ...,
+        example={
+            "name": "Sunday Morning Show",
+            "description": "Test stream for camera integration"
+        },
+    ),
     session_manager=Depends(get_session_manager),
     event_bus=Depends(get_event_bus),
 ):
@@ -188,10 +209,31 @@ async def get_session(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/{session_id}/start", response_model=SessionStartResponse)
+@router.post(
+    "/{session_id}/start",
+    response_model=SessionStartResponse,
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "example": {
+                        "start_streaming": True,
+                        "start_recording": False,
+                    }
+                }
+            }
+        }
+    },
+)
 async def start_session(
     session_id: str,
-    request: SessionStartRequest,
+    request: SessionStartRequest = Body(
+        ...,
+        example={
+            "start_streaming": True,
+            "start_recording": False
+        },
+    ),
     session_manager=Depends(get_session_manager),
     streaming_manager=Depends(get_streaming_manager),
     recording_service=Depends(get_recording_service),
