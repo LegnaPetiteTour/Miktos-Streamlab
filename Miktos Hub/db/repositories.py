@@ -52,6 +52,8 @@ class SessionRepository:
             Database session model
         """
         try:
+            from db.models import SessionCameraModel
+
             db_session = SessionModel(
                 id=session.id,
                 name=session.name,
@@ -63,6 +65,17 @@ class SessionRepository:
             )
 
             self._db.add(db_session)
+            self._db.flush()  # Ensure session exists before adding cameras
+
+            # Add camera associations
+            for idx, camera_id in enumerate(session.camera_ids):
+                session_camera = SessionCameraModel(
+                    session_id=session.id,
+                    camera_id=camera_id,
+                    position=idx
+                )
+                self._db.add(session_camera)
+
             self._db.commit()
             self._db.refresh(db_session)
 

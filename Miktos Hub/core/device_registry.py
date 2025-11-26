@@ -5,11 +5,14 @@ Tracks all cameras (phones, webcams, NDI, etc.) and provides unified access.
 This is the single source of truth for camera devices in the Hub.
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 import logging
 from threading import RLock
 
 from models.camera import CameraDevice, CameraHealth, CameraCapability
+
+if TYPE_CHECKING:
+    from db import Database
 
 logger = logging.getLogger(__name__)
 
@@ -44,16 +47,24 @@ class DeviceRegistry:
         ```
     """
 
-    def __init__(self, enable_persistence: bool = True):
+    def __init__(
+        self,
+        enable_persistence: bool = True,
+        database: Optional['Database'] = None
+    ):
         self._devices: Dict[str, CameraDevice] = {}
         self._lock = RLock()  # Thread-safe access
         self._enable_persistence = enable_persistence
-        self._db = None
+        self._db = database  # Allow test database injection
         self._camera_repo = None
         logger.info(
             f"Device Registry initialized "
             f"(persistence: {enable_persistence})"
         )
+
+        # Auto-recover cameras from database if persistence enabled
+        if self._enable_persistence:
+            self.restore_from_database()
 
     def register(self, device: CameraDevice) -> None:
         """

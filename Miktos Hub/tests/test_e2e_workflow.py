@@ -50,10 +50,7 @@ def test_db() -> Generator[Database, None, None]:
 @pytest.fixture
 def device_registry(test_db) -> DeviceRegistry:
     """Provide a device registry with test database"""
-    # DeviceRegistry gets database from get_database(), so we need to
-    # set it up beforehand. For testing, we use the fixture approach.
-    registry = DeviceRegistry(enable_persistence=True)
-    # Note: In production, registry uses get_database() internally
+    registry = DeviceRegistry(enable_persistence=True, database=test_db)
     return registry
 
 
@@ -68,11 +65,12 @@ def stream_router():
 def session_manager(
     device_registry, stream_router, test_db
 ) -> SessionManager:
-    """Provide a session manager"""
+    """Provide a session manager with test database"""
     manager = SessionManager(
         device_registry=device_registry,
         stream_router=stream_router,
-        enable_persistence=True
+        enable_persistence=True,
+        database=test_db
     )
     return manager
 
@@ -132,7 +130,9 @@ class TestEndToEndWorkflow:
             assert str(db_camera.name) == "Sony A7 IV Main Camera"
 
         # Step 5: Simulate server restart (create new registry instance)
-        new_registry = DeviceRegistry(enable_persistence=True)
+        new_registry = DeviceRegistry(
+            enable_persistence=True, database=test_db
+        )
 
         # Step 6: Verify camera is recovered
         recovered_cam = new_registry.get(camera.id)
@@ -185,12 +185,15 @@ class TestEndToEndWorkflow:
             assert str(db_session_obj.name) == "City Council Meeting - Nov 25"
 
         # Step 4: Simulate server restart (create new manager instance)
-        new_registry = DeviceRegistry(enable_persistence=True)
+        new_registry = DeviceRegistry(
+            enable_persistence=True, database=test_db
+        )
         new_router = StreamRouter()
         new_manager = SessionManager(
             device_registry=new_registry,
             stream_router=new_router,
-            enable_persistence=True
+            enable_persistence=True,
+            database=test_db
         )
 
         # Step 5: Verify session recovery
@@ -426,12 +429,15 @@ class TestE2EPersistenceWorkflow:
 
         # ===== RECOVERY PHASE =====
         # Simulate complete server restart
-        new_registry = DeviceRegistry(enable_persistence=True)
+        new_registry = DeviceRegistry(
+            enable_persistence=True, database=test_db
+        )
         new_router = StreamRouter()
         new_manager = SessionManager(
             device_registry=new_registry,
             stream_router=new_router,
-            enable_persistence=True
+            enable_persistence=True,
+            database=test_db
         )
 
         # Verify full recovery

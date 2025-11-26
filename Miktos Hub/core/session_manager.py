@@ -9,7 +9,7 @@ A Session represents a complete streaming show:
 - Persistence (survives server restarts)
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 from dataclasses import dataclass
 from datetime import datetime
 import logging
@@ -18,6 +18,9 @@ from models.session import Session, SessionState, SessionConfig
 from models.destination import StreamDestination
 from core.device_registry import DeviceRegistry
 from core.stream_router import StreamRouter
+
+if TYPE_CHECKING:
+    from db import Database
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +52,8 @@ class SessionManager:
         self,
         device_registry: DeviceRegistry,
         stream_router: StreamRouter,
-        enable_persistence: bool = True
+        enable_persistence: bool = True,
+        database: Optional['Database'] = None
     ):
         self._device_registry = device_registry
         self._stream_router = stream_router
@@ -61,13 +65,17 @@ class SessionManager:
         # Current active session (only one can be live at a time)
         self._active_session_id: Optional[str] = None
 
-        # Database connection (lazy loaded)
-        self._db = None
+        # Database connection (lazy loaded or injected for tests)
+        self._db = database  # Allow test database injection
         self._session_repo = None
 
         logger.info(
             f"SessionManager initialized (persistence: {enable_persistence})"
         )
+
+        # Auto-recover sessions from database if persistence enabled
+        if self._enable_persistence:
+            self._recover_sessions_from_database()
 
     def _get_db(self):
         """Get database connection (lazy initialization)"""
@@ -230,6 +238,8 @@ class SessionManager:
             description=config.description,
             config=config,
             state=SessionState.PREPARING,
+            camera_ids=config.camera_ids.copy(),
+            destination_ids=config.destination_ids.copy(),
         )
 
         self._sessions[session.id] = session
@@ -614,6 +624,58 @@ class SessionManager:
         if not self._active_session_id:
             return None
         return self._sessions.get(self._active_session_id)
+
+    def _recover_sessions_from_database(self) -> None:
+        """
+        Recover sessions from database on initialization.
+        Allows SessionManager to survive server restarts.
+        """
+        db = self._get_db()
+        if db is None:
+            return
+
+        try:
+            from db.repositories import SessionRepository
+
+            with db.session() as db_session:
+                repo = SessionRepository(db_session)
+                db_sessions = repo.list_all()
+
+                for db_sess in db_sessions:
+                    # Get camera IDs from session_cameras relationship
+                    camera_ids = [
+                        str(sc.camera_id)
+                        for sc in db_sess.cameras  # type: ignore[attr-defined]
+                    ]
+
+                    # Convert DB model to Session
+                    session = Session(
+                        id=str(db_sess.id),
+                        name=str(db_sess.name),
+                        description=str(db_sess.description or ""),
+                        state=SessionState(db_sess.state.value),
+                        camera_ids=camera_ids,
+                        created_at=(
+                            db_sess.created_at  # type: ignore[arg-type]
+                        ),
+                        started_at=(
+                            db_sess.started_at  # type: ignore[arg-type]
+                        ),
+                        ended_at=(
+                            db_sess.ended_at  # type: ignore[arg-type]
+                        ),
+                    )
+                    self._sessions[session.id] = session
+
+                if db_sessions:
+                    logger.info(
+                        f"Recovered {len(db_sessions)} sessions from DB"
+                    )
+
+        except Exception as e:
+            logger.warning(
+                f"Failed to recover sessions from database: {e}"
+            )
 
     def _clear_session_routes(self, session: Session) -> None:
         """Clear all routes for a session"""
