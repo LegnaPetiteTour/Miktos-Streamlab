@@ -110,10 +110,19 @@ def get_device_registry():
 )
 async def list_scenes(
     session_id: str,
-    obs: object = Depends(get_obs_orchestrator)
+    obs: object = Depends(get_obs_orchestrator),
+    session_mgr: object = Depends(get_session_manager)
 ):
     """List all scenes in a session"""
     try:
+        # Validate session exists
+        session = session_mgr.get_session(session_id)  # type: ignore[attr-defined]
+        if not session:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Session {session_id} not found"
+            )
+
         scenes = await obs.list_scenes(  # type: ignore[attr-defined]
             session_id)
         active_scene_id = await obs.get_active_scene(session_id)  # type: ignore[attr-defined]  # noqa: E501
@@ -137,6 +146,8 @@ async def list_scenes(
             active_scene_id=active_scene_id
         )
 
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

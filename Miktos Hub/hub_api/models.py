@@ -85,7 +85,7 @@ class SessionCreateResponse(BaseModel):
 
 class SessionResponse(BaseModel):
     """Complete session information"""
-    id: str
+    id: str = Field(..., alias="session_id")
     name: str
     description: Optional[str]
     state: SessionStateAPI

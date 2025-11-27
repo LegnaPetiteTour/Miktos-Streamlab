@@ -248,10 +248,16 @@ async def configure_destinations(
             destinations.append(dest)
 
         # Configure destinations
-        await streaming.configure_destinations(
+        result = await streaming.configure_destinations(
             session_id=request.session_id,
             destinations=[dest.__dict__ for dest in destinations]
         )
+
+        if not result:
+            raise HTTPException(
+                status_code=503,
+                detail="Streaming module unavailable or configuration failed"
+            )
 
         return SuccessResponse(
             success=True,
@@ -264,12 +270,17 @@ async def configure_destinations(
 
     except HTTPException:
         raise
+    except AttributeError:
+        raise HTTPException(
+            status_code=503,
+            detail="Streaming module not fully initialized"
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to configure destinations: {str(e)}"
+            status_code=503,
+            detail=f"Streaming service unavailable: {str(e)}"
         )
 
 # ============================================================================
@@ -416,10 +427,19 @@ async def stop_streaming(
 )
 async def get_streaming_health(
     session_id: str,
-    streaming: object = Depends(get_streaming_module)
+    streaming: object = Depends(get_streaming_module),
+    session_mgr: object = Depends(get_session_manager)
 ):
     """Get streaming health status"""
     try:
+        # Validate session exists
+        session = session_mgr.get_session(session_id)  # type: ignore[attr-defined]
+        if not session:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Session {session_id} not found"
+            )
+
         health = await streaming.get_health(session_id)
 
         # Convert to response model
@@ -459,6 +479,8 @@ async def get_streaming_health(
             uptime_seconds=health.uptime_seconds
         )
 
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
