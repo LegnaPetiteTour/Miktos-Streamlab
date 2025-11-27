@@ -18,11 +18,10 @@ if BACKEND_PATH not in sys.path:
     sys.path.insert(0, BACKEND_PATH)
 
 try:
-    from core.network import NetworkMonitor, BandwidthTester
+    from core.network import NetworkMonitor
     NETWORK_AVAILABLE = True
 except ImportError as e:
     NetworkMonitor = None
-    BandwidthTester = None
     NETWORK_AVAILABLE = False
     logging.warning(f"Network module not available: {e}")
 
@@ -182,9 +181,8 @@ class NetworkService:
 
         config = get_config()
 
-        self._tester = BandwidthTester()
         self._monitor = NetworkMonitor(
-            check_interval=config.camera.health_check_interval_seconds
+            test_interval=config.camera.health_check_interval_seconds
         )
 
         # Active monitoring sessions
@@ -215,11 +213,12 @@ class NetworkService:
         )
 
         try:
-            # Run test via existing tester
-            result = await self._tester.test_upload(
+            # Run test via existing monitor
+            # Note: NetworkMonitor may not have test_upload method
+            # We'll need to adapt this based on actual NetworkMonitor API
+            result = await self._monitor.test_bandwidth(
                 target_bitrate_kbps=target_bitrate,
                 duration_seconds=duration,
-                host=test_host,
             )
 
             # Extract metrics

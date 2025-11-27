@@ -19,11 +19,11 @@ if BACKEND_PATH not in sys.path:
     sys.path.insert(0, BACKEND_PATH)
 
 try:
-    from core.iso_recording import ISORecorder, ReplayBuffer
+    from core.iso_recording import ISORecordingManager, SessionConfig
     RECORDING_AVAILABLE = True
 except ImportError as e:
-    ISORecorder = None
-    ReplayBuffer = None
+    ISORecordingManager = None
+    SessionConfig = None
     RECORDING_AVAILABLE = False
     logging.warning(f"ISO recording module not available: {e}")
 
@@ -160,18 +160,16 @@ class RecordingService:
         config = get_config()
 
         # Default recording directory
-        self._recordings_dir = Path(config.paths.recordings_directory)
+        self._recordings_dir = Path(config.paths.recordings_dir)
         self._recordings_dir.mkdir(parents=True, exist_ok=True)
 
-        # ISO recorder
-        self._iso_recorder = ISORecorder(
-            output_directory=str(self._recordings_dir),
-        )
+        # ISO recorder (requires OBS controller passed later)
+        # Note: ISORecordingManager expects obs_controller parameter
+        # We'll initialize it as None for now
+        self._iso_recorder = None  # Will be set when OBS connects
 
-        # Replay buffer manager
-        self._replay_buffer = ReplayBuffer(
-            buffer_duration=300,  # 5 minutes default
-        )
+        # Replay buffer functionality is part of ISORecordingManager
+        self._replay_buffer = None  # Will be set when OBS connects
 
         # Active recordings
         self._active_recordings: Dict[str, RecordingInfo] = {}

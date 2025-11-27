@@ -18,11 +18,10 @@ if BACKEND_PATH not in sys.path:
 from config import get_config  # noqa: E402
 
 try:
-    from core.transcription import Transcriber, TranscriptFormat
+    from core.transcription import TranscriptionEngine
     TRANSCRIPTION_AVAILABLE = True
 except ImportError as e:
-    Transcriber = None
-    TranscriptFormat = None
+    TranscriptionEngine = None
     TRANSCRIPTION_AVAILABLE = False
     logging.warning(f"Transcription module not available: {e}")
 
@@ -69,20 +68,29 @@ class TranscriptionService:
 
         config = get_config()
 
-        self._transcriber = Transcriber(
-            model_size=config.transcription.model_size,
-            use_gpu=config.transcription.use_gpu,
-        )
+        try:
+            # TranscriptionEngine expects: model_size, device (not use_gpu)
+            device = "cuda" if config.transcription.use_gpu else "cpu"
+            self._transcriber = TranscriptionEngine(
+                model_size=config.transcription.model_size,
+                device=device,
+            )
 
-        self._default_language = config.transcription.default_language
-        self._supported_languages = config.transcription.supported_languages
+            self._default_language = config.transcription.default_language
+            self._supported_languages = config.transcription.supported_languages
 
-        model_size = config.transcription.model_size
-        use_gpu = config.transcription.use_gpu
-        logger.info(
-            f"Transcription service initialized "
-            f"(model={model_size}, gpu={use_gpu})"
-        )
+            model_size = config.transcription.model_size
+            use_gpu = config.transcription.use_gpu
+            logger.info(
+                f"Transcription service initialized "
+                f"(model={model_size}, gpu={use_gpu})"
+            )
+        except ImportError as e:
+            # Whisper/Torch not installed - graceful degradation
+            logger.warning(f"Transcription dependencies not available: {e}")
+            self._transcriber = None
+            self._default_language = "en"
+            self._supported_languages = ["en"]
 
     async def transcribe_file(
         self,
