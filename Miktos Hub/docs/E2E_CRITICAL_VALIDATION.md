@@ -80,18 +80,18 @@ Server should be accessible at: `http://localhost:8000`
 
 Create 3 test scenes with different layouts:
 
-**Scene 1: "Main Camera"**
+#### Scene 1: "Main Camera"
 
 - Add **Video Capture Device** source
 - Configure for your main camera (Sony a7 IV / Imaging Edge / capture card)
 
-**Scene 2: "Picture-in-Picture"**
+#### Scene 2: "Picture-in-Picture"
 
 - Add **Video Capture Device** source (main camera)
 - Add **Video Capture Device** source (secondary camera/webcam)
 - Position secondary as PiP overlay
 
-**Scene 3: "Screen Share"**
+#### Scene 3: "Screen Share"
 
 - Add **Display Capture** or **Window Capture** source
 - Optional: Add **Video Capture Device** in corner
@@ -116,7 +116,7 @@ curl http://localhost:8000/api/obs/scenes
 
 ### Step 1.4: Test Scene Switching
 
-**Method 1: Path parameter**
+#### Method 1: Path parameter
 
 ```bash
 # Switch to "Picture-in-Picture" scene
@@ -125,7 +125,7 @@ curl -X POST http://localhost:8000/api/obs/scenes/Picture-in-Picture/activate
 # Verify in OBS Studio that the scene changed
 ```
 
-**Method 2: Request body**
+#### Method 2: Request body
 
 ```bash
 # Switch to "Screen Share" scene
