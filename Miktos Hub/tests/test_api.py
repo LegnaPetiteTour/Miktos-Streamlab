@@ -273,8 +273,8 @@ class TestSceneEndpoints:
             "name": "Test Scene"
         })
 
-        # Returns 503 because dependencies check happens before Pydantic validation
-        # or 422 if Pydantic validation happens first
+        # Returns 503 because dependencies check happens before
+        # Pydantic validation, or 422 if Pydantic validation happens first
         assert response.status_code in [422, 503]
 
 

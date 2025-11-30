@@ -19,7 +19,10 @@ if BACKEND_PATH not in sys.path:
     sys.path.insert(0, BACKEND_PATH)
 
 try:
-    from core.iso_recording import ISORecordingManager, SessionConfig
+    from core.iso_recording import (  # type: ignore
+        ISORecordingManager,
+        SessionConfig,
+    )
     RECORDING_AVAILABLE = True
 except ImportError as e:
     ISORecordingManager = None

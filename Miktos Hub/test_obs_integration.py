@@ -42,9 +42,10 @@ class OBSIntegrationTest:
         """Test 1: Basic connection and version info"""
         print("\n🧪 Test 1: Connection & Version Info")
         try:
-            version = self.client.get_version()
-            print(f"   ✅ OBS Version: {version.obs_version}")
-            print(f"   ✅ WebSocket Version: {version.obs_web_socket_version}")
+            version = self.client.get_version()  # type: ignore
+            print(f"   ✅ OBS Version: {version.obs_version}")  # type: ignore
+            ws_ver = version.obs_web_socket_version  # type: ignore
+            print(f"   ✅ WebSocket Version: {ws_ver}")
             self.test_results.append(("Connection", True))
             return True
         except Exception as e:
@@ -56,14 +57,19 @@ class OBSIntegrationTest:
         """Test 2: List existing scenes"""
         print("\n🧪 Test 2: Scene Discovery")
         try:
-            scenes = self.client.get_scene_list()
-            current = self.client.get_current_program_scene()
+            scenes = self.client.get_scene_list()  # type: ignore
+            current = self.client.get_current_program_scene()  # type: ignore
 
-            print(f"   ✅ Found {len(scenes.scenes)} scenes")
-            print(f"   ✅ Current: {current.current_program_scene_name}")
+            print(f"   ✅ Found {len(scenes.scenes)} scenes")  # type: ignore
+            current_name = current.current_program_scene_name  # type: ignore
+            print(f"   ✅ Current: {current_name}")
 
-            for scene in scenes.scenes[:5]:
-                marker = "→" if scene["sceneName"] == current.current_program_scene_name else " "
+            for scene in scenes.scenes[:5]:  # type: ignore
+                is_current = scene["sceneName"]
+                # Check if this is the current scene
+                curr_scene = current.current_program_scene_name  # type: ignore
+                is_current = is_current == curr_scene
+                marker = "→" if is_current else " "
                 print(f"     {marker} {scene['sceneName']}")
 
             self.test_results.append(("Scene Discovery", True))
@@ -80,25 +86,27 @@ class OBSIntegrationTest:
 
         try:
             # Check if scene exists, delete if it does
-            scenes = self.client.get_scene_list()
-            existing = [s["sceneName"] for s in scenes.scenes]
+            scenes = self.client.get_scene_list()  # type: ignore
+            existing = [s["sceneName"] for s in scenes.scenes]  # type: ignore
 
             if test_scene in existing:
-                print(f"   🗑️  Removing existing test scene...")
-                self.client.remove_scene(test_scene)
+                print("   🗑️  Removing existing test scene...")
+                self.client.remove_scene(test_scene)  # type: ignore
 
             # Create new scene
-            self.client.create_scene(test_scene)
+            self.client.create_scene(test_scene)  # type: ignore
             print(f"   ✅ Created scene: {test_scene}")
 
             # Verify it exists
-            scenes = self.client.get_scene_list()
-            if test_scene in [s["sceneName"] for s in scenes.scenes]:
-                print(f"   ✅ Scene verified in scene list")
+            scenes = self.client.get_scene_list()  # type: ignore
+            all_scenes = scenes.scenes  # type: ignore
+            scene_names = [s["sceneName"] for s in all_scenes]
+            if test_scene in scene_names:
+                print("   ✅ Scene verified in scene list")
                 self.test_results.append(("Scene Creation", True))
                 return True
             else:
-                print(f"   ❌ Scene not found after creation")
+                print("   ❌ Scene not found after creation")
                 self.test_results.append(("Scene Creation", False))
                 return False
 
@@ -114,27 +122,30 @@ class OBSIntegrationTest:
 
         try:
             # Get current scene
-            current = self.client.get_current_program_scene()
-            original_scene = current.current_program_scene_name
+            current = self.client.get_current_program_scene()  # type: ignore
+            original_scene = current.current_program_scene_name  # type: ignore
             print(f"   📍 Original scene: {original_scene}")
 
             # Switch to test scene
-            self.client.set_current_program_scene(test_scene)
+            self.client.set_current_program_scene(test_scene)  # type: ignore
             print(f"   ✅ Switched to: {test_scene}")
 
             # Verify switch
-            current = self.client.get_current_program_scene()
-            if current.current_program_scene_name == test_scene:
-                print(f"   ✅ Scene switch verified")
+            current = self.client.get_current_program_scene()  # type: ignore
+            current_name = current.current_program_scene_name  # type: ignore
+            if current_name == test_scene:
+                print("   ✅ Scene switch verified")
 
                 # Switch back
-                self.client.set_current_program_scene(original_scene)
+                self.client.set_current_program_scene(  # type: ignore
+                    original_scene
+                )
                 print(f"   ✅ Restored original scene: {original_scene}")
 
                 self.test_results.append(("Scene Switching", True))
                 return True
             else:
-                print(f"   ❌ Scene switch failed")
+                print("   ❌ Scene switch failed")
                 self.test_results.append(("Scene Switching", False))
                 return False
 
@@ -154,8 +165,8 @@ class OBSIntegrationTest:
 
             # Check if source exists
             try:
-                self.client.remove_input(source_name)
-            except:
+                self.client.remove_input(source_name)  # type: ignore
+            except Exception:
                 pass  # Source doesn't exist, that's fine
 
             # Create text source
@@ -164,26 +175,29 @@ class OBSIntegrationTest:
                 "font": {"face": "Arial", "size": 72}
             }
 
-            self.client.create_input(
+            self.client.create_input(  # type: ignore
                 sceneName=test_scene,
                 inputName=source_name,
                 inputKind="text_gdiplus_v2",
-                inputSettings=settings
+                inputSettings=settings,
+                sceneItemEnabled=True
             )
             print(f"   ✅ Created text source: {source_name}")
 
             # Verify source in scene
-            items = self.client.get_scene_item_list(test_scene)
+            items = self.client.get_scene_item_list(test_scene)  # type: ignore
+            scene_items = items.scene_items  # type: ignore
             source_found = any(
-                item["sourceName"] == source_name for item in items.scene_items
+                item["sourceName"] == source_name
+                for item in scene_items
             )
 
             if source_found:
-                print(f"   ✅ Source verified in scene")
+                print("   ✅ Source verified in scene")
                 self.test_results.append(("Source Management", True))
                 return True
             else:
-                print(f"   ❌ Source not found in scene")
+                print("   ❌ Source not found in scene")
                 self.test_results.append(("Source Management", False))
                 return False
 
@@ -197,14 +211,16 @@ class OBSIntegrationTest:
         print("\n🧪 Test 6: Streaming Status")
 
         try:
-            stream_status = self.client.get_stream_status()
-            record_status = self.client.get_record_status()
+            stream_status = self.client.get_stream_status()  # type: ignore
+            record_status = self.client.get_record_status()  # type: ignore
 
-            print(f"   ✅ Stream Active: {stream_status.output_active}")
-            print(f"   ✅ Recording Active: {record_status.output_active}")
+            stream_active = stream_status.output_active  # type: ignore
+            print(f"   ✅ Stream Active: {stream_active}")
+            record_active = record_status.output_active  # type: ignore
+            print(f"   ✅ Recording Active: {record_active}")
 
-            if stream_status.output_active:
-                duration = stream_status.output_duration / 1000
+            if stream_status.output_active:  # type: ignore
+                duration = stream_status.output_duration / 1000  # type: ignore
                 print(f"   📊 Stream Duration: {duration:.1f}s")
 
             self.test_results.append(("Status Query", True))
@@ -220,9 +236,9 @@ class OBSIntegrationTest:
         print("\n🧹 Cleanup")
         try:
             # Remove test scene
-            self.client.remove_scene("Hub_Test_Scene")
+            self.client.remove_scene("Hub_Test_Scene")  # type: ignore
             print("   ✅ Removed test scene")
-        except:
+        except Exception:
             print("   ℹ️  Test scene already removed")
 
     def print_summary(self):

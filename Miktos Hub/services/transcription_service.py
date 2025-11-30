@@ -18,7 +18,7 @@ if BACKEND_PATH not in sys.path:
 from config import get_config  # noqa: E402
 
 try:
-    from core.transcription import TranscriptionEngine
+    from core.transcription import TranscriptionEngine  # type: ignore
     TRANSCRIPTION_AVAILABLE = True
 except ImportError as e:
     TranscriptionEngine = None
@@ -77,7 +77,8 @@ class TranscriptionService:
             )
 
             self._default_language = config.transcription.default_language
-            self._supported_languages = config.transcription.supported_languages
+            supported_langs = config.transcription.supported_languages
+            self._supported_languages = supported_langs
 
             model_size = config.transcription.model_size
             use_gpu = config.transcription.use_gpu

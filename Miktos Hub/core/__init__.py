@@ -13,7 +13,13 @@ from core.processing_pipeline import (
     ProcessingPipelineManager,
     IMediaProcessor,
 )
-from core.event_bus import EventBus, Event, EventPriority, EventTypes, get_event_bus
+from core.event_bus import (
+    EventBus,
+    Event,
+    EventPriority,
+    EventTypes,
+    get_event_bus,
+)
 from core.interfaces import (
     DeviceRegistryProtocol,
     StreamRouterProtocol,

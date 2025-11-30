@@ -18,7 +18,7 @@ if BACKEND_PATH not in sys.path:
     sys.path.insert(0, BACKEND_PATH)
 
 try:
-    from core.network import NetworkMonitor
+    from core.network import NetworkMonitor  # type: ignore
     NETWORK_AVAILABLE = True
 except ImportError as e:
     NetworkMonitor = None

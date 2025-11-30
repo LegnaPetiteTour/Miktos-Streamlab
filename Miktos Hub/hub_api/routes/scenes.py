@@ -116,7 +116,8 @@ async def list_scenes(
     """List all scenes in a session"""
     try:
         # Validate session exists
-        session = session_mgr.get_session(session_id)  # type: ignore[attr-defined]
+        # type: ignore[attr-defined]
+        session = session_mgr.get_session(session_id)
         if not session:
             raise HTTPException(
                 status_code=404,
