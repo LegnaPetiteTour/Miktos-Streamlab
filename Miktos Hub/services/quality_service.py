@@ -5,19 +5,17 @@ This service provides video quality analysis capabilities by wrapping
 your existing quality_analyzer.py module.
 """
 
-import sys
 import logging
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from datetime import datetime
 
-# Add existing backend to path
-BACKEND_PATH = '/Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend'
-if BACKEND_PATH not in sys.path:
-    sys.path.insert(0, BACKEND_PATH)
+# Setup Backend integration
+from config.backend_integration import setup_backend_path
+setup_backend_path()
 
 try:
-    from core.quality_analyzer import QualityAnalyzer
+    from core.quality_analyzer import QualityAnalyzer  # type: ignore
     QUALITY_ANALYZER_AVAILABLE = True
 except ImportError as e:
     QualityAnalyzer = None

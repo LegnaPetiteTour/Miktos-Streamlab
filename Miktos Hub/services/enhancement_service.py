@@ -5,27 +5,26 @@ This service provides audio and video enhancement capabilities by wrapping
 your existing enhancement_engine.py module.
 """
 
-import sys
 import logging
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
 
-# Add existing backend to path
-BACKEND_PATH = '/Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend'
-if BACKEND_PATH not in sys.path:
-    sys.path.insert(0, BACKEND_PATH)
+# Setup Backend integration
+from config.backend_integration import setup_backend_path
+setup_backend_path()
 
 try:
-    from core.enhancement_engine import EnhancementEngine, EnhancementPreset
+    from core.enhancement_engine import (  # type: ignore
+        EnhancementEngine,
+        EnhancementPreset
+    )
     ENHANCEMENT_AVAILABLE = True
 except ImportError as e:
     EnhancementEngine = None
     EnhancementPreset = None
     ENHANCEMENT_AVAILABLE = False
     logging.warning(f"Enhancement engine module not available: {e}")
-
-from config import get_config  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -138,12 +137,17 @@ class EnhancementService:
             self._enhancer = None
             return
 
-        config = get_config()
+        try:
+            from config.settings import get_config
+            config = get_config()
 
-        self._engine = EnhancementEngine(
-            enable_gpu=config.processing.enable_gpu_acceleration,
-            gpu_device_id=config.processing.gpu_device_id,
-        )
+            self._engine = EnhancementEngine(
+                enable_gpu=config.processing.enable_gpu_acceleration,
+                gpu_device_id=config.processing.gpu_device_id,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to initialize enhancement engine: {e}")
+            self._engine = None
 
         # Store custom profiles
         self._custom_profiles: Dict[str, EnhancementProfile] = {}

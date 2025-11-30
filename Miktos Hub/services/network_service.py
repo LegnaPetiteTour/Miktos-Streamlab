@@ -5,17 +5,15 @@ This service provides network testing and monitoring capabilities by wrapping
 your existing network.py module.
 """
 
-import sys
 import logging
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
-# Add existing backend to path
-BACKEND_PATH = '/Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend'
-if BACKEND_PATH not in sys.path:
-    sys.path.insert(0, BACKEND_PATH)
+# Setup Backend integration
+from config.backend_integration import setup_backend_path
+setup_backend_path()
 
 try:
     from core.network import NetworkMonitor  # type: ignore
@@ -24,8 +22,6 @@ except ImportError as e:
     NetworkMonitor = None
     NETWORK_AVAILABLE = False
     logging.warning(f"Network module not available: {e}")
-
-from config import get_config  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -177,13 +173,19 @@ class NetworkService:
                 "service will operate in limited mode"
             )
             self._monitoring_sessions = {}
+            self._monitor = None
             return
 
-        config = get_config()
+        try:
+            from config.settings import get_config
+            config = get_config()
 
-        self._monitor = NetworkMonitor(
-            test_interval=config.camera.health_check_interval_seconds
-        )
+            self._monitor = NetworkMonitor(
+                test_interval=config.camera.health_check_interval_seconds
+            )
+        except Exception as e:
+            logger.warning(f"Failed to initialize network monitor: {e}")
+            self._monitor = None
 
         # Active monitoring sessions
         self._monitoring_sessions: Dict[str, MonitoringSession] = {}

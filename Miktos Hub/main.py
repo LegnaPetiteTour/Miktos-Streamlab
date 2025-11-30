@@ -17,6 +17,13 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+# Setup Backend integration early
+from config.backend_integration import (  # noqa: E402
+    setup_backend_path,
+    log_integration_status
+)
+setup_backend_path()
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -55,6 +62,10 @@ def main():
     logger.info("Professional Live Streaming Orchestration Platform")
     logger.info("=" * 60)
     logger.info(f"Starting server on {args.host}:{args.port}")
+    
+    # Log Backend integration status
+    log_integration_status()
+    
     logger.info("=" * 60)
 
     # Run server

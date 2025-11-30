@@ -5,17 +5,16 @@ This service provides a clean interface to your existing Whisper-based
 transcription functionality.
 """
 
-import sys
 import logging
 from typing import List, Optional, Any, Callable
 from pathlib import Path
 
-# Add existing backend to path
-BACKEND_PATH = '/Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend'
-if BACKEND_PATH not in sys.path:
-    sys.path.insert(0, BACKEND_PATH)
-
-from config import get_config  # noqa: E402
+# Setup Backend integration
+from config.backend_integration import (  # noqa: E402
+    setup_backend_path,
+    MODULES_AVAILABLE
+)
+setup_backend_path()
 
 try:
     from core.transcription import TranscriptionEngine  # type: ignore
@@ -66,9 +65,11 @@ class TranscriptionService:
             self._supported_languages = ["en"]
             return
 
-        config = get_config()
-
         try:
+            # Import config from Hub
+            from config.settings import get_config
+            config = get_config()
+
             # TranscriptionEngine expects: model_size, device (not use_gpu)
             device = "cuda" if config.transcription.use_gpu else "cpu"
             self._transcriber = TranscriptionEngine(

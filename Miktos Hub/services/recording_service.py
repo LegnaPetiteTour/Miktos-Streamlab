@@ -5,7 +5,6 @@ This service provides multi-track recording and replay buffer capabilities
 by wrapping your existing iso_recording.py module.
 """
 
-import sys
 import logging
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
@@ -13,10 +12,9 @@ from datetime import datetime
 from pathlib import Path
 from enum import Enum
 
-# Add existing backend to path
-BACKEND_PATH = '/Users/atorrella/Desktop/Miktos Streamlab/Desktop/Backend'
-if BACKEND_PATH not in sys.path:
-    sys.path.insert(0, BACKEND_PATH)
+# Setup Backend integration
+from config.backend_integration import setup_backend_path
+setup_backend_path()
 
 try:
     from core.iso_recording import (  # type: ignore
