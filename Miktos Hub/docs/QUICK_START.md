@@ -131,10 +131,12 @@ curl -X POST http://localhost:8000/api/obs/scenes/MyScene/activate
 
 ## Next Steps
 
-- [Camera Pairing Guide](CAMERA_PAIRING.md) - Connect multiple cameras
-- [Deployment Guide](DEPLOYMENT.md) - Run as a service
-- [API Reference](API_REFERENCE.md) - Full API documentation
-- [Troubleshooting](TROUBLESHOOTING.md) - Common issues
+- 📹 [OBS Setup Guide](OBS_SETUP.md) - Complete OBS configuration walkthrough
+- 📷 [Camera Pairing Guide](CAMERA_PAIRING.md) - Connect Sony cameras (a7 IV, a7S III)
+- 🔌 [API Examples](API_EXAMPLES.md) - Common workflows and code samples
+- 🔧 [Deployment Guide](DEPLOYMENT.md) - Run as a service
+- 📚 [API Reference](API_REFERENCE.md) - Full API documentation
+- 🐛 [Troubleshooting](TROUBLESHOOTING.md) - Common issues and solutions
 
 ## Common Issues
 

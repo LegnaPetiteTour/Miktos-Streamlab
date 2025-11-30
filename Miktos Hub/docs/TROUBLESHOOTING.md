@@ -6,6 +6,7 @@ Common issues and solutions for Miktos Hub.
 
 - [Server Issues](#server-issues)
 - [OBS Connection](#obs-connection)
+- [Camera Issues](#camera-issues)
 - [Camera Discovery](#camera-discovery)
 - [Database Problems](#database-problems)
 - [Performance Issues](#performance-issues)
@@ -160,6 +161,249 @@ obs:
 2. **Verify network stability** - WiFi issues affect localhost too
 3. **Update OBS WebSocket plugin** - Ensure latest version
 4. **Check OBS logs** - Look for errors in OBS log files
+
+---
+
+## Camera Issues
+
+### Camera Not Detected by Imaging Edge
+
+**Symptoms:**
+
+- Imaging Edge Webcam doesn't show camera
+- Camera not appearing in OBS device list
+
+**Solutions:**
+
+1. **Check USB Connection**
+
+   ```bash
+   # macOS - Check connected USB devices
+   system_profiler SPUSBDataType | grep -i camera
+   
+   # Should see your camera model
+   ```
+
+2. **Verify Camera Settings**
+
+   - Menu → Network → PC Remote Function: **On**
+   - Menu → Network → PC Remote → USB Connection Mode: **PC Remote**
+   - Camera display should show "PC Remote" indicator
+
+3. **Restart Imaging Edge**
+
+   - Quit Imaging Edge Webcam completely
+   - Disconnect camera from USB
+   - Restart camera
+   - Reconnect USB cable
+   - Launch Imaging Edge Webcam
+
+4. **Try Different USB Port**
+
+   - Use USB 3.0 port directly on computer (blue port)
+   - Avoid USB hubs
+   - Try different cable if available
+
+5. **Check Permissions (macOS)**
+
+   - System Settings → Privacy & Security → Camera
+   - Ensure Imaging Edge Webcam is allowed
+
+### Camera Disconnects During Stream
+
+**Symptoms:**
+
+- Camera feed drops mid-stream
+- "Device disconnected" error in OBS
+- Black screen in camera source
+
+**Solutions:**
+
+1. **Disable Auto Power Off**
+
+   - Menu → Setup → Auto Power Off Temp.: **High**
+   - Menu → Setup → Auto Off w/ VF: **Off**
+   - Menu → Setup → Auto Power Off: **Off**
+
+2. **Use AC Power**
+
+   - Connect camera to AC adapter (recommended for streaming)
+   - Battery drain can cause unstable connection
+   - Menu → Network → USB Power Supply: **On**
+
+3. **Check USB Cable Quality**
+
+   - Use high-quality USB-C cable
+   - Shorter cables more reliable (< 2 meters)
+   - Replace worn or damaged cables
+   - Avoid cheap cables from unknown brands
+
+4. **Reduce USB Bandwidth**
+
+   - If using multiple cameras, reduce resolution
+   - Change from 4K → 1080p
+   - Change from 60fps → 30fps
+
+5. **Update Camera Firmware**
+
+   - Check Sony support site for latest firmware
+   - Newer firmware improves USB stability
+
+### Video Lag or Stuttering
+
+**Symptoms:**
+
+- Choppy video in OBS preview
+- Frame drops
+- Laggy camera feed
+
+**Solutions:**
+
+1. **Reduce Camera Resolution**
+
+   - Change Imaging Edge output: 4K → 1080p
+   - Right-click OBS source → Properties → Resolution
+
+2. **Reduce Frame Rate**
+
+   - 60fps → 30fps reduces bandwidth by 50%
+
+3. **Free Up Resources**
+
+   - Close unnecessary applications
+   - Close browser tabs
+   - Quit other video apps
+
+4. **Check USB Bandwidth**
+
+   ```bash
+   # macOS - Check USB usage
+   system_profiler SPUSBDataType
+   
+   # Look for cameras on same USB controller
+   # Move cameras to different controllers if possible
+   ```
+
+5. **Optimize OBS Settings**
+
+   - Settings → Video → Downscale Filter: **Bicubic**
+   - Reduce OBS canvas resolution if needed
+
+### Poor Image Quality
+
+**Symptoms:**
+
+- Soft or blurry image
+- Noisy/grainy video
+- Washed out colors
+
+**Solutions:**
+
+1. **Check Camera Focus**
+
+   - Use camera's focus magnifier
+   - Enable Face/Eye AF for talking head
+   - Set to Continuous AF mode
+   - Clean lens (fingerprints = soft image)
+
+2. **Adjust Camera Exposure**
+
+   - ISO too high → grainy (keep ISO ≤ 1600 indoors)
+   - Underexposed → increase ISO or open aperture
+   - Overexposed → reduce ISO or close aperture
+
+3. **Optimize Aperture**
+
+   - Too wide (f/1.4) → soft, shallow focus
+   - Too narrow (f/16) → diffraction, soft
+   - **Optimal: f/2.8 - f/5.6** for most lenses
+
+4. **Check Picture Profile**
+
+   - Standard profile works well for streaming
+   - Avoid S-Log unless color grading
+   - Sharpness: 0 to +1 (avoid over-sharpening)
+
+5. **Lighting**
+
+   - Good lighting is crucial
+   - Avoid mixed color temperatures
+   - Use key light + fill light setup
+   - See [OBS_SETUP.md](OBS_SETUP.md) for more
+
+### Multi-Camera Issues
+
+**Symptoms:**
+
+- Only one camera works at a time
+- Second camera not recognized
+- Both cameras lag when used together
+
+**Solutions:**
+
+1. **USB Bandwidth Management**
+
+   ```bash
+   # Check USB controllers
+   # macOS
+   system_profiler SPUSBDataType | grep -A 10 "USB 3"
+   
+   # Connect each camera to different USB controller
+   ```
+
+2. **Reduce Combined Bandwidth**
+
+   - Camera 1: 1080p @ 30fps (main)
+   - Camera 2: 720p @ 30fps (secondary)
+   - Avoid multiple 4K streams simultaneously
+
+3. **Stagger Camera Connections**
+
+   - Connect main camera first
+   - Wait for it to stabilize in OBS
+   - Then connect second camera
+
+4. **Use Separate Imaging Edge Instances**
+
+   - Some setups may need multiple instances
+   - Check Imaging Edge documentation
+
+### Audio Issues from Camera
+
+**Symptoms:**
+
+- No audio from camera mic
+- Audio cutting out
+- Echo or feedback
+
+**Solutions:**
+
+1. **Check Camera Audio Settings**
+
+   - Menu → Audio Recording: **On**
+   - Menu → Rec Level: **Manual** (adjust levels)
+   - Wind Noise Reduction: **On** (if applicable)
+
+2. **OBS Audio Configuration**
+
+   - Right-click camera source → Advanced Audio Properties
+   - Verify not muted
+   - Check audio monitoring settings
+
+3. **Use External Audio** (Recommended)
+
+   - Camera mics are typically low quality
+   - Use USB microphone or audio interface
+   - Better quality and easier control
+   - See [OBS_SETUP.md](OBS_SETUP.md) for audio setup
+
+4. **Fix Echo/Feedback**
+
+   - Disable audio monitoring if speakers are on
+   - Use headphones
+   - Check for duplicate audio sources
+
+For detailed camera setup instructions, see [CAMERA_PAIRING.md](CAMERA_PAIRING.md).
 
 ---
 
