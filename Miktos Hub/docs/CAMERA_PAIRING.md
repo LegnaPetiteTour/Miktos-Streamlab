@@ -5,10 +5,12 @@ Complete guide for connecting and configuring Sony cameras with Miktos Hub.
 ## Supported Cameras
 
 ✅ **Fully Tested**:
+
 - Sony a7 IV
 - Sony a7S III (via Imaging Edge Webcam)
 
 ✅ **Compatible** (expected to work):
+
 - Sony a7R IV/V
 - Sony a6400/6600
 - Sony ZV-E10/E1
@@ -26,7 +28,7 @@ Complete guide for connecting and configuring Sony cameras with Miktos Hub.
 ### Step 1: Install Imaging Edge Webcam
 
 1. **Download Software**
-   - Visit: https://imagingedge.sony.net/en-us/ie-desktop.html
+   - Visit: <https://imagingedge.sony.net/en-us/ie-desktop.html>
    - Download **Imaging Edge Webcam**
    - Compatible with macOS and Windows
 
@@ -117,10 +119,12 @@ Complete guide for connecting and configuring Sony cameras with Miktos Hub.
 #### Hardware Setup
 
 **Camera 1**: Sony a7 IV (Main)
+
 - USB-C → Computer (USB 3.0 port)
 - Imaging Edge Webcam
 
 **Camera 2**: Sony a7S III (Secondary)
+
 - USB-C → Computer (different USB 3.0 port)
 - Imaging Edge Webcam (separate instance if needed)
 
@@ -161,6 +165,7 @@ Complete guide for connecting and configuring Sony cameras with Miktos Hub.
 **Important**: USB bandwidth is shared per controller.
 
 **Best Practices**:
+
 1. Connect cameras to USB ports on different controllers
 2. Use USB 3.0/3.1 ports (blue ports)
 3. Avoid USB hubs for cameras
@@ -170,6 +175,7 @@ Complete guide for connecting and configuring Sony cameras with Miktos Hub.
    - Use one camera at 4K, others at 1080p
 
 **Check USB Controllers** (macOS):
+
 - Apple Menu → About This Mac → System Report
 - USB → See which ports are on same controller
 
@@ -180,12 +186,14 @@ Complete guide for connecting and configuring Sony cameras with Miktos Hub.
 #### Exposure Settings
 
 **Auto Exposure**: Works well for most scenarios
+
 - Mode: Aperture Priority (A) or Manual (M)
 - ISO: Auto (or fixed ISO 400-1600 for indoor)
 - Shutter Speed: 1/60s (for 30fps) or 1/120s (for 60fps)
 - Aperture: f/2.8 - f/5.6 (balance depth and sharpness)
 
 **Manual Exposure**: For consistent lighting
+
 - ISO: 400-800 (indoor), 100-400 (outdoor)
 - Shutter: Double frame rate (1/60 for 30fps, 1/120 for 60fps)
 - Aperture: f/2.8 - f/4 (shallow DOF) or f/5.6-f/8 (deeper)
@@ -194,6 +202,7 @@ Complete guide for connecting and configuring Sony cameras with Miktos Hub.
 
 **Auto WB**: Good for changing lighting
 **Preset**: Better for consistent look
+
 - Indoor: 3200K (tungsten) or 4000K (fluorescent)
 - Outdoor: 5500K (daylight)
 - Custom: Use gray card for perfect accuracy
@@ -201,11 +210,13 @@ Complete guide for connecting and configuring Sony cameras with Miktos Hub.
 #### Picture Profile
 
 For streaming, consider:
+
 - **Standard**: Works great out of box
 - **PP1-PP10**: For advanced color grading
 - **S-Log**: Only if you plan to color grade
 
 **Recommended for Live Streaming**:
+
 - Profile: **Standard**
 - Contrast: **0** (neutral)
 - Saturation: **+1** to **+2** (slightly enhanced)
@@ -214,16 +225,19 @@ For streaming, consider:
 ### Focus Settings
 
 **Continuous AF**: Best for solo streaming
+
 - AF Area: **Wide** or **Center**
 - AF Speed: **5** (balanced)
 - AF Sensitivity: **5** (standard)
 
 **Face/Eye AF**: Excellent for talking head
+
 - Enable Face Detection
 - Enable Eye AF
 - Priority: **Eye** → **Face** → **Body**
 
 **Manual Focus**: Best for fixed position
+
 - Set focus once
 - Use focus magnifier to verify
 - Lock focus ring if available
@@ -231,16 +245,19 @@ For streaming, consider:
 ### Audio Settings
 
 **Built-in Mic**: Basic quality
+
 - Acceptable for emergency backup
 - **Not recommended** for primary audio
 
 **External Mic via Camera**:
+
 - Connect mic to camera multi-interface shoe or mic input
 - Set Audio Recording: **On**
 - Rec Level: Manual (adjust to avoid clipping)
 - Wind Noise Reduction: **On** (if outdoors)
 
 **Recommended**: Use separate audio interface/mic
+
 - Better quality
 - More control
 - Easier monitoring
@@ -252,6 +269,7 @@ For streaming, consider:
 **Problem**: Imaging Edge doesn't see camera
 
 **Solutions**:
+
 1. **Check USB Connection**
    - Try different USB cable
    - Use direct port (not hub)
@@ -278,6 +296,7 @@ For streaming, consider:
 **Problem**: Connection drops during stream
 
 **Solutions**:
+
 1. **Disable Auto Power Off**
    - Menu → Setup → Auto Power Off Temp.: **High**
    - Menu → Setup → Auto Off w/ VF: **Off**
@@ -301,6 +320,7 @@ For streaming, consider:
 **Problem**: Choppy video in OBS
 
 **Solutions**:
+
 1. **Reduce Resolution**
    - Change camera output: 4K → 1080p
    - Less data = smoother stream
@@ -323,6 +343,7 @@ For streaming, consider:
 **Problem**: Soft focus or poor image quality
 
 **Solutions**:
+
 1. **Check Focus**
    - Ensure camera is in focus
    - Use focus magnifier on camera
@@ -347,6 +368,7 @@ For streaming, consider:
 **Problem**: No audio from camera
 
 **Solutions**:
+
 1. **Check OBS Audio Settings**
    - Sources → Camera source → Advanced Audio Properties
    - Verify not muted
@@ -369,11 +391,13 @@ For streaming, consider:
 You can control some camera settings remotely:
 
 **Via Imaging Edge Desktop** (not Webcam):
+
 - Download Imaging Edge Desktop suite
 - Includes Remote app for camera control
 - Adjust settings without touching camera
 
 **Via Miktos Hub** (future feature):
+
 - Planned API for camera control
 - Adjust exposure, focus, etc.
 - Automated workflows
@@ -402,11 +426,13 @@ For professional productions:
 For cameras in different locations:
 
 **NDI** (Network Device Interface):
+
 - Convert camera feed to NDI signal
 - Stream over local network
 - Use NDI plugin in OBS
 
 **RTMP/RTSP**:
+
 - Some cameras support network streaming
 - Pull stream into OBS
 - Adds latency (1-3 seconds)
