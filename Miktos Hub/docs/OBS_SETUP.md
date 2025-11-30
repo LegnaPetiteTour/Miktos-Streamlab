@@ -122,11 +122,13 @@ Look for OBS Engine status:
 ### Scene Collection Best Practices
 
 **Naming Convention**:
+
 - Use clear, descriptive names
 - Prefix by camera: `Sony_Main`, `Sony_PIP`
 - Suffix by purpose: `_Intro`, `_Outro`, `_BRB`
 
 **Organization**:
+
 - Group related scenes
 - Keep scene count manageable (8-12 scenes recommended)
 - Delete unused scenes
@@ -318,6 +320,7 @@ for scene in scenes:
 **Problem**: "OBS Engine: unhealthy - Connection failed"
 
 **Solutions**:
+
 1. Verify OBS WebSocket is enabled
 2. Check port number matches (4455)
 3. Verify password is correct
@@ -329,6 +332,7 @@ for scene in scenes:
 **Problem**: API returns "Scene not found"
 
 **Solutions**:
+
 1. Verify scene name matches exactly (case-sensitive)
 2. List scenes via API: `GET /api/sessions/{id}/scenes`
 3. Check scene exists in OBS
@@ -338,6 +342,7 @@ for scene in scenes:
 **Problem**: Stream fails to start via API
 
 **Solutions**:
+
 1. Verify RTMP server is running (for local streaming)
 2. Check stream key/server settings in OBS
 3. Ensure internet connection is stable
@@ -348,6 +353,7 @@ for scene in scenes:
 **Problem**: Dropped frames, lag, stuttering
 
 **Solutions**:
+
 1. Lower output resolution (1080p → 720p)
 2. Reduce bitrate
 3. Use hardware encoder if available
