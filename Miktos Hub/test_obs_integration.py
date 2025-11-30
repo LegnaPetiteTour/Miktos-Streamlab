@@ -160,8 +160,8 @@ class OBSIntegrationTest:
         test_scene = "Hub_Test_Scene"
 
         try:
-            # Add a text source
-            source_name = "Hub_Test_Text"
+            # Add a color source (universally supported)
+            source_name = "Hub_Test_Color"
 
             # Check if source exists
             try:
@@ -169,20 +169,21 @@ class OBSIntegrationTest:
             except Exception:
                 pass  # Source doesn't exist, that's fine
 
-            # Create text source
+            # Create color source
             settings = {
-                "text": "Miktos Hub Test",
-                "font": {"face": "Arial", "size": 72}
+                "color": 0xFF0000FF,  # Red color
+                "width": 1920,
+                "height": 1080
             }
 
             self.client.create_input(  # type: ignore
                 sceneName=test_scene,
                 inputName=source_name,
-                inputKind="text_gdiplus_v2",
+                inputKind="color_source_v3",
                 inputSettings=settings,
                 sceneItemEnabled=True
             )
-            print(f"   ✅ Created text source: {source_name}")
+            print(f"   ✅ Created color source: {source_name}")
 
             # Verify source in scene
             items = self.client.get_scene_item_list(test_scene)  # type: ignore
